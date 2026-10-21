@@ -1,0 +1,1566 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Pembukuan Toko - Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/x-icon" id="appFavicon" href="data:image/x-icon;base64,AAABAAEAEBAQAAEABAAoAQAAFgAAACgAAAAQAAAAIAAAAAEAABAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////">
+    <!-- Chart.js: Lokal dengan fallback CDN untuk keandalan 100% offline & online -->
+    <script src="chart.umd.min.js"></script>
+    <script>
+        if (typeof Chart === 'undefined') {
+            document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"><\/script>');
+        }
+    </script>
+</head>
+<body>
+
+    <!-- Toast Notifications Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Login Modal -->
+    <div class="modal-overlay" id="loginModal">
+        <div class="modal-card">
+            <h2>🔐 Login Akses Pengguna</h2>
+            <div class="form-group">
+                <label>Pilih Role</label>
+                <select id="loginRole" class="form-control">
+                    <option value="superadmin">Superadmin</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="loginPassword" class="form-control" placeholder="Masukkan password..." onkeydown="if(event.key==='Enter') handleLogin()">
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
+                <span style="color: var(--text-muted);">Default: super123 / admin123</span>
+                <a href="#" onclick="openForgotModal()" style="color: var(--accent-color); text-decoration: none; font-weight: bold;">Lupa Password?</a>
+            </div>
+            <button class="btn btn-primary" style="height: 40px;" onclick="handleLogin()">Login</button>
+        </div>
+    </div>
+
+    <!-- Settings Modal (Gear Menu) -->
+    <div class="modal-overlay" id="settingsModal" style="display: none;">
+        <div class="modal-card">
+            <h2>⚙️ Pengaturan Aplikasi</h2>
+            
+            <!-- Section 1: Theme -->
+            <div class="settings-section">
+                <h3>Tampilan Tema</h3>
+                <button class="btn btn-primary" onclick="toggleTheme()" id="themeBtnModal" style="width: 100%;">🌙 Mode Gelap</button>
+            </div>
+
+            <!-- Section 2: Password Management -->
+            <div class="settings-section">
+                <h3>Keamanan Akun</h3>
+                <button class="btn" onclick="openChangePassModal()" style="width: 100%; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--border-color);">🔑 Ganti Password Akun</button>
+                <button class="btn" id="resetPassSuperBtn" onclick="openForgotModal()" style="width: 100%; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--border-color); display: none;">🔑 Reset Password (Superadmin)</button>
+            </div>
+
+            <!-- Section 3: Logo Customization (.ico only) -->
+            <div class="settings-section">
+                <h3>Logo Aplikasi (.ico)</h3>
+                <p style="font-size: 11px; color: var(--text-muted);">Pilih file gambar berformat <b>.ico</b> untuk mengubah logo aplikasi.</p>
+                <input type="file" id="logoFileInput" class="form-control" accept=".ico" onchange="handleLogoUpload(this)" style="font-size: 12px; padding: 6px;">
+            </div>
+
+            <!-- Section 4: Database Backup & Restore -->
+            <div class="settings-section">
+                <h3>💾 Pemulihan Database (Restore)</h3>
+                <p style="font-size: 11px; color: var(--text-muted);">Pilih file backup dari folder <code>backup/</code> untuk memulihkan data.</p>
+                <select id="backupSelectList" class="form-control" style="font-size: 12px; padding: 6px;">
+                    <option value="">-- Pilih file backup --</option>
+                </select>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn" onclick="loadBackupList()" style="flex: 1; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--border-color); font-size: 12px;">🔄 Refresh</button>
+                    <button class="btn btn-primary" onclick="executeRestoreBackup()" style="flex: 1; font-size: 12px; background: #d9534f;">⚠️ Restore</button>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" style="height: 40px; margin-top: 5px;" onclick="closeSettingsModal()">Tutup Pengaturan</button>
+        </div>
+    </div>
+
+    <!-- Forgot Password Modal (Superadmin Only) -->
+    <div class="modal-overlay" id="forgotPassModal" style="display: none;">
+        <div class="modal-card">
+            <h2>🔑 Reset Password</h2>
+            <p style="font-size: 12px; color: var(--text-muted);">Masukkan Master Password Superadmin untuk mereset password akun.</p>
+            <div class="form-group">
+                <label>Akun yang ingin direset</label>
+                <select id="resetTargetRole" class="form-control">
+                    <option value="superadmin">Superadmin</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Master Password Superadmin</label>
+                <input type="password" id="masterSuperPass" class="form-control" placeholder="Password master...">
+            </div>
+            <div class="form-group">
+                <label>Password Baru</label>
+                <input type="password" id="newResetPass" class="form-control" placeholder="Password baru...">
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" style="flex: 1; height: 40px;" onclick="executePasswordReset()">Reset</button>
+                <button class="btn" style="flex: 1; height: 40px; background: #ccc;" onclick="closeForgotModal()">Batal</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div class="modal-overlay" id="changePassModal" style="display: none;">
+        <div class="modal-card">
+            <h2>⚙️ Ganti Password</h2>
+            <div class="form-group">
+                <label>Password Lama</label>
+                <input type="password" id="oldPass" class="form-control" placeholder="Password lama...">
+            </div>
+            <div class="form-group">
+                <label>Password Baru</label>
+                <input type="password" id="newPass" class="form-control" placeholder="Password baru...">
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" style="flex: 1; height: 40px;" onclick="executeChangePassword()">Simpan</button>
+                <button class="btn" style="flex: 1; height: 40px; background: #ccc;" onclick="closeChangePassModal()">Batal</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Confirm Modal (YA / TIDAK) for Reset -->
+    <div class="modal-overlay" id="confirmModal" style="display: none;">
+        <div class="modal-card" style="text-align: center;">
+            <h2 style="color: #d9534f;">⚠️ Konfirmasi Reset</h2>
+            <p style="font-size: 14px; color: var(--text-color); margin: 10px 0;">Apakah Anda yakin ingin mereset semua data transaksi?</p>
+            <div style="display: flex; gap: 15px; margin-top: 15px;">
+                <button class="btn btn-danger" style="flex: 1; height: 44px; font-weight: bold;" onclick="executeReset(true)">YA</button>
+                <button class="btn" style="flex: 1; height: 44px; background: #ccc; color: #333; font-weight: bold;" onclick="executeReset(false)">TIDAK</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" id="appContainer" style="opacity: 0; pointer-events: none;">
+        <!-- Header -->
+        <header>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <h1>
+                    <img id="headerLogoImg" class="app-logo" src="data:image/x-icon;base64,AAABAAEAEBAQAAEABAAoAQAAFgAAACgAAAAQAAAAIAAAAAEAABAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////" alt="Logo">
+                    Dashboard Pembukuan Toko
+                </h1>
+                <span class="role-badge" id="roleBadge">Role: -</span>
+                <span id="syncStatus" style="font-size: 11px; background: rgba(0,0,0,0.1); padding: 3px 8px; border-radius: 10px;">🟢 Live Sync Aktif</span>
+            </div>
+            <div class="header-actions">
+                <button class="btn-icon" onclick="openSettingsModal()" title="Pengaturan">⚙️</button>
+                <button class="btn" onclick="loadTransactions(true)" style="background: #e6f4ed; color: #107c41;">🔄 Sinkronkan</button>
+                <button class="btn btn-primary" style="background: #fff; color: #107c41;" onclick="exportToExcel()">📊 Export (.xls)</button>
+                <button class="btn btn-danger" id="resetBtn" onclick="resetData()">🗑️ Reset</button>
+                <button class="btn" onclick="logout()" style="background: #333; color: #fff;">🚪 Keluar</button>
+            </div>
+        </header>
+
+        <!-- Summary Cards -->
+        <div class="summary-cards">
+            <div class="summary-card">
+                <h3>Total Omset</h3>
+                <div class="value" id="sumOmset">Rp 0</div>
+            </div>
+            <div class="summary-card">
+                <h3>Total SPP</h3>
+                <div class="value" id="sumSpp">Rp 0</div>
+            </div>
+            <div class="summary-card">
+                <h3>Total Opp Toko</h3>
+                <div class="value" id="sumOpp">Rp 0</div>
+            </div>
+            <div class="summary-card">
+                <h3>Total Jasa</h3>
+                <div class="value" id="sumJasa">Rp 0</div>
+            </div>
+            <div class="summary-card">
+                <h3>Total Hasil</h3>
+                <div class="value" id="sumHasil">Rp 0</div>
+            </div>
+            <div class="summary-card" id="cardKas">
+                <h3>Kas (30%)</h3>
+                <div class="value" id="sumKas">Rp 0</div>
+            </div>
+            <div class="summary-card" id="cardBonus">
+                <h3>Bonus (10%)</h3>
+                <div class="value" id="sumBonus">Rp 0</div>
+            </div>
+        </div>
+
+        <!-- Input Card -->
+        <div class="card">
+            <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>➕ Input Catatan Transaksi Baru</span>
+                <button class="btn" id="toggleInputCardBtn" onclick="toggleInputCard()" style="font-size: 11px; padding: 4px 10px; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--border-color); display: none;">Sembunyikan Form</button>
+            </div>
+            <div class="form-horizontal-grid" id="inputFormContent">
+                <div class="form-group">
+                    <label>Tanggal</label>
+                    <input type="date" id="inputTanggal" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Omset</label>
+                    <input type="text" id="inputOmset" class="form-control" placeholder="0" oninput="formatCurrencyInput(this); autoCalculate();">
+                </div>
+                <div class="form-group">
+                    <label>SPP</label>
+                    <input type="text" id="inputSpp" class="form-control" placeholder="0" oninput="formatCurrencyInput(this); autoCalculate();">
+                </div>
+                <div class="form-group">
+                    <label>
+                        Opp Toko 
+                        <span style="font-weight: normal; font-size: 10px; margin-left: 5px;">
+                            <input type="checkbox" id="lockOppCheck" onclick="toggleLockOpp()"> Kunci
+                        </span>
+                    </label>
+                    <input type="text" id="inputOpp" class="form-control" placeholder="0" oninput="formatCurrencyInput(this); autoCalculate();">
+                </div>
+
+                <!-- Grouped Jasa Component -->
+                <div class="jasa-grouped-box">
+                    <div class="form-group" style="flex: 2;">
+                        <label>Jasa</label>
+                        <input type="text" id="inputJasa" class="form-control" placeholder="0" readonly style="background-color: rgba(0,0,0,0.03);">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label style="font-size: 10px;">Persen</label>
+                        <input type="text" id="inputPersenJasa" class="form-control input-percent" value="10%" oninput="handlePercentInput(this)" onblur="formatPercentBlur(this)">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Hasil</label>
+                    <input type="text" id="inputHasil" class="form-control" placeholder="0" readonly style="background-color: rgba(0,0,0,0.03); font-weight: bold;">
+                </div>
+
+                <!-- Field Catatan -->
+                <div class="form-group" style="min-width: 180px;">
+                    <label>Catatan</label>
+                    <input type="text" id="inputCatatan" class="form-control" placeholder="Catatan transaksi...">
+                </div>
+
+                <div class="form-group" style="min-width: 130px;">
+                    <button class="btn btn-primary" id="saveTransactionBtn" style="height: 44px; width: 100%;" onclick="addTransaction()">Simpan</button>
+                    <button class="btn" id="cancelEditBtn" style="height: 30px; width: 100%; margin-top: 4px; display: none; background: #888; color: #fff; font-size: 11px;" onclick="cancelEdit()">Batal Edit</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart Card (Grafik Omset & Hasil) - HANYA TERLIHAT DI ROLE SUPERADMIN -->
+        <div class="card" id="chartCard" style="display: none;">
+            <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>📈 Grafik Tren Omset & Hasil Keuangan</span>
+                <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;">Visualisasi pergerakan data harian</span>
+            </div>
+            <div class="chart-container">
+                <canvas id="financialChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Table Card (Riwayat Buku Harian Toko - BISA DI-HIDE DENGAN TOMBOL PANAH ATAS BAWAH) -->
+        <div class="card" id="historyCard">
+            <div class="card-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span>📋 Riwayat Buku Harian Toko</span>
+                    <span id="tableRecordCount" style="font-size: 12px; color: var(--text-muted); font-weight: normal;">Total: 0 baris</span>
+                </div>
+                <button class="btn" id="toggleHistoryCardBtn" onclick="toggleHistoryCard()" style="font-size: 12px; padding: 5px 12px; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--border-color); cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                    <span id="historyArrowIcon">▲</span> <span id="historyBtnText">Sembunyikan</span>
+                </button>
+            </div>
+            <div class="table-responsive" id="historyTableContainer" style="margin-top: 15px;">
+                <table id="exportTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 45px;">No</th>
+                            <th>Tanggal</th>
+                            <th class="text-right">Omset</th>
+                            <th class="text-right">SPP</th>
+                            <th class="text-right">Opp Toko</th>
+                            <th class="text-right">Jasa</th>
+                            <th class="text-right">Hasil</th>
+                            <th class="text-right col-superadmin" style="display: none;">Kas (30%)</th>
+                            <th class="text-right col-superadmin" style="display: none;">Bonus (10%)</th>
+                            <th>Catatan</th>
+                            <th class="no-print" style="text-align: center; width: 140px;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionTableBody">
+                        <!-- Rows inserted by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Ringkasan Bulanan & Mingguan Card - HANYA TERLIHAT DI ROLE SUPERADMIN -->
+        <div class="card" id="summaryPeriodCard" style="display: none;">
+            <div class="card-title" style="margin-bottom: 12px;">
+                <span>📅 Ringkasan Akumulasi Periode</span>
+            </div>
+            
+            <div class="tabs-header">
+                <button class="tab-btn active" id="tabMonthlyBtn" onclick="switchSummaryTab('monthly')">📆 Ringkasan Bulanan</button>
+                <button class="tab-btn" id="tabWeeklyBtn" onclick="switchSummaryTab('weekly')">🗓️ Ringkasan Mingguan</button>
+            </div>
+
+            <!-- Tab Content: Bulanan -->
+            <div id="tabMonthlyContent" class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Bulan</th>
+                            <th style="text-align: center;">Hari / Transaksi</th>
+                            <th class="text-right">Total Omset</th>
+                            <th class="text-right">Total SPP</th>
+                            <th class="text-right">Total Opp Toko</th>
+                            <th class="text-right">Total Jasa</th>
+                            <th class="text-right">Total Hasil</th>
+                            <th class="text-right col-superadmin" style="display: none;">Kas (30%)</th>
+                            <th class="text-right col-superadmin" style="display: none;">Bonus (10%)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="monthlySummaryBody">
+                        <!-- Rows inserted by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Tab Content: Mingguan -->
+            <div id="tabWeeklyContent" class="table-responsive" style="display: none;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Minggu / Rentang Waktu</th>
+                            <th style="text-align: center;">Hari / Transaksi</th>
+                            <th class="text-right">Total Omset</th>
+                            <th class="text-right">Total SPP</th>
+                            <th class="text-right">Total Opp Toko</th>
+                            <th class="text-right">Total Jasa</th>
+                            <th class="text-right">Total Hasil</th>
+                            <th class="text-right col-superadmin" style="display: none;">Kas (30%)</th>
+                            <th class="text-right col-superadmin" style="display: none;">Bonus (10%)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="weeklySummaryBody">
+                        <!-- Rows inserted by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+<script>
+    var transactions = [];
+    var editIndex = -1;
+    var currentUser = null;
+    var chartInstance = null;
+    var lastSyncDataHash = '';
+
+    function getPassword(role) {
+        var key = 'calasetoko_pass_' + role;
+        var saved = localStorage.getItem(key);
+        if (saved !== null) return saved;
+        return role === 'superadmin' ? 'super123' : 'admin123';
+    }
+
+    function setPassword(role, newPass) {
+        var key = 'calasetoko_pass_' + role;
+        localStorage.setItem(key, newPass);
+    }
+
+    // Modern Toast Notification
+    function showToast(message, type) {
+        type = type || 'success';
+        var container = document.getElementById('toastContainer');
+        if (!container) return;
+
+        var toast = document.createElement('div');
+        toast.className = 'toast toast-' + type;
+
+        var icon = '✅';
+        if (type === 'info') icon = '🔔';
+        if (type === 'warning') icon = '⚠️';
+
+        toast.innerHTML = 
+            '<div style="font-size:20px; line-height: 1;">' + icon + '</div>' +
+            '<div class="toast-content">' +
+                '<div class="toast-title">Notifikasi CalAseToko</div>' +
+                '<div class="toast-message">' + message + '</div>' +
+            '</div>' +
+            '<button class="toast-close" title="Tutup">✕</button>';
+
+        toast.querySelector('.toast-close').onclick = function() {
+            dismissToast(toast);
+        };
+
+        container.appendChild(toast);
+
+        setTimeout(function() {
+            dismissToast(toast);
+        }, 4500);
+    }
+
+    function dismissToast(toast) {
+        if (!toast || !toast.parentElement) return;
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(50px)';
+        setTimeout(function() {
+            if (toast.parentElement) toast.remove();
+        }, 300);
+    }
+
+    function initApp() {
+        var savedTheme = localStorage.getItem('calasetoko_theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        updateThemeButton(savedTheme);
+
+        // Load status hide history dari localStorage
+        var hideHistory = localStorage.getItem('calasetoko_hide_history') === 'true';
+        var historyContainer = document.getElementById('historyTableContainer');
+        var historyArrow = document.getElementById('historyArrowIcon');
+        var historyText = document.getElementById('historyBtnText');
+        if (hideHistory && historyContainer) {
+            historyContainer.style.display = 'none';
+            if (historyArrow) historyArrow.innerText = '▼';
+            if (historyText) historyText.innerText = 'Tampilkan';
+        }
+
+        // Load custom logo if exists
+        var savedLogo = localStorage.getItem('calasetoko_logo_ico');
+        if (savedLogo) {
+            document.getElementById('appFavicon').href = savedLogo;
+            document.getElementById('headerLogoImg').src = savedLogo;
+        }
+
+        fetch('logo.ico', { method: 'HEAD' })
+            .then(function(res) {
+                if (res.ok) {
+                    var logoUrl = 'logo.ico?t=' + Date.now();
+                    document.getElementById('appFavicon').href = logoUrl;
+                    document.getElementById('headerLogoImg').src = logoUrl;
+                }
+            })
+            .catch(function(err) {});
+
+        var savedSession = sessionStorage.getItem('calasetoko_current_role');
+        if (savedSession) {
+            currentUser = { role: savedSession };
+            document.getElementById('loginModal').style.display = 'none';
+            document.getElementById('appContainer').style.opacity = '1';
+            document.getElementById('appContainer').style.pointerEvents = 'auto';
+            applyRolePermissions();
+        } else {
+            document.getElementById('loginModal').style.display = 'flex';
+        }
+
+        loadTransactions();
+        loadSettings();
+
+        document.getElementById('inputTanggal').value = getSystemDate();
+
+        // Polling Live Sync setiap 5 detik
+        setInterval(function() {
+            if (currentUser && document.visibilityState === 'visible') {
+                loadTransactionsSilently();
+            }
+        }, 5000);
+    }
+
+    // Toggle Hide/Show Riwayat Buku Harian Toko dengan Panah Atas / Bawah
+    function toggleHistoryCard() {
+        var container = document.getElementById('historyTableContainer');
+        var arrow = document.getElementById('historyArrowIcon');
+        var text = document.getElementById('historyBtnText');
+        
+        if (container.style.display === 'none') {
+            container.style.display = 'block';
+            arrow.innerText = '▲';
+            text.innerText = 'Sembunyikan';
+            localStorage.setItem('calasetoko_hide_history', 'false');
+        } else {
+            container.style.display = 'none';
+            arrow.innerText = '▼';
+            text.innerText = 'Tampilkan';
+            localStorage.setItem('calasetoko_hide_history', 'true');
+        }
+    }
+
+    function loadSettings() {
+        fetch('/api/settings')
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.success && data.settings) {
+                    var s = data.settings;
+                    if (s.is_opp_locked === 'true') {
+                        var oppVal = parseNumber(s.locked_opp_value);
+                        document.getElementById('inputOpp').value = oppVal.toLocaleString('id-ID');
+                        document.getElementById('lockOppCheck').checked = true;
+                        document.getElementById('inputOpp').disabled = true;
+                    }
+                }
+            })
+            .catch(function(err) {
+                console.error("Gagal memuat pengaturan dari server:", err);
+                var lockedOpp = localStorage.getItem('calasetoko_locked_opp');
+                if (lockedOpp !== null) {
+                    document.getElementById('inputOpp').value = parseNumber(lockedOpp).toLocaleString('id-ID');
+                    document.getElementById('lockOppCheck').checked = true;
+                    document.getElementById('inputOpp').disabled = true;
+                }
+            });
+    }
+
+    function handleLogoUpload(input) {
+        if (input.files && input.files[0]) {
+            var file = input.files[0];
+            var fileName = file.name.toLowerCase();
+            
+            if (!fileName.endsWith('.ico')) {
+                alert("Format file tidak valid! Harap pilih file berformat .ico saja.");
+                input.value = '';
+                return;
+            }
+
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var base64Data = e.target.result;
+                localStorage.setItem('calasetoko_logo_ico', base64Data);
+                document.getElementById('appFavicon').href = base64Data;
+                document.getElementById('headerLogoImg').src = base64Data;
+
+                fetch('/api/logo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: base64Data })
+                })
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    if (data.success) {
+                        showToast("Logo aplikasi berhasil disimpan permanen!", "success");
+                    } else {
+                        showToast("Logo disimpan secara lokal: " + data.message, "warning");
+                    }
+                })
+                .catch(function(err) {
+                    showToast("Logo berhasil diubah!", "success");
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function openSettingsModal() {
+        document.getElementById('settingsModal').style.display = 'flex';
+        loadBackupList();
+    }
+
+    function loadBackupList() {
+        fetch('/api/backups')
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                var select = document.getElementById('backupSelectList');
+                select.innerHTML = '<option value="">-- Pilih file backup --</option>';
+                if (data.success && data.backups) {
+                    data.backups.forEach(function(b) {
+                        var dateStr = new Date(b.time * 1000).toLocaleString('id-ID');
+                        var opt = document.createElement('option');
+                        opt.value = b.filename;
+                        opt.text = b.filename + ' (' + dateStr + ')';
+                        select.appendChild(opt);
+                    });
+                }
+            })
+            .catch(function(err) {
+                console.error("Gagal memuat daftar backup:", err);
+            });
+    }
+
+    function executeRestoreBackup() {
+        var select = document.getElementById('backupSelectList');
+        var filename = select.value;
+
+        if (!filename) {
+            alert("Harap pilih file backup terlebih dahulu!");
+            return;
+        }
+
+        if (confirm("Peringatan: Memulihkan database akan mengganti data saat ini dengan data dari " + filename + ". Lanjutkan?")) {
+            fetch('/api/restore', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filename: filename })
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    showToast("Sukses! " + data.message, "success");
+                    closeSettingsModal();
+                    loadTransactions();
+                } else {
+                    alert("Gagal memulihkan database: " + data.message);
+                }
+            })
+            .catch(function(err) {
+                alert("Terjadi kesalahan koneksi: " + err);
+            });
+        }
+    }
+
+    function closeSettingsModal() {
+        document.getElementById('settingsModal').style.display = 'none';
+    }
+
+    function loadTransactions(isManualSync) {
+        fetch('/api/transactions')
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    transactions = data.transactions || [];
+                    lastSyncDataHash = JSON.stringify(transactions);
+                    renderAllData();
+                    document.getElementById('syncStatus').innerText = '🟢 Live Sync Aktif';
+                    if (isManualSync) {
+                        showToast("Sinkronisasi manual berhasil!", "success");
+                    }
+                }
+            })
+            .catch(function(err) {
+                console.error("Gagal sinkronisasi data dari server:", err);
+                document.getElementById('syncStatus').innerText = '🔴 Offline Mode';
+                var saved = localStorage.getItem('calasetoko_transactions_card');
+                if (saved !== null) {
+                    try { transactions = JSON.parse(saved); } catch(e) { transactions = []; }
+                }
+                renderAllData();
+            });
+    }
+
+    // Deteksi perubahan real-time dari device/tab lain secara silent
+    function loadTransactionsSilently() {
+        fetch('/api/transactions')
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    var newTrans = data.transactions || [];
+                    var newHash = JSON.stringify(newTrans);
+                    
+                    if (newHash !== lastSyncDataHash) {
+                        if (editIndex === -1) {
+                            transactions = newTrans;
+                            lastSyncDataHash = newHash;
+                            renderAllData();
+                            showToast("🔄 Data transaksi baru diperbarui dari perangkat lain!", "info");
+                        } else {
+                            showToast("⚠️ Ada perubahan data di server dari perangkat lain!", "warning");
+                        }
+                    }
+                    document.getElementById('syncStatus').innerText = '🟢 Live Sync Aktif';
+                }
+            })
+            .catch(function(err) {
+                document.getElementById('syncStatus').innerText = '🔴 Offline Mode';
+            });
+    }
+
+    function saveData() {
+        fetch('/api/transactions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ transactions: transactions })
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data.success) {
+                lastSyncDataHash = JSON.stringify(transactions);
+                localStorage.setItem('calasetoko_transactions_card', JSON.stringify(transactions));
+                showToast("Data berhasil disimpan & disinkronkan!", "success");
+            } else {
+                alert("Peringatan: Gagal menyinkronkan data ke server pusat.");
+            }
+        })
+        .catch(function(err) {
+            console.error("Gagal koneksi ke server pusat:", err);
+            localStorage.setItem('calasetoko_transactions_card', JSON.stringify(transactions));
+            showToast("Mode Offline: Data disimpan di browser lokal.", "warning");
+        });
+    }
+
+    function handleLogin() {
+        var role = document.getElementById('loginRole').value;
+        var pass = document.getElementById('loginPassword').value;
+        var correctPass = getPassword(role);
+
+        if (pass === correctPass) {
+            currentUser = { role: role };
+            sessionStorage.setItem('calasetoko_current_role', currentUser.role);
+            document.getElementById('loginModal').style.display = 'none';
+            document.getElementById('appContainer').style.opacity = '1';
+            document.getElementById('appContainer').style.pointerEvents = 'auto';
+            document.getElementById('loginPassword').value = '';
+            applyRolePermissions();
+            loadTransactions();
+            showToast("Selamat datang, " + role.toUpperCase() + "!", "success");
+        } else {
+            alert("Password salah!");
+        }
+    }
+
+    function logout() {
+        sessionStorage.removeItem('calasetoko_current_role');
+        currentUser = null;
+        document.getElementById('loginModal').style.display = 'flex';
+        document.getElementById('appContainer').style.opacity = '0';
+        document.getElementById('appContainer').style.pointerEvents = 'none';
+    }
+
+    function openForgotModal() {
+        closeSettingsModal();
+        document.getElementById('forgotPassModal').style.display = 'flex';
+    }
+
+    function closeForgotModal() {
+        document.getElementById('forgotPassModal').style.display = 'none';
+        document.getElementById('masterSuperPass').value = '';
+        document.getElementById('newResetPass').value = '';
+    }
+
+    function executePasswordReset() {
+        var targetRole = document.getElementById('resetTargetRole').value;
+        var masterPass = document.getElementById('masterSuperPass').value;
+        var newPass = document.getElementById('newResetPass').value;
+
+        var superPass = getPassword('superadmin');
+        if (masterPass !== superPass) {
+            alert("Master Password Superadmin salah!");
+            return;
+        }
+
+        if (!newPass || newPass.length < 3) {
+            alert("Password baru minimal 3 karakter!");
+            return;
+        }
+
+        setPassword(targetRole, newPass);
+        showToast("Password untuk role " + targetRole.toUpperCase() + " berhasil direset!", "success");
+        closeForgotModal();
+    }
+
+    function openChangePassModal() {
+        closeSettingsModal();
+        document.getElementById('changePassModal').style.display = 'flex';
+    }
+
+    function closeChangePassModal() {
+        document.getElementById('changePassModal').style.display = 'none';
+        document.getElementById('oldPass').value = '';
+        document.getElementById('newPass').value = '';
+    }
+
+    function executeChangePassword() {
+        var oldPass = document.getElementById('oldPass').value;
+        var newPass = document.getElementById('newPass').value;
+        var currentRole = currentUser.role;
+        var correctPass = getPassword(currentRole);
+
+        if (oldPass !== correctPass) {
+            alert("Password lama salah!");
+            return;
+        }
+
+        if (!newPass || newPass.length < 3) {
+            alert("Password baru minimal 3 karakter!");
+            return;
+        }
+
+        setPassword(currentRole, newPass);
+        showToast("Password berhasil diubah!", "success");
+        closeChangePassModal();
+    }
+
+    function applyRolePermissions() {
+        var badge = document.getElementById('roleBadge');
+        var resetBtn = document.getElementById('resetBtn');
+        var resetPassSuperBtn = document.getElementById('resetPassSuperBtn');
+        var toggleInputBtn = document.getElementById('toggleInputCardBtn');
+        var cardKas = document.getElementById('cardKas');
+        var cardBonus = document.getElementById('cardBonus');
+        var chartCard = document.getElementById('chartCard');
+        var summaryPeriodCard = document.getElementById('summaryPeriodCard');
+        var isSuperadmin = currentUser && currentUser.role === 'superadmin';
+
+        if (isSuperadmin) {
+            badge.innerText = 'Role: Superadmin';
+            badge.style.background = '#0b5e2f';
+            resetBtn.style.display = 'inline-block';
+            resetPassSuperBtn.style.display = 'block';
+            toggleInputBtn.style.display = 'inline-block';
+            cardKas.style.display = 'block';
+            cardBonus.style.display = 'block';
+            
+            // FITUR BARU: Grafik & Ringkasan Akumulasi HANYA TERLIHAT UNTUK SUPERADMIN
+            if (chartCard) chartCard.style.display = 'block';
+            if (summaryPeriodCard) summaryPeriodCard.style.display = 'block';
+
+            var hideInput = localStorage.getItem('calasetoko_hide_input') === 'true';
+            if (hideInput) {
+                document.getElementById('inputFormContent').style.display = 'none';
+                toggleInputBtn.innerText = 'Tampilkan Form';
+            } else {
+                document.getElementById('inputFormContent').style.display = 'flex';
+                toggleInputBtn.innerText = 'Sembunyikan Form';
+            }
+        } else {
+            badge.innerText = 'Role: Admin';
+            badge.style.background = '#d9534f';
+            resetBtn.style.display = 'none';
+            resetPassSuperBtn.style.display = 'none';
+            toggleInputBtn.style.display = 'none';
+            cardKas.style.display = 'none';
+            cardBonus.style.display = 'none';
+
+            // FITUR BARU: DISEMBUNYIKAN UNTUK ADMIN
+            if (chartCard) chartCard.style.display = 'none';
+            if (summaryPeriodCard) summaryPeriodCard.style.display = 'none';
+
+            document.getElementById('inputFormContent').style.display = 'flex';
+        }
+
+        // Tampilkan atau sembunyikan kolom Kas & Bonus di tabel utama dan tabel ringkasan
+        var saCols = document.querySelectorAll('.col-superadmin');
+        saCols.forEach(function(el) {
+            el.style.display = isSuperadmin ? '' : 'none';
+        });
+
+        renderAllData();
+    }
+
+    function toggleInputCard() {
+        var content = document.getElementById('inputFormContent');
+        var btn = document.getElementById('toggleInputCardBtn');
+        if (content.style.display === 'none') {
+            content.style.display = 'flex';
+            btn.innerText = 'Sembunyikan Form';
+            localStorage.setItem('calasetoko_hide_input', 'false');
+        } else {
+            content.style.display = 'none';
+            btn.innerText = 'Tampilkan Form';
+            localStorage.setItem('calasetoko_hide_input', 'true');
+        }
+    }
+
+    function toggleTheme() {
+        var currentTheme = document.documentElement.getAttribute('data-theme');
+        var newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('calasetoko_theme', newTheme);
+        updateThemeButton(newTheme);
+        if (currentUser && currentUser.role === 'superadmin') {
+            renderChart();
+        }
+    }
+
+    function updateThemeButton(theme) {
+        var btn = document.getElementById('themeBtnModal');
+        if (theme === 'dark') {
+            btn.innerText = '☀️ Mode Terang';
+        } else {
+            btn.innerText = '🌙 Mode Gelap';
+        }
+    }
+
+    function getSystemDate() {
+        var today = new Date();
+        var yyyy = today.getFullYear();
+        var mm = today.getMonth() + 1;
+        var dd = today.getDate();
+        if (mm < 10) mm = '0' + mm;
+        if (dd < 10) dd = '0' + dd;
+        return yyyy + '-' + mm + '-' + dd;
+    }
+
+    function formatDateISO(d) {
+        var yyyy = d.getFullYear();
+        var mm = d.getMonth() + 1;
+        var dd = d.getDate();
+        if (mm < 10) mm = '0' + mm;
+        if (dd < 10) dd = '0' + dd;
+        return yyyy + '-' + mm + '-' + dd;
+    }
+
+    function toggleLockOpp() {
+        var isChecked = document.getElementById('lockOppCheck').checked;
+        var oppInput = document.getElementById('inputOpp');
+        var val = parseNumber(oppInput.value);
+
+        if (isChecked) {
+            oppInput.disabled = true;
+            localStorage.setItem('calasetoko_locked_opp', val);
+        } else {
+            oppInput.disabled = false;
+            localStorage.removeItem('calasetoko_locked_opp');
+            val = 0;
+        }
+
+        fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: 'is_opp_locked', value: isChecked ? 'true' : 'false' })
+        });
+
+        fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: 'locked_opp_value', value: val })
+        });
+    }
+
+    function formatCurrencyInput(input) {
+        var val = input.value.replace(/[^0-9]/g, '');
+        if (val !== '') {
+            input.value = parseInt(val, 10).toLocaleString('id-ID');
+        } else {
+            input.value = '';
+        }
+    }
+
+    function parseNumber(val) {
+        if (!val) return 0;
+        if (typeof val === 'number') return val;
+        var clean = val.toString().replace(/\./g, '').replace(/[^0-9.-]/g, '');
+        return parseFloat(clean) || 0;
+    }
+
+    function handlePercentInput(input) {
+        autoCalculate();
+    }
+
+    function formatPercentBlur(input) {
+        var val = input.value.replace(/[^0-9]/g, '');
+        if (val !== '') {
+            input.value = val + '%';
+        } else {
+            input.value = '10%';
+        }
+        autoCalculate();
+    }
+
+    function autoCalculate() {
+        var omset = parseNumber(document.getElementById('inputOmset').value);
+        var spp = parseNumber(document.getElementById('inputSpp').value);
+        var opp = parseNumber(document.getElementById('inputOpp').value);
+        
+        var percentStr = document.getElementById('inputPersenJasa').value;
+        var persen = parseFloat(percentStr.replace(/[^0-9.]/g, '')) || 0;
+
+        var baseJasa = omset - spp;
+        var jasa = baseJasa > 0 ? baseJasa * (persen / 100) : 0;
+        document.getElementById('inputJasa').value = Math.round(jasa).toLocaleString('id-ID');
+
+        var hasil = omset - spp - jasa - opp;
+        document.getElementById('inputHasil').value = Math.round(hasil).toLocaleString('id-ID');
+    }
+
+    function formatRupiah(num) {
+        return "Rp " + Math.round(num || 0).toLocaleString('id-ID');
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function renderAllData() {
+        renderTable();
+        if (currentUser && currentUser.role === 'superadmin') {
+            renderChart();
+            renderMonthlyAndWeekly();
+        }
+    }
+
+    // ==========================================
+    // RENDER TABLE & SUMMARY CARDS
+    // ==========================================
+
+    function renderTable() {
+        var tbody = document.getElementById('transactionTableBody');
+        tbody.innerHTML = '';
+
+        var totOmset = 0, totSpp = 0, totOpp = 0, totJasa = 0, totHasil = 0;
+        var isSuperadmin = currentUser && currentUser.role === 'superadmin';
+
+        for (var i = 0; i < transactions.length; i++) {
+            var t = transactions[i];
+            totOmset += (t.omset || 0);
+            totSpp += (t.spp || 0);
+            totOpp += (t.opp || 0);
+            totJasa += (t.jasa || 0);
+            totHasil += (t.hasil || 0);
+
+            var kas = (t.hasil || 0) * 0.30;
+            var bonus = (t.hasil || 0) * 0.10;
+
+            var tr = document.createElement('tr');
+            
+            var actionButtons = '<button class="btn" style="padding: 4px 10px; font-size: 12px; background: #e6f4ed; color: #107c41;" onclick="editTransaction(' + i + ')">Edit</button>';
+            if (isSuperadmin) {
+                actionButtons += ' <button class="btn btn-danger" style="padding: 4px 10px; font-size: 12px; margin-left: 4px;" onclick="deleteTransaction(' + i + ')">Hapus</button>';
+            }
+
+            var kasCol = '<td class="text-right col-superadmin" style="font-weight: 600; color: #0b5e2f; display: ' + (isSuperadmin ? '' : 'none') + ';">' + formatRupiah(kas) + '</td>';
+            var bonusCol = '<td class="text-right col-superadmin" style="font-weight: 600; color: #b78103; display: ' + (isSuperadmin ? '' : 'none') + ';">' + formatRupiah(bonus) + '</td>';
+            var catatanDisplay = t.catatan ? escapeHtml(t.catatan) : '<span style="color:var(--text-muted); font-size:11px;">-</span>';
+
+            tr.innerHTML = '<td>' + (i + 1) + '</td>' +
+                           '<td>' + t.tanggal + '</td>' +
+                           '<td class="text-right">' + formatRupiah(t.omset) + '</td>' +
+                           '<td class="text-right">' + formatRupiah(t.spp) + '</td>' +
+                           '<td class="text-right">' + formatRupiah(t.opp) + '</td>' +
+                           '<td class="text-right">' + formatRupiah(t.jasa) + '</td>' +
+                           '<td class="text-right" style="font-weight: bold; color: var(--accent-color);">' + formatRupiah(t.hasil) + '</td>' +
+                           kasCol +
+                           bonusCol +
+                           '<td style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="' + escapeHtml(t.catatan || '') + '">' + catatanDisplay + '</td>' +
+                           '<td style="text-align: center; white-space: nowrap;">' + actionButtons + '</td>';
+            tbody.appendChild(tr);
+        }
+
+        if (transactions.length === 0) {
+            var colSpan = isSuperadmin ? 11 : 9;
+            tbody.innerHTML = '<tr><td colspan="' + colSpan + '" style="text-align: center; padding: 24px; color: var(--text-muted);">Belum ada data transaksi.</td></tr>';
+        }
+
+        var totKas = totHasil * 0.30;
+        var totBonus = totHasil * 0.10;
+
+        document.getElementById('sumOmset').innerText = formatRupiah(totOmset);
+        document.getElementById('sumSpp').innerText = formatRupiah(totSpp);
+        document.getElementById('sumOpp').innerText = formatRupiah(totOpp);
+        document.getElementById('sumJasa').innerText = formatRupiah(totJasa);
+        document.getElementById('sumHasil').innerText = formatRupiah(totHasil);
+        document.getElementById('sumKas').innerText = formatRupiah(totKas);
+        document.getElementById('sumBonus').innerText = formatRupiah(totBonus);
+        document.getElementById('tableRecordCount').innerText = 'Total: ' + transactions.length + ' baris';
+    }
+
+    // ==========================================
+    // CHART RENDERING (Chart.js) - SUPERADMIN ONLY
+    // ==========================================
+
+    function renderChart() {
+        if (typeof Chart === 'undefined') return;
+        if (!currentUser || currentUser.role !== 'superadmin') return;
+
+        var sorted = transactions.slice().sort(function(a, b) {
+            return a.tanggal.localeCompare(b.tanggal);
+        });
+
+        var labels = sorted.map(function(t) { return t.tanggal; });
+        var omsetData = sorted.map(function(t) { return t.omset || 0; });
+        var hasilData = sorted.map(function(t) { return t.hasil || 0; });
+
+        var canvas = document.getElementById('financialChart');
+        if (!canvas) return;
+        var ctx = canvas.getContext('2d');
+
+        var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        var textColor = isDark ? '#b0b0b0' : '#555555';
+        var gridColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
+
+        if (chartInstance) {
+            chartInstance.destroy();
+        }
+
+        chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Omset',
+                        data: omsetData,
+                        borderColor: '#107c41',
+                        backgroundColor: isDark ? 'rgba(16, 124, 65, 0.25)' : 'rgba(16, 124, 65, 0.1)',
+                        fill: true,
+                        tension: 0.35,
+                        pointBackgroundColor: '#107c41',
+                        pointBorderColor: '#ffffff',
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        borderWidth: 2.5
+                    },
+                    {
+                        label: 'Hasil Bersih',
+                        data: hasilData,
+                        borderColor: '#0078d4',
+                        backgroundColor: isDark ? 'rgba(0, 120, 212, 0.25)' : 'rgba(0, 120, 212, 0.1)',
+                        fill: true,
+                        tension: 0.35,
+                        pointBackgroundColor: '#0078d4',
+                        pointBorderColor: '#ffffff',
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        borderWidth: 2.5
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            color: textColor,
+                            font: { family: "'Segoe UI', sans-serif", size: 12, weight: 'bold' },
+                            usePointStyle: true,
+                            padding: 16
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: isDark ? '#222' : '#ffffff',
+                        titleColor: isDark ? '#fff' : '#111',
+                        bodyColor: isDark ? '#eee' : '#333',
+                        borderColor: isDark ? '#444' : '#ddd',
+                        borderWidth: 1,
+                        padding: 10,
+                        boxPadding: 4,
+                        usePointStyle: true,
+                        callbacks: {
+                            label: function(context) {
+                                return ' ' + context.dataset.label + ': ' + formatRupiah(context.raw);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: gridColor },
+                        ticks: { color: textColor, font: { size: 11 } }
+                    },
+                    y: {
+                        grid: { color: gridColor },
+                        ticks: {
+                            color: textColor,
+                            font: { size: 11 },
+                            callback: function(val) {
+                                if (val >= 1000000) return 'Rp ' + (val / 1000000).toFixed(1) + 'M';
+                                if (val >= 1000) return 'Rp ' + (val / 1000).toFixed(0) + 'K';
+                                return 'Rp ' + val;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // ==========================================
+    // RINGKASAN BULANAN & MINGGUAN - SUPERADMIN ONLY
+    // ==========================================
+
+    function switchSummaryTab(tab) {
+        var monthlyBtn = document.getElementById('tabMonthlyBtn');
+        var weeklyBtn = document.getElementById('tabWeeklyBtn');
+        var monthlyContent = document.getElementById('tabMonthlyContent');
+        var weeklyContent = document.getElementById('tabWeeklyContent');
+
+        if (tab === 'monthly') {
+            monthlyBtn.classList.add('active');
+            weeklyBtn.classList.remove('active');
+            monthlyContent.style.display = 'block';
+            weeklyContent.style.display = 'none';
+        } else {
+            weeklyBtn.classList.add('active');
+            monthlyBtn.classList.remove('active');
+            weeklyContent.style.display = 'block';
+            monthlyContent.style.display = 'none';
+        }
+    }
+
+    function getWeekRangeLabel(dateStr) {
+        var parts = dateStr.split('-');
+        var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        var day = d.getDay();
+        var diffToMon = d.getDate() - day + (day === 0 ? -6 : 1);
+        var monday = new Date(d.setDate(diffToMon));
+        var sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+
+        var monStr = monday.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+        var sunStr = sunday.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+        var key = formatDateISO(monday);
+        return { key: key, label: monStr + ' - ' + sunStr };
+    }
+
+    function renderMonthlyAndWeekly() {
+        if (!currentUser || currentUser.role !== 'superadmin') return;
+
+        var isSuperadmin = true;
+
+        // 1. Agregasi Bulanan
+        var monthlyMap = {};
+        transactions.forEach(function(t) {
+            var mKey = t.tanggal.substring(0, 7); // YYYY-MM
+            if (!monthlyMap[mKey]) {
+                monthlyMap[mKey] = { count: 0, omset: 0, spp: 0, opp: 0, jasa: 0, hasil: 0 };
+            }
+            monthlyMap[mKey].count++;
+            monthlyMap[mKey].omset += (t.omset || 0);
+            monthlyMap[mKey].spp += (t.spp || 0);
+            monthlyMap[mKey].opp += (t.opp || 0);
+            monthlyMap[mKey].jasa += (t.jasa || 0);
+            monthlyMap[mKey].hasil += (t.hasil || 0);
+        });
+
+        var mBody = document.getElementById('monthlySummaryBody');
+        mBody.innerHTML = '';
+        var mKeys = Object.keys(monthlyMap).sort();
+
+        mKeys.forEach(function(mKey) {
+            var item = monthlyMap[mKey];
+            var kas = item.hasil * 0.30;
+            var bonus = item.hasil * 0.10;
+            var dateObj = new Date(mKey + '-01');
+            var mName = dateObj.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+
+            var kasTd = '<td class="text-right col-superadmin" style="font-weight: 600; color: #0b5e2f;">' + formatRupiah(kas) + '</td>';
+            var bonusTd = '<td class="text-right col-superadmin" style="font-weight: 600; color: #b78103;">' + formatRupiah(bonus) + '</td>';
+
+            mBody.innerHTML += '<tr>' +
+                '<td><b>' + mName + '</b></td>' +
+                '<td style="text-align: center;">' + item.count + ' hari</td>' +
+                '<td class="text-right">' + formatRupiah(item.omset) + '</td>' +
+                '<td class="text-right">' + formatRupiah(item.spp) + '</td>' +
+                '<td class="text-right">' + formatRupiah(item.opp) + '</td>' +
+                '<td class="text-right">' + formatRupiah(item.jasa) + '</td>' +
+                '<td class="text-right" style="font-weight: bold; color: var(--accent-color);">' + formatRupiah(item.hasil) + '</td>' +
+                kasTd + bonusTd +
+                '</tr>';
+        });
+
+        if (mKeys.length === 0) {
+            mBody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 18px; color: var(--text-muted);">Tidak ada data untuk periode ini.</td></tr>';
+        }
+
+        // 2. Agregasi Mingguan
+        var weeklyMap = {};
+        transactions.forEach(function(t) {
+            var wInfo = getWeekRangeLabel(t.tanggal);
+            if (!weeklyMap[wInfo.key]) {
+                weeklyMap[wInfo.key] = { label: wInfo.label, count: 0, omset: 0, spp: 0, opp: 0, jasa: 0, hasil: 0 };
+            }
+            weeklyMap[wInfo.key].count++;
+            weeklyMap[wInfo.key].omset += (t.omset || 0);
+            weeklyMap[wInfo.key].spp += (t.spp || 0);
+            weeklyMap[wInfo.key].opp += (t.opp || 0);
+            weeklyMap[wInfo.key].jasa += (t.jasa || 0);
+            weeklyMap[wInfo.key].hasil += (t.hasil || 0);
+        });
+
+        var wBody = document.getElementById('weeklySummaryBody');
+        wBody.innerHTML = '';
+        var wKeys = Object.keys(weeklyMap).sort();
+
+        wKeys.forEach(function(wKey) {
+            var item = weeklyMap[wKey];
+            var kas = item.hasil * 0.30;
+            var bonus = item.hasil * 0.10;
+
+            var kasTd = '<td class="text-right col-superadmin" style="font-weight: 600; color: #0b5e2f;">' + formatRupiah(kas) + '</td>';
+            var bonusTd = '<td class="text-right col-superadmin" style="font-weight: 600; color: #b78103;">' + formatRupiah(bonus) + '</td>';
+
+            wBody.innerHTML += '<tr>' +
+                '<td><b>' + item.label + '</b></td>' +
+                '<td style="text-align: center;">' + item.count + ' hari</td>' +
+                '<td class="text-right">' + formatRupiah(item.omset) + '</td>' +
+                '<td class="text-right">' + formatRupiah(item.spp) + '</td>' +
+                '<td class="text-right">' + formatRupiah(item.opp) + '</td>' +
+                '<td class="text-right">' + formatRupiah(item.jasa) + '</td>' +
+                '<td class="text-right" style="font-weight: bold; color: var(--accent-color);">' + formatRupiah(item.hasil) + '</td>' +
+                kasTd + bonusTd +
+                '</tr>';
+        });
+
+        if (wKeys.length === 0) {
+            wBody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 18px; color: var(--text-muted);">Tidak ada data untuk periode ini.</td></tr>';
+        }
+    }
+
+    // ==========================================
+    // TRANSACTION CRUD
+    // ==========================================
+
+    function addTransaction() {
+        var tanggal = document.getElementById('inputTanggal').value;
+        var omset = parseNumber(document.getElementById('inputOmset').value);
+        var spp = parseNumber(document.getElementById('inputSpp').value);
+        var opp = parseNumber(document.getElementById('inputOpp').value);
+        var jasa = parseNumber(document.getElementById('inputJasa').value);
+        var hasil = parseNumber(document.getElementById('inputHasil').value);
+        var catatan = (document.getElementById('inputCatatan').value || '').trim();
+
+        if (!tanggal) {
+            alert("Harap isi tanggal!");
+            return;
+        }
+
+        var item = {
+            tanggal: tanggal,
+            omset: omset,
+            spp: spp,
+            opp: opp,
+            jasa: jasa,
+            hasil: hasil,
+            catatan: catatan
+        };
+
+        if (editIndex >= 0) {
+            transactions[editIndex] = item;
+            editIndex = -1;
+            document.getElementById('saveTransactionBtn').innerText = 'Simpan';
+            document.getElementById('cancelEditBtn').style.display = 'none';
+        } else {
+            transactions.push(item);
+        }
+
+        // Urutkan transaksi berdasarkan tanggal asc
+        transactions.sort(function(a, b) {
+            return a.tanggal.localeCompare(b.tanggal);
+        });
+
+        var isLocked = document.getElementById('lockOppCheck').checked;
+        var currentOpp = document.getElementById('inputOpp').value;
+
+        clearForm();
+
+        if (isLocked) {
+            document.getElementById('inputOpp').value = currentOpp;
+            document.getElementById('lockOppCheck').checked = true;
+            document.getElementById('inputOpp').disabled = true;
+        }
+
+        renderAllData();
+        saveData();
+    }
+
+    function clearForm() {
+        document.getElementById('inputOmset').value = '';
+        document.getElementById('inputSpp').value = '';
+        if (!document.getElementById('lockOppCheck').checked) {
+            document.getElementById('inputOpp').value = '';
+        }
+        document.getElementById('inputJasa').value = '';
+        document.getElementById('inputHasil').value = '';
+        document.getElementById('inputCatatan').value = '';
+        document.getElementById('inputTanggal').value = getSystemDate();
+    }
+
+    function editTransaction(idx) {
+        var t = transactions[idx];
+        if (!t) return;
+
+        document.getElementById('inputTanggal').value = t.tanggal;
+        document.getElementById('inputOmset').value = (t.omset || 0).toLocaleString('id-ID');
+        document.getElementById('inputSpp').value = (t.spp || 0).toLocaleString('id-ID');
+        document.getElementById('inputOpp').value = (t.opp || 0).toLocaleString('id-ID');
+        document.getElementById('inputJasa').value = (t.jasa || 0).toLocaleString('id-ID');
+        document.getElementById('inputHasil').value = (t.hasil || 0).toLocaleString('id-ID');
+        document.getElementById('inputCatatan').value = t.catatan || '';
+
+        editIndex = idx;
+        document.getElementById('saveTransactionBtn').innerText = 'Update Transaksi';
+        document.getElementById('cancelEditBtn').style.display = 'block';
+
+        // Pastikan form input terlihat
+        document.getElementById('inputFormContent').style.display = 'flex';
+        var toggleBtn = document.getElementById('toggleInputCardBtn');
+        if (toggleBtn) toggleBtn.innerText = 'Sembunyikan Form';
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function cancelEdit() {
+        editIndex = -1;
+        document.getElementById('saveTransactionBtn').innerText = 'Simpan';
+        document.getElementById('cancelEditBtn').style.display = 'none';
+        clearForm();
+    }
+
+    function deleteTransaction(idx) {
+        if (!currentUser || currentUser.role !== 'superadmin') {
+            alert("Akses ditolak: Hanya Superadmin yang dapat menghapus transaksi!");
+            return;
+        }
+        var t = transactions[idx];
+        var info = t ? (t.tanggal + ' - Omset: ' + formatRupiah(t.omset)) : '';
+        if (confirm("Hapus transaksi ini?\n" + info)) {
+            transactions.splice(idx, 1);
+            renderAllData();
+            saveData();
+        }
+    }
+
+    // ==========================================
+    // EXPORT TO EXCEL (.XLS)
+    // ==========================================
+
+    function exportToExcel() {
+        var isSuperadmin = currentUser && currentUser.role === 'superadmin';
+
+        var html = '<html><head><meta charset="UTF-8"><title>Pembukuan Toko</title>';
+        html += '<style>table{border-collapse:collapse;width:100%;} th,td{border:1px solid #ddd;padding:8px;font-family:Arial,sans-serif;} th{background:#107c41;color:#fff;text-align:left;} .text-right{text-align:right;} .tot{font-weight:bold;background:#f5f5f5;} .kas{background:#e6f4ed;font-weight:bold;}</style>';
+        html += '</head><body>';
+        html += '<h2>Laporan Buku Harian Toko</h2>';
+        html += '<p>Tanggal Cetak: ' + new Date().toLocaleString('id-ID') + '</p>';
+        html += '<table><thead><tr>';
+        html += '<th>No</th><th>Tanggal</th><th class="text-right">Omset</th><th class="text-right">SPP</th><th class="text-right">Opp Toko</th><th class="text-right">Jasa</th><th class="text-right">Hasil</th>';
+        
+        if (isSuperadmin) {
+            html += '<th class="text-right">Kas (30%)</th><th class="text-right">Bonus (10%)</th>';
+        }
+        html += '<th>Catatan</th>';
+        html += '</tr></thead><tbody>';
+
+        var totOmset = 0, totSpp = 0, totOpp = 0, totJasa = 0, totHasil = 0;
+        for (var i = 0; i < transactions.length; i++) {
+            var t = transactions[i];
+            totOmset += (t.omset || 0);
+            totSpp += (t.spp || 0);
+            totOpp += (t.opp || 0);
+            totJasa += (t.jasa || 0);
+            totHasil += (t.hasil || 0);
+
+            var kas = (t.hasil || 0) * 0.30;
+            var bonus = (t.hasil || 0) * 0.10;
+
+            html += '<tr>';
+            html += '<td>' + (i + 1) + '</td>';
+            html += '<td>' + t.tanggal + '</td>';
+            html += '<td class="text-right">' + t.omset + '</td>';
+            html += '<td class="text-right">' + t.spp + '</td>';
+            html += '<td class="text-right">' + t.opp + '</td>';
+            html += '<td class="text-right">' + t.jasa + '</td>';
+            html += '<td class="text-right">' + t.hasil + '</td>';
+            if (isSuperadmin) {
+                html += '<td class="text-right">' + Math.round(kas) + '</td>';
+                html += '<td class="text-right">' + Math.round(bonus) + '</td>';
+            }
+            html += '<td>' + escapeHtml(t.catatan || '') + '</td>';
+            html += '</tr>';
+        }
+
+        var totKas = totHasil * 0.30;
+        var totBonus = totHasil * 0.10;
+
+        var colSpanTotal = 2;
+        html += '<tr class="tot">';
+        html += '<td colspan="' + colSpanTotal + '">TOTAL</td>';
+        html += '<td class="text-right">' + totOmset + '</td>';
+        html += '<td class="text-right">' + totSpp + '</td>';
+        html += '<td class="text-right">' + totOpp + '</td>';
+        html += '<td class="text-right">' + totJasa + '</td>';
+        html += '<td class="text-right">' + totHasil + '</td>';
+        if (isSuperadmin) {
+            html += '<td class="text-right">' + Math.round(totKas) + '</td>';
+            html += '<td class="text-right">' + Math.round(totBonus) + '</td>';
+        }
+        html += '<td></td>';
+        html += '</tr>';
+
+        if (isSuperadmin) {
+            html += '<tr class="kas">';
+            html += '<td colspan="6">KAS (30%)</td><td class="text-right">' + Math.round(totKas) + '</td><td colspan="3"></td>';
+            html += '</tr>';
+            html += '<tr class="kas">';
+            html += '<td colspan="6">BONUS (10%)</td><td class="text-right">' + Math.round(totBonus) + '</td><td colspan="3"></td>';
+            html += '</tr>';
+        }
+
+        html += '</tbody></table></body></html>';
+
+        var filename = 'Laporan_Pembukuan_Toko_' + getSystemDate() + '.xls';
+
+        // Trigger direct browser download
+        var blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+        var downloadUrl = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(downloadUrl);
+
+        // Simpan juga salinan di folder backup/ server
+        fetch('/api/export', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filename: filename, html: html })
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data.success) {
+                showToast("File Excel berhasil diunduh & dicadangkan di server!", "success");
+            }
+        })
+        .catch(function(err) {
+            showToast("File Excel berhasil diunduh!", "success");
+        });
+    }
+
+    function resetData() {
+        if (!currentUser || currentUser.role !== 'superadmin') {
+            alert("Akses ditolak: Hanya Superadmin yang dapat mereset data!");
+            return;
+        }
+        document.getElementById('confirmModal').style.display = 'flex';
+    }
+
+    function executeReset(isYes) {
+        document.getElementById('confirmModal').style.display = 'none';
+        if (isYes) {
+            transactions = [];
+            renderAllData();
+            saveData();
+            localStorage.removeItem('calasetoko_locked_opp');
+            document.getElementById('lockOppCheck').checked = false;
+            document.getElementById('inputOpp').disabled = false;
+
+            fetch('/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key: 'is_opp_locked', value: 'false' })
+            });
+            fetch('/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key: 'locked_opp_value', value: '0' })
+            });
+            showToast("Semua data transaksi berhasil direset!", "warning");
+        }
+    }
+
+    window.onload = function() {
+        initApp();
+    };
+</script>
+
+</body>
+</html>

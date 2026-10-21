@@ -1,0 +1,81 @@
+# 📊 Panduan Penggunaan & Dokumentasi CalAseToko
+
+Aplikasi **CalAseToko** adalah aplikasi pembukuan toko modern berbasis web (HTML5, CSS3, JavaScript) dengan backend Python (`server.py`) dan database **SQLite (`pembukuan.db`)** yang mendukung sinkronisasi data real-time antar perangkat dalam jaringan lokal, pembagian hak akses (Superadmin & Admin), visualisasi grafik omset & hasil, ringkasan akumulasi periode, serta pencadangan database otomatis.
+
+---
+
+## 🚀 1. Menjalankan & Menghentikan Server
+
+### A. Menjalankan Server di Background
+Cukup lakukan *double-click* pada file **`jalankan_server.bat`**.
+- Skrip otomatis membuka firewall port `8080` dan menjalankan server Python secara senyap di *background* **tanpa memunculkan jendela Command Prompt**.
+
+### B. Cara Menghentikan Server
+1. **Melalui Command Prompt (CMD):**
+   ```cmd
+   taskkill /f /im python.exe
+   ```
+2. **Melalui Task Manager:**
+   Tekan `Ctrl + Shift + Esc` -> Cari proses **Python** (`python.exe`) -> Klik kanan lalu pilih **End Task**.
+
+---
+
+## 🌐 2. Cara Mengakses Aplikasi
+Setelah server berjalan, akses browser melalui:
+- **Di komputer server:** `http://localhost:8080/index.html`
+- **Di komputer lain dalam 1 jaringan Wi-Fi/LAN:** `http://[IP-Komputer-Server]:8080/index.html`
+
+---
+
+## 🔐 3. Hak Akses Pengguna (Role Permissions)
+
+Fitur-fitur analitik dan finansial sensitif dirancang khusus hanya dapat diakses oleh **Superadmin**:
+
+| Fitur / Komponen | Superadmin (`super123`) | Admin (`admin123`) |
+|---|:---:|:---:|
+| Input & Edit Transaksi | ✅ Ya | ✅ Ya |
+| Catatan di Transaksi | ✅ Ya | ✅ Ya |
+| Riwayat Buku Harian Toko | ✅ Ya | ✅ Ya |
+| Tombol Sembunyikan Riwayat (▲/▼) | ✅ Ya | ✅ Ya |
+| Tombol Sembunyikan Form Input | ✅ Ya | ❌ Tidak |
+| Ekspor Excel (.xls) | ✅ Ya (Lengkap) | ✅ Ya (Operasional) |
+| **Kas (30%) & Bonus (10%)** | ✅ **Terlihat** | ❌ **Disembunyikan** |
+| **📈 Grafik Tren Omset & Hasil** | ✅ **Terlihat** | ❌ **Disembunyikan** |
+| **📅 Ringkasan Bulanan & Mingguan** | ✅ **Terlihat** | ❌ **Disembunyikan** |
+| Hapus Transaksi & Reset Data | ✅ Ya | ❌ Tidak |
+
+---
+
+## ✨ 4. Fitur-Fitur Utama
+
+### 🔼 A. Sembunyikan / Tampilkan Riwayat Buku Harian Toko (Tombol Panah)
+- Pada judul kartu **Riwayat Buku Harian Toko**, terdapat tombol panah atas/bawah:
+  - **`▲ Sembunyikan`**: Menyembunyikan tampilan tabel riwayat agar halaman lebih ringkas.
+  - **`▼ Tampilkan`**: Membuka kembali tabel riwayat.
+- Pilihan status sembunyikan disimpan di browser sehingga tetap diingat saat halaman dimuat ulang.
+
+### 📝 B. Kolom Catatan / Keterangan Transaksi
+- Input transaksi dilengkapi kolom **Catatan** untuk mencatat keterangan belanja inventaris, servis, atau catatan harian lainnya.
+- Tersimpan permanen di database SQLite dan disertakan dalam ekspor file Excel.
+
+### 📈 C. Grafik Tren Omset & Hasil (Khusus Superadmin)
+- Visualisasi grafik garis (*Line Chart*) interaktif berbasis Chart.js lokal (bekerja 100% offline).
+- Membandingkan tren harian antara **Omset** dan **Hasil Bersih**.
+- Otomatis disembunyikan saat pengguna login sebagai **Admin**.
+
+### 📅 D. Ringkasan Akumulasi Bulanan & Mingguan (Khusus Superadmin)
+- Mengelompokkan total transaksi secara otomatis:
+  - **Ringkasan Bulanan:** Akumulasi per bulan (Omset, SPP, Opp Toko, Jasa, Hasil, Kas 30%, Bonus 10%).
+  - **Ringkasan Mingguan:** Akumulasi per minggu (Senin s/d Minggu).
+- Otomatis disembunyikan saat pengguna login sebagai **Admin**.
+
+### 🔔 E. Notifikasi Toast Sinkronisasi Antar Perangkat
+- Sistem *live sync* otomatis memunculkan notifikasi banner (*Toast*) di pojok kanan atas saat ada perubahan data dari perangkat lain di jaringan LAN.
+
+---
+
+## 🗄️ 5. Database SQLite & Auto-Backup
+- **Database SQLite (`pembukuan.db`):** Seluruh data tersimpan secara aman dan terpusat di SQLite.
+- **Auto-Backup JSON:** Snapshot otomatis tersimpan di folder **`backup/`** setiap kali transaksi disimpan.
+- **Fitur Restore:** Pemulihan database dapat dilakukan melalui menu Pengaturan (`⚙️`).
+- **Ekspor Excel (.xls):** Tombol **Export (.xls)** langsung mengunduh file laporan dan mencadangkannya di folder `backup/`.
