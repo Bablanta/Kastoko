@@ -264,94 +264,95 @@
             </div>
         </div>
 
-        <!-- Table Card (Riwayat Buku Harian Toko - BISA DI-HIDE DENGAN TOMBOL PANAH ATAS BAWAH) -->
+        <!-- Card: Riwayat Buku Toko (Harian / Mingguan / Bulanan Satu Bar) -->
         <div class="card" id="historyCard">
-            <div class="card-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
+            <div class="card-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0; flex-wrap: wrap; gap: 10px;">
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <span>📋 Riwayat Buku Harian Toko</span>
+                    <span>📋 Riwayat Buku Toko</span>
                     <span id="tableRecordCount" style="font-size: 12px; color: var(--text-muted); font-weight: normal;">Total: 0 baris</span>
                 </div>
-                <button class="btn" id="toggleHistoryCardBtn" onclick="toggleHistoryCard()" style="font-size: 12px; padding: 5px 12px; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--border-color); cursor: pointer; display: flex; align-items: center; gap: 6px;">
-                    <span id="historyArrowIcon">▲</span> <span id="historyBtnText">Sembunyikan</span>
-                </button>
-            </div>
-            <div class="table-responsive" id="historyTableContainer" style="margin-top: 15px;">
-                <table id="exportTable">
-                    <thead>
-                        <tr>
-                            <th style="width: 45px;">No</th>
-                            <th>Tanggal</th>
-                            <th class="text-right">Omset</th>
-                            <th class="text-right">SPP</th>
-                            <th class="text-right">Opp Toko</th>
-                            <th class="text-right">Jasa</th>
-                            <th class="text-right">Hasil</th>
-                            <th class="text-right col-superadmin" style="display: none;">Kas (30%)</th>
-                            <th class="text-right col-superadmin" style="display: none;">Bonus (10%)</th>
-                            <th>Catatan</th>
-                            <th class="no-print" style="text-align: center; width: 140px;">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody id="transactionTableBody">
-                        <!-- Rows inserted by JS -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Ringkasan Bulanan & Mingguan Card - HANYA TERLIHAT DI ROLE SUPERADMIN -->
-        <div class="card" id="summaryPeriodCard" style="display: none;">
-            <div class="card-title" style="margin-bottom: 12px;">
-                <span>📅 Ringkasan Akumulasi Periode</span>
-            </div>
-            
-            <div class="tabs-header">
-                <button class="tab-btn active" id="tabMonthlyBtn" onclick="switchSummaryTab('monthly')">📆 Ringkasan Bulanan</button>
-                <button class="tab-btn" id="tabWeeklyBtn" onclick="switchSummaryTab('weekly')">🗓️ Ringkasan Mingguan</button>
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <!-- Segmented View Tabs: Harian / Mingguan / Bulanan -->
+                    <div class="tabs-header">
+                        <button class="tab-btn active" id="tabHarianBtn" onclick="switchBookView('harian')">📅 Harian</button>
+                        <button class="tab-btn" id="tabMingguanBtn" onclick="switchBookView('mingguan')">🗓️ Mingguan</button>
+                        <button class="tab-btn" id="tabBulananBtn" onclick="switchBookView('bulanan')">📆 Bulanan</button>
+                    </div>
+                    <!-- Tombol Panah Atas/Bawah Sembunyikan/Tampilkan -->
+                    <button class="btn" id="toggleHistoryCardBtn" onclick="toggleHistoryCard()" style="font-size: 12px; padding: 5px 12px; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--border-color); cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                        <span id="historyArrowIcon">▲</span> <span id="historyBtnText">Sembunyikan</span>
+                    </button>
+                </div>
             </div>
 
-            <!-- Tab Content: Bulanan -->
-            <div id="tabMonthlyContent" class="table-responsive">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Bulan</th>
-                            <th style="text-align: center;">Hari / Transaksi</th>
-                            <th class="text-right">Total Omset</th>
-                            <th class="text-right">Total SPP</th>
-                            <th class="text-right">Total Opp Toko</th>
-                            <th class="text-right">Total Jasa</th>
-                            <th class="text-right">Total Hasil</th>
-                            <th class="text-right col-superadmin" style="display: none;">Kas (30%)</th>
-                            <th class="text-right col-superadmin" style="display: none;">Bonus (10%)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="monthlySummaryBody">
-                        <!-- Rows inserted by JS -->
-                    </tbody>
-                </table>
-            </div>
+            <div id="historyTableContainer" style="margin-top: 15px;">
+                <!-- 1. Tampilan Harian -->
+                <div id="viewHarianContent" class="table-responsive">
+                    <table id="exportTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 45px;">No</th>
+                                <th>Tanggal</th>
+                                <th class="text-right">Omset</th>
+                                <th class="text-right">SPP</th>
+                                <th class="text-right">Opp Toko</th>
+                                <th class="text-right">Jasa</th>
+                                <th class="text-right">Hasil</th>
+                                <th class="text-right col-superadmin" style="display: none;">Kas (30%)</th>
+                                <th class="text-right col-superadmin" style="display: none;">Bonus (10%)</th>
+                                <th>Catatan</th>
+                                <th class="no-print" style="text-align: center; width: 140px;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionTableBody">
+                            <!-- Rows inserted by JS -->
+                        </tbody>
+                    </table>
+                </div>
 
-            <!-- Tab Content: Mingguan -->
-            <div id="tabWeeklyContent" class="table-responsive" style="display: none;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Minggu / Rentang Waktu</th>
-                            <th style="text-align: center;">Hari / Transaksi</th>
-                            <th class="text-right">Total Omset</th>
-                            <th class="text-right">Total SPP</th>
-                            <th class="text-right">Total Opp Toko</th>
-                            <th class="text-right">Total Jasa</th>
-                            <th class="text-right">Total Hasil</th>
-                            <th class="text-right col-superadmin" style="display: none;">Kas (30%)</th>
-                            <th class="text-right col-superadmin" style="display: none;">Bonus (10%)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="weeklySummaryBody">
-                        <!-- Rows inserted by JS -->
-                    </tbody>
-                </table>
+                <!-- 2. Tampilan Mingguan -->
+                <div id="viewMingguanContent" class="table-responsive" style="display: none;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Minggu / Rentang Waktu</th>
+                                <th style="text-align: center;">Hari / Transaksi</th>
+                                <th class="text-right">Total Omset</th>
+                                <th class="text-right">Total SPP</th>
+                                <th class="text-right">Total Opp Toko</th>
+                                <th class="text-right">Total Jasa</th>
+                                <th class="text-right">Total Hasil</th>
+                                <th class="text-right col-superadmin" style="display: none;">Kas (30%)</th>
+                                <th class="text-right col-superadmin" style="display: none;">Bonus (10%)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="weeklySummaryBody">
+                            <!-- Rows inserted by JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 3. Tampilan Bulanan -->
+                <div id="viewBulananContent" class="table-responsive" style="display: none;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Bulan</th>
+                                <th style="text-align: center;">Hari / Transaksi</th>
+                                <th class="text-right">Total Omset</th>
+                                <th class="text-right">Total SPP</th>
+                                <th class="text-right">Total Opp Toko</th>
+                                <th class="text-right">Total Jasa</th>
+                                <th class="text-right">Total Hasil</th>
+                                <th class="text-right col-superadmin" style="display: none;">Kas (30%)</th>
+                                <th class="text-right col-superadmin" style="display: none;">Bonus (10%)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="monthlySummaryBody">
+                            <!-- Rows inserted by JS -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -363,6 +364,7 @@
     var currentUser = null;
     var chartInstance = null;
     var lastSyncDataHash = '';
+    var currentBookView = 'harian';
 
     function getPassword(role) {
         var key = 'calasetoko_pass_' + role;
@@ -433,6 +435,10 @@
             if (historyText) historyText.innerText = 'Tampilkan';
         }
 
+        // Load view tab preference (harian / mingguan / bulanan)
+        var savedBookView = localStorage.getItem('calasetoko_book_view') || 'harian';
+        switchBookView(savedBookView);
+
         // Load custom logo if exists
         var savedLogo = localStorage.getItem('calasetoko_logo_ico');
         if (savedLogo) {
@@ -474,7 +480,63 @@
         }, 5000);
     }
 
-    // Toggle Hide/Show Riwayat Buku Harian Toko dengan Panah Atas / Bawah
+    // Toggle View Tab di Riwayat Buku Toko (Harian / Mingguan / Bulanan)
+    function switchBookView(view) {
+        currentBookView = view;
+        var tabHarianBtn = document.getElementById('tabHarianBtn');
+        var tabMingguanBtn = document.getElementById('tabMingguanBtn');
+        var tabBulananBtn = document.getElementById('tabBulananBtn');
+
+        var viewHarian = document.getElementById('viewHarianContent');
+        var viewMingguan = document.getElementById('viewMingguanContent');
+        var viewBulanan = document.getElementById('viewBulananContent');
+
+        if (!tabHarianBtn || !viewHarian) return;
+
+        tabHarianBtn.classList.remove('active');
+        tabMingguanBtn.classList.remove('active');
+        tabBulananBtn.classList.remove('active');
+
+        viewHarian.style.display = 'none';
+        viewMingguan.style.display = 'none';
+        viewBulanan.style.display = 'none';
+
+        if (view === 'harian') {
+            tabHarianBtn.classList.add('active');
+            viewHarian.style.display = 'block';
+        } else if (view === 'mingguan') {
+            tabMingguanBtn.classList.add('active');
+            viewMingguan.style.display = 'block';
+        } else if (view === 'bulanan') {
+            tabBulananBtn.classList.add('active');
+            viewBulanan.style.display = 'block';
+        }
+
+        updateRecordCount();
+        localStorage.setItem('calasetoko_book_view', view);
+    }
+
+    // Update Label Jumlah Data di Header Riwayat Buku Toko
+    function updateRecordCount() {
+        var el = document.getElementById('tableRecordCount');
+        if (!el) return;
+
+        if (currentBookView === 'harian') {
+            el.innerText = 'Total: ' + transactions.length + ' baris';
+        } else if (currentBookView === 'mingguan') {
+            var rows = document.querySelectorAll('#weeklySummaryBody tr');
+            var isNoData = rows.length === 1 && rows[0].innerText.includes('Tidak ada data');
+            var count = isNoData ? 0 : rows.length;
+            el.innerText = 'Total: ' + count + ' minggu';
+        } else if (currentBookView === 'bulanan') {
+            var rows = document.querySelectorAll('#monthlySummaryBody tr');
+            var isNoData = rows.length === 1 && rows[0].innerText.includes('Tidak ada data');
+            var count = isNoData ? 0 : rows.length;
+            el.innerText = 'Total: ' + count + ' bulan';
+        }
+    }
+
+    // Toggle Hide/Show Riwayat Buku Toko dengan Panah Atas / Bawah
     function toggleHistoryCard() {
         var container = document.getElementById('historyTableContainer');
         var arrow = document.getElementById('historyArrowIcon');
@@ -793,7 +855,6 @@
         var cardKas = document.getElementById('cardKas');
         var cardBonus = document.getElementById('cardBonus');
         var chartCard = document.getElementById('chartCard');
-        var summaryPeriodCard = document.getElementById('summaryPeriodCard');
         var isSuperadmin = currentUser && currentUser.role === 'superadmin';
 
         if (isSuperadmin) {
@@ -805,9 +866,8 @@
             cardKas.style.display = 'block';
             cardBonus.style.display = 'block';
             
-            // FITUR BARU: Grafik & Ringkasan Akumulasi HANYA TERLIHAT UNTUK SUPERADMIN
+            // Grafik HANYA TERLIHAT UNTUK SUPERADMIN
             if (chartCard) chartCard.style.display = 'block';
-            if (summaryPeriodCard) summaryPeriodCard.style.display = 'block';
 
             var hideInput = localStorage.getItem('calasetoko_hide_input') === 'true';
             if (hideInput) {
@@ -826,14 +886,13 @@
             cardKas.style.display = 'none';
             cardBonus.style.display = 'none';
 
-            // FITUR BARU: DISEMBUNYIKAN UNTUK ADMIN
+            // Grafik DISEMBUNYIKAN UNTUK ADMIN
             if (chartCard) chartCard.style.display = 'none';
-            if (summaryPeriodCard) summaryPeriodCard.style.display = 'none';
 
             document.getElementById('inputFormContent').style.display = 'flex';
         }
 
-        // Tampilkan atau sembunyikan kolom Kas & Bonus di tabel utama dan tabel ringkasan
+        // Tampilkan atau sembunyikan kolom Kas & Bonus di seluruh tabel (Harian, Mingguan, Bulanan)
         var saCols = document.querySelectorAll('.col-superadmin');
         saCols.forEach(function(el) {
             el.style.display = isSuperadmin ? '' : 'none';
@@ -984,14 +1043,16 @@
 
     function renderAllData() {
         renderTable();
+        renderWeekly();
+        renderMonthly();
+        updateRecordCount();
         if (currentUser && currentUser.role === 'superadmin') {
             renderChart();
-            renderMonthlyAndWeekly();
         }
     }
 
     // ==========================================
-    // RENDER TABLE & SUMMARY CARDS
+    // 1. RENDER TABEL HARIAN & SUMMARY CARDS
     // ==========================================
 
     function renderTable() {
@@ -1052,7 +1113,125 @@
         document.getElementById('sumHasil').innerText = formatRupiah(totHasil);
         document.getElementById('sumKas').innerText = formatRupiah(totKas);
         document.getElementById('sumBonus').innerText = formatRupiah(totBonus);
-        document.getElementById('tableRecordCount').innerText = 'Total: ' + transactions.length + ' baris';
+    }
+
+    // ==========================================
+    // 2. RENDER RINGKASAN MINGGUAN
+    // ==========================================
+
+    function getWeekRangeLabel(dateStr) {
+        var parts = dateStr.split('-');
+        var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        var day = d.getDay();
+        var diffToMon = d.getDate() - day + (day === 0 ? -6 : 1);
+        var monday = new Date(d.setDate(diffToMon));
+        var sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+
+        var monStr = monday.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+        var sunStr = sunday.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+        var key = formatDateISO(monday);
+        return { key: key, label: monStr + ' - ' + sunStr };
+    }
+
+    function renderWeekly() {
+        var isSuperadmin = currentUser && currentUser.role === 'superadmin';
+        var weeklyMap = {};
+        
+        transactions.forEach(function(t) {
+            var wInfo = getWeekRangeLabel(t.tanggal);
+            if (!weeklyMap[wInfo.key]) {
+                weeklyMap[wInfo.key] = { label: wInfo.label, count: 0, omset: 0, spp: 0, opp: 0, jasa: 0, hasil: 0 };
+            }
+            weeklyMap[wInfo.key].count++;
+            weeklyMap[wInfo.key].omset += (t.omset || 0);
+            weeklyMap[wInfo.key].spp += (t.spp || 0);
+            weeklyMap[wInfo.key].opp += (t.opp || 0);
+            weeklyMap[wInfo.key].jasa += (t.jasa || 0);
+            weeklyMap[wInfo.key].hasil += (t.hasil || 0);
+        });
+
+        var wBody = document.getElementById('weeklySummaryBody');
+        wBody.innerHTML = '';
+        var wKeys = Object.keys(weeklyMap).sort();
+
+        wKeys.forEach(function(wKey) {
+            var item = weeklyMap[wKey];
+            var kas = item.hasil * 0.30;
+            var bonus = item.hasil * 0.10;
+
+            var kasTd = '<td class="text-right col-superadmin" style="font-weight: 600; color: #0b5e2f; display: ' + (isSuperadmin ? '' : 'none') + ';">' + formatRupiah(kas) + '</td>';
+            var bonusTd = '<td class="text-right col-superadmin" style="font-weight: 600; color: #b78103; display: ' + (isSuperadmin ? '' : 'none') + ';">' + formatRupiah(bonus) + '</td>';
+
+            wBody.innerHTML += '<tr>' +
+                '<td><b>' + item.label + '</b></td>' +
+                '<td style="text-align: center;">' + item.count + ' hari</td>' +
+                '<td class="text-right">' + formatRupiah(item.omset) + '</td>' +
+                '<td class="text-right">' + formatRupiah(item.spp) + '</td>' +
+                '<td class="text-right">' + formatRupiah(item.opp) + '</td>' +
+                '<td class="text-right">' + formatRupiah(item.jasa) + '</td>' +
+                '<td class="text-right" style="font-weight: bold; color: var(--accent-color);">' + formatRupiah(item.hasil) + '</td>' +
+                kasTd + bonusTd +
+                '</tr>';
+        });
+
+        if (wKeys.length === 0) {
+            var colCount = isSuperadmin ? 9 : 7;
+            wBody.innerHTML = '<tr><td colspan="' + colCount + '" style="text-align: center; padding: 18px; color: var(--text-muted);">Tidak ada data mingguan.</td></tr>';
+        }
+    }
+
+    // ==========================================
+    // 3. RENDER RINGKASAN BULANAN
+    // ==========================================
+
+    function renderMonthly() {
+        var isSuperadmin = currentUser && currentUser.role === 'superadmin';
+        var monthlyMap = {};
+
+        transactions.forEach(function(t) {
+            var mKey = t.tanggal.substring(0, 7); // YYYY-MM
+            if (!monthlyMap[mKey]) {
+                monthlyMap[mKey] = { count: 0, omset: 0, spp: 0, opp: 0, jasa: 0, hasil: 0 };
+            }
+            monthlyMap[mKey].count++;
+            monthlyMap[mKey].omset += (t.omset || 0);
+            monthlyMap[mKey].spp += (t.spp || 0);
+            monthlyMap[mKey].opp += (t.opp || 0);
+            monthlyMap[mKey].jasa += (t.jasa || 0);
+            monthlyMap[mKey].hasil += (t.hasil || 0);
+        });
+
+        var mBody = document.getElementById('monthlySummaryBody');
+        mBody.innerHTML = '';
+        var mKeys = Object.keys(monthlyMap).sort();
+
+        mKeys.forEach(function(mKey) {
+            var item = monthlyMap[mKey];
+            var kas = item.hasil * 0.30;
+            var bonus = item.hasil * 0.10;
+            var dateObj = new Date(mKey + '-01');
+            var mName = dateObj.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+
+            var kasTd = '<td class="text-right col-superadmin" style="font-weight: 600; color: #0b5e2f; display: ' + (isSuperadmin ? '' : 'none') + ';">' + formatRupiah(kas) + '</td>';
+            var bonusTd = '<td class="text-right col-superadmin" style="font-weight: 600; color: #b78103; display: ' + (isSuperadmin ? '' : 'none') + ';">' + formatRupiah(bonus) + '</td>';
+
+            mBody.innerHTML += '<tr>' +
+                '<td><b>' + mName + '</b></td>' +
+                '<td style="text-align: center;">' + item.count + ' hari</td>' +
+                '<td class="text-right">' + formatRupiah(item.omset) + '</td>' +
+                '<td class="text-right">' + formatRupiah(item.spp) + '</td>' +
+                '<td class="text-right">' + formatRupiah(item.opp) + '</td>' +
+                '<td class="text-right">' + formatRupiah(item.jasa) + '</td>' +
+                '<td class="text-right" style="font-weight: bold; color: var(--accent-color);">' + formatRupiah(item.hasil) + '</td>' +
+                kasTd + bonusTd +
+                '</tr>';
+        });
+
+        if (mKeys.length === 0) {
+            var colCount = isSuperadmin ? 9 : 7;
+            mBody.innerHTML = '<tr><td colspan="' + colCount + '" style="text-align: center; padding: 18px; color: var(--text-muted);">Tidak ada data bulanan.</td></tr>';
+        }
     }
 
     // ==========================================
@@ -1169,138 +1348,6 @@
                 }
             }
         });
-    }
-
-    // ==========================================
-    // RINGKASAN BULANAN & MINGGUAN - SUPERADMIN ONLY
-    // ==========================================
-
-    function switchSummaryTab(tab) {
-        var monthlyBtn = document.getElementById('tabMonthlyBtn');
-        var weeklyBtn = document.getElementById('tabWeeklyBtn');
-        var monthlyContent = document.getElementById('tabMonthlyContent');
-        var weeklyContent = document.getElementById('tabWeeklyContent');
-
-        if (tab === 'monthly') {
-            monthlyBtn.classList.add('active');
-            weeklyBtn.classList.remove('active');
-            monthlyContent.style.display = 'block';
-            weeklyContent.style.display = 'none';
-        } else {
-            weeklyBtn.classList.add('active');
-            monthlyBtn.classList.remove('active');
-            weeklyContent.style.display = 'block';
-            monthlyContent.style.display = 'none';
-        }
-    }
-
-    function getWeekRangeLabel(dateStr) {
-        var parts = dateStr.split('-');
-        var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-        var day = d.getDay();
-        var diffToMon = d.getDate() - day + (day === 0 ? -6 : 1);
-        var monday = new Date(d.setDate(diffToMon));
-        var sunday = new Date(monday);
-        sunday.setDate(monday.getDate() + 6);
-
-        var monStr = monday.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-        var sunStr = sunday.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
-        var key = formatDateISO(monday);
-        return { key: key, label: monStr + ' - ' + sunStr };
-    }
-
-    function renderMonthlyAndWeekly() {
-        if (!currentUser || currentUser.role !== 'superadmin') return;
-
-        var isSuperadmin = true;
-
-        // 1. Agregasi Bulanan
-        var monthlyMap = {};
-        transactions.forEach(function(t) {
-            var mKey = t.tanggal.substring(0, 7); // YYYY-MM
-            if (!monthlyMap[mKey]) {
-                monthlyMap[mKey] = { count: 0, omset: 0, spp: 0, opp: 0, jasa: 0, hasil: 0 };
-            }
-            monthlyMap[mKey].count++;
-            monthlyMap[mKey].omset += (t.omset || 0);
-            monthlyMap[mKey].spp += (t.spp || 0);
-            monthlyMap[mKey].opp += (t.opp || 0);
-            monthlyMap[mKey].jasa += (t.jasa || 0);
-            monthlyMap[mKey].hasil += (t.hasil || 0);
-        });
-
-        var mBody = document.getElementById('monthlySummaryBody');
-        mBody.innerHTML = '';
-        var mKeys = Object.keys(monthlyMap).sort();
-
-        mKeys.forEach(function(mKey) {
-            var item = monthlyMap[mKey];
-            var kas = item.hasil * 0.30;
-            var bonus = item.hasil * 0.10;
-            var dateObj = new Date(mKey + '-01');
-            var mName = dateObj.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
-
-            var kasTd = '<td class="text-right col-superadmin" style="font-weight: 600; color: #0b5e2f;">' + formatRupiah(kas) + '</td>';
-            var bonusTd = '<td class="text-right col-superadmin" style="font-weight: 600; color: #b78103;">' + formatRupiah(bonus) + '</td>';
-
-            mBody.innerHTML += '<tr>' +
-                '<td><b>' + mName + '</b></td>' +
-                '<td style="text-align: center;">' + item.count + ' hari</td>' +
-                '<td class="text-right">' + formatRupiah(item.omset) + '</td>' +
-                '<td class="text-right">' + formatRupiah(item.spp) + '</td>' +
-                '<td class="text-right">' + formatRupiah(item.opp) + '</td>' +
-                '<td class="text-right">' + formatRupiah(item.jasa) + '</td>' +
-                '<td class="text-right" style="font-weight: bold; color: var(--accent-color);">' + formatRupiah(item.hasil) + '</td>' +
-                kasTd + bonusTd +
-                '</tr>';
-        });
-
-        if (mKeys.length === 0) {
-            mBody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 18px; color: var(--text-muted);">Tidak ada data untuk periode ini.</td></tr>';
-        }
-
-        // 2. Agregasi Mingguan
-        var weeklyMap = {};
-        transactions.forEach(function(t) {
-            var wInfo = getWeekRangeLabel(t.tanggal);
-            if (!weeklyMap[wInfo.key]) {
-                weeklyMap[wInfo.key] = { label: wInfo.label, count: 0, omset: 0, spp: 0, opp: 0, jasa: 0, hasil: 0 };
-            }
-            weeklyMap[wInfo.key].count++;
-            weeklyMap[wInfo.key].omset += (t.omset || 0);
-            weeklyMap[wInfo.key].spp += (t.spp || 0);
-            weeklyMap[wInfo.key].opp += (t.opp || 0);
-            weeklyMap[wInfo.key].jasa += (t.jasa || 0);
-            weeklyMap[wInfo.key].hasil += (t.hasil || 0);
-        });
-
-        var wBody = document.getElementById('weeklySummaryBody');
-        wBody.innerHTML = '';
-        var wKeys = Object.keys(weeklyMap).sort();
-
-        wKeys.forEach(function(wKey) {
-            var item = weeklyMap[wKey];
-            var kas = item.hasil * 0.30;
-            var bonus = item.hasil * 0.10;
-
-            var kasTd = '<td class="text-right col-superadmin" style="font-weight: 600; color: #0b5e2f;">' + formatRupiah(kas) + '</td>';
-            var bonusTd = '<td class="text-right col-superadmin" style="font-weight: 600; color: #b78103;">' + formatRupiah(bonus) + '</td>';
-
-            wBody.innerHTML += '<tr>' +
-                '<td><b>' + item.label + '</b></td>' +
-                '<td style="text-align: center;">' + item.count + ' hari</td>' +
-                '<td class="text-right">' + formatRupiah(item.omset) + '</td>' +
-                '<td class="text-right">' + formatRupiah(item.spp) + '</td>' +
-                '<td class="text-right">' + formatRupiah(item.opp) + '</td>' +
-                '<td class="text-right">' + formatRupiah(item.jasa) + '</td>' +
-                '<td class="text-right" style="font-weight: bold; color: var(--accent-color);">' + formatRupiah(item.hasil) + '</td>' +
-                kasTd + bonusTd +
-                '</tr>';
-        });
-
-        if (wKeys.length === 0) {
-            wBody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 18px; color: var(--text-muted);">Tidak ada data untuk periode ini.</td></tr>';
-        }
     }
 
     // ==========================================
@@ -1424,10 +1471,10 @@
     function exportToExcel() {
         var isSuperadmin = currentUser && currentUser.role === 'superadmin';
 
-        var html = '<html><head><meta charset="UTF-8"><title>Pembukuan Toko</title>';
+        var html = '<html><head><meta charset="UTF-8"><title>Riwayat Buku Toko</title>';
         html += '<style>table{border-collapse:collapse;width:100%;} th,td{border:1px solid #ddd;padding:8px;font-family:Arial,sans-serif;} th{background:#107c41;color:#fff;text-align:left;} .text-right{text-align:right;} .tot{font-weight:bold;background:#f5f5f5;} .kas{background:#e6f4ed;font-weight:bold;}</style>';
         html += '</head><body>';
-        html += '<h2>Laporan Buku Harian Toko</h2>';
+        html += '<h2>Laporan Riwayat Buku Toko</h2>';
         html += '<p>Tanggal Cetak: ' + new Date().toLocaleString('id-ID') + '</p>';
         html += '<table><thead><tr>';
         html += '<th>No</th><th>Tanggal</th><th class="text-right">Omset</th><th class="text-right">SPP</th><th class="text-right">Opp Toko</th><th class="text-right">Jasa</th><th class="text-right">Hasil</th>';
@@ -1495,7 +1542,7 @@
 
         html += '</tbody></table></body></html>';
 
-        var filename = 'Laporan_Pembukuan_Toko_' + getSystemDate() + '.xls';
+        var filename = 'Laporan_Riwayat_Buku_Toko_' + getSystemDate() + '.xls';
 
         // Trigger direct browser download
         var blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });

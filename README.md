@@ -1,6 +1,6 @@
 # 📊 Panduan Penggunaan & Dokumentasi CalAseToko
 
-Aplikasi **CalAseToko** adalah aplikasi pembukuan toko modern berbasis web (HTML5, CSS3, JavaScript) dengan backend Python (`server.py`) dan database **SQLite (`pembukuan.db`)** yang mendukung sinkronisasi data real-time antar perangkat dalam jaringan lokal, pembagian hak akses (Superadmin & Admin), visualisasi grafik omset & hasil, ringkasan akumulasi periode, serta pencadangan database otomatis.
+Aplikasi **CalAseToko** adalah aplikasi pembukuan toko modern berbasis web (HTML5, CSS3, JavaScript) dengan backend Python (`server.py`) dan database **SQLite (`pembukuan.db`)** yang mendukung sinkronisasi data real-time antar perangkat dalam jaringan lokal, pembagian hak akses (Superadmin & Admin), visualisasi grafik omset & hasil, riwayat buku toko terpadu (Harian, Mingguan, Bulanan), serta pencadangan database otomatis.
 
 ---
 
@@ -29,30 +29,33 @@ Setelah server berjalan, akses browser melalui:
 
 ## 🔐 3. Hak Akses Pengguna (Role Permissions)
 
-Fitur-fitur analitik dan finansial sensitif dirancang khusus hanya dapat diakses oleh **Superadmin**:
+Fitur analitik dan finansial sensitif dirancang khusus hanya dapat diakses penuh oleh **Superadmin**:
 
 | Fitur / Komponen | Superadmin (`super123`) | Admin (`admin123`) |
 |---|:---:|:---:|
 | Input & Edit Transaksi | ✅ Ya | ✅ Ya |
 | Catatan di Transaksi | ✅ Ya | ✅ Ya |
-| Riwayat Buku Harian Toko | ✅ Ya | ✅ Ya |
+| **Riwayat Buku Toko (Harian / Mingguan / Bulanan)** | ✅ Ya | ✅ Ya |
 | Tombol Sembunyikan Riwayat (▲/▼) | ✅ Ya | ✅ Ya |
 | Tombol Sembunyikan Form Input | ✅ Ya | ❌ Tidak |
 | Ekspor Excel (.xls) | ✅ Ya (Lengkap) | ✅ Ya (Operasional) |
 | **Kas (30%) & Bonus (10%)** | ✅ **Terlihat** | ❌ **Disembunyikan** |
 | **📈 Grafik Tren Omset & Hasil** | ✅ **Terlihat** | ❌ **Disembunyikan** |
-| **📅 Ringkasan Bulanan & Mingguan** | ✅ **Terlihat** | ❌ **Disembunyikan** |
 | Hapus Transaksi & Reset Data | ✅ Ya | ❌ Tidak |
 
 ---
 
 ## ✨ 4. Fitur-Fitur Utama
 
-### 🔼 A. Sembunyikan / Tampilkan Riwayat Buku Harian Toko (Tombol Panah)
-- Pada judul kartu **Riwayat Buku Harian Toko**, terdapat tombol panah atas/bawah:
-  - **`▲ Sembunyikan`**: Menyembunyikan tampilan tabel riwayat agar halaman lebih ringkas.
-  - **`▼ Tampilkan`**: Membuka kembali tabel riwayat.
-- Pilihan status sembunyikan disimpan di browser sehingga tetap diingat saat halaman dimuat ulang.
+### 📋 A. Riwayat Buku Toko (3 Tampilan dalam 1 Bar Terpadu)
+- Menyatukan riwayat harian dan ringkasan akumulasi periode ke dalam satu wadah kartu yang praktis dan efisien.
+- **Pilihan Tampilan (Tabs Segmented):**
+  - **`📅 Harian`** : Menampilkan daftar rincian setiap transaksi harian toko secara kronologis.
+  - **`🗓️ Mingguan`** : Menampilkan ringkasan akumulasi per minggu (Senin s/d Minggu).
+  - **`📆 Bulanan`** : Menampilkan ringkasan akumulasi per bulan kalender.
+- **Tombol Panah Sembunyikan/Tampilkan (`▲` / `▼`):**
+  - Menyembunyikan atau membuka seluruh tabel riwayat untuk tampilan yang lebih ringkas.
+  - Pilihan status disimpan di browser secara otomatis.
 
 ### 📝 B. Kolom Catatan / Keterangan Transaksi
 - Input transaksi dilengkapi kolom **Catatan** untuk mencatat keterangan belanja inventaris, servis, atau catatan harian lainnya.
@@ -63,13 +66,7 @@ Fitur-fitur analitik dan finansial sensitif dirancang khusus hanya dapat diakses
 - Membandingkan tren harian antara **Omset** dan **Hasil Bersih**.
 - Otomatis disembunyikan saat pengguna login sebagai **Admin**.
 
-### 📅 D. Ringkasan Akumulasi Bulanan & Mingguan (Khusus Superadmin)
-- Mengelompokkan total transaksi secara otomatis:
-  - **Ringkasan Bulanan:** Akumulasi per bulan (Omset, SPP, Opp Toko, Jasa, Hasil, Kas 30%, Bonus 10%).
-  - **Ringkasan Mingguan:** Akumulasi per minggu (Senin s/d Minggu).
-- Otomatis disembunyikan saat pengguna login sebagai **Admin**.
-
-### 🔔 E. Notifikasi Toast Sinkronisasi Antar Perangkat
+### 🔔 D. Notifikasi Toast Sinkronisasi Antar Perangkat
 - Sistem *live sync* otomatis memunculkan notifikasi banner (*Toast*) di pojok kanan atas saat ada perubahan data dari perangkat lain di jaringan LAN.
 
 ---
