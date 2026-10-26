@@ -6,17 +6,22 @@ Aplikasi **CalAseToko** adalah aplikasi pembukuan toko modern berbasis web (HTML
 
 ## 🚀 1. Menjalankan & Menghentikan Server
 
-### A. Menjalankan Server di Background
+### A. Menjalankan Server & Tray Icon
 Cukup lakukan *double-click* pada file **`jalankan_server.bat`**.
-- Skrip otomatis membuka firewall port `8080` dan menjalankan server Python secara senyap di *background* **tanpa memunculkan jendela Command Prompt**.
+- Skrip otomatis membuka firewall port `8080`, menampilkan jendela konsol server, dan memunculkan ikon KasToko (**KT**) di **System Tray** (area notifikasi Windows di dekat jam).
+- **Minimize to Background (System Tray):**
+  - Jendela konsol **TIDAK auto-hide** saat baru dibuka.
+  - Namun, ketika Anda menekan tombol **Minimize (`_`)**, jendela server akan **otomatis disembunyikan ke background** dan tersimpan rapi di System Tray agar taskbar tetap bersih.
 
-### B. Cara Menghentikan Server
-1. **Melalui Command Prompt (CMD):**
-   ```cmd
-   taskkill /f /im python.exe
-   ```
-2. **Melalui Task Manager:**
-   Tekan `Ctrl + Shift + Esc` -> Cari proses **Python** (`python.exe`) -> Klik kanan lalu pilih **End Task**.
+### B. Menu Klik Kanan di System Tray
+Klik kanan pada ikon KasToko di System Tray untuk mengakses menu:
+1. **🌐 Open (Buka KasToko):** Membuka dashboard KasToko langsung di peramban web dan memunculkan kembali jendela konsol.
+2. **🖥️ Tampilkan/Sembunyikan Jendela Server:** Toggle untuk memunculkan atau menyembunyikan jendela konsol secara manual.
+3. **❌ Quit (Keluar):** Menghentikan server Python dan menutup aplikasi secara bersih tanpa meninggalkan proses menggantung.
+
+### C. Cara Menghentikan Server
+- Cukup klik kanan ikon Tray KasToko lalu pilih **Quit (Keluar)**.
+- Atau jika jendela konsol sedang terbuka, tekan kombinasi tombol `Ctrl + C`.
 
 ---
 

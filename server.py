@@ -5,6 +5,8 @@ import json
 import sqlite3
 import datetime
 import urllib.parse
+import threading
+import signal
 
 PORT = 8080
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
@@ -413,7 +415,29 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
 if __name__ == "__main__":
     socketserver.TCPServer.allow_reuse_address = True
     with socketserver.TCPServer(("", PORT), CustomHandler) as httpd:
-        print(f"Server Pembukuan Toko berjalan di http://localhost:{PORT}")
-        print(f"Database SQLite terpusat di: {DB_FILE}")
-        print(f"Folder Backup JSON: {BACKUP_DIR}")
-        httpd.serve_forever()
+        print(f"==============================================================")
+        print(f"  KasToko - Server Pembukuan Toko")
+        print(f"  Port: {PORT}")
+        print(f"  URL : http://localhost:{PORT}")
+        print(f"  Database : {DB_FILE}")
+        print(f"==============================================================")
+        print(f"[INFO] Server aktif. Minimize jendela ini untuk berjalan di background.")
+        print(f"[INFO] Klik kanan icon Tray untuk 'Open' atau 'Quit'.\n")
+
+        # Inisialisasi System Tray & Minimize-to-Tray Manager
+        tray = None
+        try:
+            from tray_manager import init_tray_manager
+            def on_server_quit():
+                threading.Thread(target=httpd.shutdown, daemon=True).start()
+            tray = init_tray_manager(PORT, on_quit=on_server_quit)
+        except Exception as e:
+            print(f"[WARN] Tray manager tidak dapat diaktifkan: {e}")
+
+        try:
+            httpd.serve_forever()
+        except KeyboardInterrupt:
+            print("\n[INFO] Menghentikan server...")
+        finally:
+            if tray:
+                tray.stop()
