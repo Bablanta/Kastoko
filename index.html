@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aplikasi Pembukuan Toko - Dashboard</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="icon" type="image/x-icon" id="appFavicon" href="data:image/x-icon;base64,AAABAAEAEBAQAAEABAAoAQAAFgAAACgAAAAQAAAAIAAAAAEAABAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////">
+    <link rel="icon" type="image/x-icon" id="appFavicon" href="default_logo.ico">
     <!-- Chart.js: Lokal dengan fallback CDN untuk keandalan 100% offline & online -->
     <script src="chart.umd.min.js"></script>
     <script>
@@ -45,7 +45,10 @@
     <!-- Settings Modal (Gear Menu) -->
     <div class="modal-overlay" id="settingsModal" style="display: none;">
         <div class="modal-card">
-            <h2>⚙️ Pengaturan Aplikasi</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color); padding-bottom: 8px; margin-bottom: 4px;">
+                <h2 style="margin: 0; text-align: left; font-size: 18px;">⚙️ Pengaturan Aplikasi</h2>
+                <button class="toast-close" style="font-size: 20px; padding: 2px 8px; cursor: pointer;" onclick="closeSettingsModal()" title="Tutup">✕</button>
+            </div>
             
             <!-- Section 1: Theme -->
             <div class="settings-section">
@@ -63,8 +66,15 @@
             <!-- Section 3: Logo Customization (.ico only) -->
             <div class="settings-section">
                 <h3>Logo Aplikasi (.ico)</h3>
-                <p style="font-size: 11px; color: var(--text-muted);">Pilih file gambar berformat <b>.ico</b> untuk mengubah logo aplikasi.</p>
-                <input type="file" id="logoFileInput" class="form-control" accept=".ico" onchange="handleLogoUpload(this)" style="font-size: 12px; padding: 6px;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;">
+                    <img id="settingsLogoPreview" src="default_logo.ico" alt="Logo Preview" style="width: 40px; height: 40px; object-fit: contain; border-radius: 8px; border: 1px solid var(--border-color); background: #ffffff; padding: 3px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">
+                    <div style="font-size: 11px; flex: 1;">
+                        <div id="logoStatusLabel" style="font-weight: bold; color: var(--accent-color); margin-bottom: 2px;">Logo Bawaan KasToko (KT) Aktif</div>
+                        <div style="color: var(--text-muted);">Pilih file <b>.ico</b> untuk logo kustom toko Anda.</div>
+                    </div>
+                </div>
+                <input type="file" id="logoFileInput" class="form-control" accept=".ico" onchange="handleLogoSelect(this)" style="font-size: 12px; padding: 6px;">
+                <button class="btn" id="resetLogoBtn" onclick="prepareResetDefaultLogo()" style="margin-top: 4px; font-size: 11px; padding: 6px 12px; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--border-color); width: 100%;">🔄 Gunakan Logo Bawaan (KT)</button>
             </div>
 
             <!-- Section 4: Database Backup & Restore -->
@@ -80,7 +90,8 @@
                 </div>
             </div>
 
-            <button class="btn btn-primary" style="height: 40px; margin-top: 5px;" onclick="closeSettingsModal()">Tutup Pengaturan</button>
+            <!-- Tombol Simpan Pengaturan -->
+            <button class="btn btn-primary" style="height: 44px; margin-top: 6px; font-weight: bold; font-size: 14px;" onclick="saveSettingsModal()">💾 Simpan</button>
         </div>
     </div>
 
@@ -147,7 +158,7 @@
         <header>
             <div style="display: flex; align-items: center; gap: 15px;">
                 <h1>
-                    <img id="headerLogoImg" class="app-logo" src="data:image/x-icon;base64,AAABAAEAEBAQAAEABAAoAQAAFgAAACgAAAAQAAAAIAAAAAEAABAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////" alt="Logo">
+                    <img id="headerLogoImg" class="app-logo" src="default_logo.ico" alt="Logo">
                     Dashboard Pembukuan Toko
                 </h1>
                 <span class="role-badge" id="roleBadge">Role: -</span>
@@ -439,22 +450,8 @@
         var savedBookView = localStorage.getItem('calasetoko_book_view') || 'harian';
         switchBookView(savedBookView);
 
-        // Load custom logo if exists
-        var savedLogo = localStorage.getItem('calasetoko_logo_ico');
-        if (savedLogo) {
-            document.getElementById('appFavicon').href = savedLogo;
-            document.getElementById('headerLogoImg').src = savedLogo;
-        }
-
-        fetch('logo.ico', { method: 'HEAD' })
-            .then(function(res) {
-                if (res.ok) {
-                    var logoUrl = 'logo.ico?t=' + Date.now();
-                    document.getElementById('appFavicon').href = logoUrl;
-                    document.getElementById('headerLogoImg').src = logoUrl;
-                }
-            })
-            .catch(function(err) {});
+        // Load logo (kustom permanen atau default KT)
+        loadAppLogo();
 
         var savedSession = sessionStorage.getItem('calasetoko_current_role');
         if (savedSession) {
@@ -580,47 +577,142 @@
             });
     }
 
-    function handleLogoUpload(input) {
+    var pendingLogoBase64 = null;
+
+    function loadAppLogo() {
+        fetch('/api/logo')
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.success && data.has_custom_logo) {
+                    setLogoElements(data.logo_url, true);
+                } else {
+                    setLogoElements('default_logo.ico?t=' + Date.now(), false);
+                }
+            })
+            .catch(function(err) {
+                var saved = localStorage.getItem('calasetoko_logo_ico');
+                if (saved) {
+                    setLogoElements(saved, true);
+                } else {
+                    setLogoElements('default_logo.ico', false);
+                }
+            });
+    }
+
+    function setLogoElements(url, isCustom) {
+        var favicon = document.getElementById('appFavicon');
+        if (favicon) favicon.href = url;
+        var headerImg = document.getElementById('headerLogoImg');
+        if (headerImg) headerImg.src = url;
+        var preview = document.getElementById('settingsLogoPreview');
+        if (preview) preview.src = url;
+        var label = document.getElementById('logoStatusLabel');
+        if (label) {
+            label.innerText = isCustom ? 'Logo Kustom Aktif' : 'Logo Bawaan KasToko (KT) Aktif';
+            label.style.color = isCustom ? 'var(--accent-color)' : 'var(--text-muted)';
+        }
+    }
+
+    function handleLogoSelect(input) {
         if (input.files && input.files[0]) {
             var file = input.files[0];
             var fileName = file.name.toLowerCase();
-            
             if (!fileName.endsWith('.ico')) {
                 alert("Format file tidak valid! Harap pilih file berformat .ico saja.");
                 input.value = '';
                 return;
             }
-
             var reader = new FileReader();
             reader.onload = function(e) {
-                var base64Data = e.target.result;
-                localStorage.setItem('calasetoko_logo_ico', base64Data);
-                document.getElementById('appFavicon').href = base64Data;
-                document.getElementById('headerLogoImg').src = base64Data;
-
-                fetch('/api/logo', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ image: base64Data })
-                })
-                .then(function(res) { return res.json(); })
-                .then(function(data) {
-                    if (data.success) {
-                        showToast("Logo aplikasi berhasil disimpan permanen!", "success");
-                    } else {
-                        showToast("Logo disimpan secara lokal: " + data.message, "warning");
-                    }
-                })
-                .catch(function(err) {
-                    showToast("Logo berhasil diubah!", "success");
-                });
+                pendingLogoBase64 = e.target.result;
+                var preview = document.getElementById('settingsLogoPreview');
+                if (preview) preview.src = pendingLogoBase64;
+                var label = document.getElementById('logoStatusLabel');
+                if (label) {
+                    label.innerText = 'Logo baru dipilih (klik Simpan untuk menerapkan)';
+                    label.style.color = '#107c41';
+                }
+                showToast("File logo dipilih. Klik 'Simpan' untuk mempermanenkan.", "info");
             };
             reader.readAsDataURL(file);
         }
     }
 
+    function prepareResetDefaultLogo() {
+        pendingLogoBase64 = 'RESET_DEFAULT';
+        var defUrl = 'default_logo.ico?t=' + Date.now();
+        var preview = document.getElementById('settingsLogoPreview');
+        if (preview) preview.src = defUrl;
+        var fileInput = document.getElementById('logoFileInput');
+        if (fileInput) fileInput.value = '';
+        var label = document.getElementById('logoStatusLabel');
+        if (label) {
+            label.innerText = 'Akan diubah ke Logo Bawaan KT (klik Simpan)';
+            label.style.color = '#f0ad4e';
+        }
+        showToast("Logo bawaan dipilih. Klik 'Simpan' untuk menerapkan.", "info");
+    }
+
+    function saveSettingsModal() {
+        if (pendingLogoBase64 === 'RESET_DEFAULT') {
+            fetch('/api/logo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'reset' })
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                localStorage.removeItem('calasetoko_logo_ico');
+                setLogoElements('default_logo.ico?t=' + Date.now(), false);
+                pendingLogoBase64 = null;
+                showToast("Pengaturan disimpan! Menggunakan Logo Bawaan KasToko.", "success");
+                closeSettingsModal();
+            })
+            .catch(function(err) {
+                localStorage.removeItem('calasetoko_logo_ico');
+                setLogoElements('default_logo.ico', false);
+                pendingLogoBase64 = null;
+                showToast("Pengaturan disimpan!", "success");
+                closeSettingsModal();
+            });
+        } else if (pendingLogoBase64) {
+            var dataToSend = pendingLogoBase64;
+            fetch('/api/logo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: dataToSend })
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    localStorage.setItem('calasetoko_logo_ico', dataToSend);
+                    setLogoElements(data.logo_url || ('logo.ico?t=' + Date.now()), true);
+                    pendingLogoBase64 = null;
+                    showToast("Pengaturan disimpan! Logo kustom dipermanenkan.", "success");
+                    closeSettingsModal();
+                } else {
+                    alert("Gagal menyimpan logo: " + data.message);
+                }
+            })
+            .catch(function(err) {
+                localStorage.setItem('calasetoko_logo_ico', dataToSend);
+                setLogoElements(dataToSend, true);
+                pendingLogoBase64 = null;
+                showToast("Pengaturan disimpan!", "success");
+                closeSettingsModal();
+            });
+        } else {
+            showToast("Pengaturan berhasil disimpan!", "success");
+            closeSettingsModal();
+        }
+    }
+
     function openSettingsModal() {
         document.getElementById('settingsModal').style.display = 'flex';
+        pendingLogoBase64 = null;
+        var fileInput = document.getElementById('logoFileInput');
+        if (fileInput) fileInput.value = '';
+        loadAppLogo();
         loadBackupList();
     }
 
@@ -678,6 +770,8 @@
 
     function closeSettingsModal() {
         document.getElementById('settingsModal').style.display = 'none';
+        pendingLogoBase64 = null;
+        loadAppLogo();
     }
 
     function loadTransactions(isManualSync) {

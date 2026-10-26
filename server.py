@@ -164,6 +164,27 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_header('Content-Type', 'application/json')
                 self.end_headers()
                 self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
+
+        elif self.path == "/api/logo":
+            try:
+                logo_path = os.path.join(DIRECTORY, "logo.ico")
+                has_custom = os.path.exists(logo_path)
+                mtime = int(os.path.getmtime(logo_path)) if has_custom else 0
+                logo_url = f"/logo.ico?t={mtime}" if has_custom else "/default_logo.ico"
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    "success": True,
+                    "has_custom_logo": has_custom,
+                    "logo_url": logo_url
+                }).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
         else:
             super().do_GET()
 
@@ -308,7 +329,27 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             try:
                 import base64
                 data = json.loads(post_data.decode('utf-8'))
+                action = data.get('action', '')
+                logo_path = os.path.join(DIRECTORY, "logo.ico")
+
+                if action == 'reset':
+                    if os.path.exists(logo_path):
+                        os.remove(logo_path)
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    response = {
+                        "success": True,
+                        "has_custom_logo": False,
+                        "logo_url": "/default_logo.ico",
+                        "message": "Logo berhasil dikembalikan ke logo bawaan KasToko."
+                    }
+                    self.wfile.write(json.dumps(response).encode('utf-8'))
+                    return
+
                 image_data = data.get('image', '')
+                if not image_data:
+                    raise Exception("Data gambar logo tidak boleh kosong.")
                 
                 if ',' in image_data:
                     header, encoded = image_data.split(',', 1)
@@ -316,15 +357,19 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     encoded = image_data
 
                 binary_data = base64.b64decode(encoded)
-                logo_path = os.path.join(DIRECTORY, "logo.ico")
-                
                 with open(logo_path, 'wb') as f:
                     f.write(binary_data)
 
+                mtime = int(os.path.getmtime(logo_path))
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.end_headers()
-                response = {"success": True, "message": "Logo berhasil disimpan secara permanen di server."}
+                response = {
+                    "success": True,
+                    "has_custom_logo": True,
+                    "logo_url": f"/logo.ico?t={mtime}",
+                    "message": "Logo berhasil disimpan secara permanen di server."
+                }
                 self.wfile.write(json.dumps(response).encode('utf-8'))
             except Exception as e:
                 self.send_response(500)
