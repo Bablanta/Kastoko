@@ -74,6 +74,24 @@ Fitur analitik dan finansial sensitif dirancang khusus hanya dapat diakses penuh
 ### 🔔 D. Notifikasi Toast Sinkronisasi Antar Perangkat
 - Sistem *live sync* otomatis memunculkan notifikasi banner (*Toast*) di pojok kanan atas saat ada perubahan data dari perangkat lain di jaringan LAN.
 
+### 🔧 E. Dashboard Servis & Reparasi Unit (Fitur Baru)
+- **Navigasi Tab Terpadu:** Beralih instan antara **📊 Pembukuan Keuangan** dan **🔧 Dashboard Servis** dengan penghitung tiket aktif otomatis.
+- **Pendaftaran & Input Servis Lengkap:**
+  - **Data Pelanggan:** Nama Pelanggan & No. HP (WhatsApp).
+  - **Auto-Save Data Pelanggan:** Pelanggan baru otomatis tersimpan ke master database pelanggan SQLite.
+  - **Auto-Complete Pelanggan:** Mengetik nama atau nomor HP lama otomatis mengisi data pelanggan secara cerdas.
+  - **Status Servis:** Pilihan status pengerjaan (*Baru*, *Instan*, *Sedang Dikerjakan*, *Selesai*, *Sudah Diambil*, *Batal*).
+  - **Menu Servis:** Pilihan layanan (*Diagnosa*, *Servis Instan*, *Perbaikan Ringan*, *Ganti Sparepart*, *Servis Berat*).
+  - **Data Unit / Perangkat:** Jenis perangkat (*Smartphone/HP*, *Laptop*, *PC*, *Tablet*, dll), Merk/Model, Keluhan Pelanggan, dan Catatan Teknisi.
+  - **Estimasi Biaya & Tanggal Masuk.**
+- **Antrean & Riwayat Servis:**
+  - Filter pencarian cepat (Nama, No HP, Kode Servis, Merk/Model, Keluhan).
+  - Filter tab status (*Semua*, *Baru*, *Instan*, *Diproses*, *Selesai*, *Diambil*).
+  - Shortcut WhatsApp langsung ke nomor pelanggan untuk update pengerjaan.
+  - Tombol ganti status cepat (*Baru* -> *Diproses* -> *Selesai* -> *Diambil*).
+- **🖨️ Cetak Nota Tanda Terima:**
+  - Pratinjau nota tanda terima profesional lengkap dengan rincian unit, keluhan, estimasi biaya, dan kolom tanda tangan pelanggan & teknisi yang siap dicetak ke printer biasa maupun thermal.
+
 ---
 
 ## 🗄️ 5. Database SQLite & Auto-Backup

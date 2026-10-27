@@ -39,6 +39,42 @@ def init_db():
             value TEXT
         )
     ''')
+
+    # Tabel master data pelanggan (Auto-saved)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS customers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nama TEXT NOT NULL,
+            no_hp TEXT NOT NULL,
+            alamat TEXT DEFAULT '',
+            total_servis INTEGER DEFAULT 1,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # Tabel tiket & antrean servis
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS services (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            kode_servis TEXT UNIQUE NOT NULL,
+            customer_id INTEGER,
+            nama_pelanggan TEXT NOT NULL,
+            no_hp TEXT NOT NULL,
+            jenis_perangkat TEXT NOT NULL,
+            merk_model TEXT NOT NULL,
+            keluhan TEXT NOT NULL,
+            catatan_teknisi TEXT DEFAULT '',
+            menu_servis TEXT NOT NULL,
+            status_servis TEXT DEFAULT 'Baru',
+            estimasi_biaya REAL DEFAULT 0,
+            biaya_akhir REAL DEFAULT 0,
+            status_pembayaran TEXT DEFAULT 'Belum Bayar',
+            tanggal_masuk TEXT NOT NULL,
+            tanggal_selesai TEXT DEFAULT '',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
     conn.commit()
 
     # Migrasi kolom catatan jika tabel sudah ada dari versi sebelumnya
@@ -79,6 +115,40 @@ def init_db():
 
     conn.close()
 
+def generate_service_code(cursor):
+    """Generate kode servis otomatis format: SRV-YYYYMMDD-001"""
+    today_str = datetime.date.today().strftime("%Y%m%d")
+    prefix = f"SRV-{today_str}-"
+    cursor.execute("SELECT kode_servis FROM services WHERE kode_servis LIKE ? ORDER BY id DESC LIMIT 1", (f"{prefix}%",))
+    row = cursor.fetchone()
+    if row and row[0]:
+        last_code = row[0]
+        try:
+            last_num = int(last_code.split("-")[-1])
+            new_num = last_num + 1
+        except Exception:
+            new_num = 1
+    else:
+        new_num = 1
+    return f"{prefix}{new_num:03d}"
+
+def auto_save_customer(cursor, nama, no_hp, alamat=""):
+    """Simpan atau perbarui data pelanggan otomatis ke tabel customers"""
+    nama = nama.strip()
+    no_hp = no_hp.strip()
+    if not nama:
+        return None
+    cursor.execute("SELECT id, total_servis FROM customers WHERE (nama = ? AND no_hp = ?) OR (no_hp != '' AND no_hp = ?)", (nama, no_hp, no_hp))
+    cust = cursor.fetchone()
+    if cust:
+        cust_id = cust[0]
+        total = (cust[1] or 0) + 1
+        cursor.execute("UPDATE customers SET nama = ?, no_hp = ?, total_servis = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", (nama, no_hp, total, cust_id))
+        return cust_id
+    else:
+        cursor.execute("INSERT INTO customers (nama, no_hp, alamat, total_servis) VALUES (?, ?, ?, 1)", (nama, no_hp, alamat))
+        return cursor.lastrowid
+
 init_db()
 
 class CustomHandler(http.server.SimpleHTTPRequestHandler):
@@ -86,7 +156,11 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         super().__init__(*args, directory=DIRECTORY, **kwargs)
 
     def do_GET(self):
-        if self.path == "/api/transactions":
+        parsed = urllib.parse.urlparse(self.path)
+        path = parsed.path
+        query = urllib.parse.parse_qs(parsed.query)
+
+        if path == "/api/transactions":
             try:
                 conn = sqlite3.connect(DB_FILE)
                 conn.row_factory = sqlite3.Row
@@ -118,7 +192,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
 
-        elif self.path == "/api/settings":
+        elif path == "/api/settings":
             try:
                 conn = sqlite3.connect(DB_FILE)
                 conn.row_factory = sqlite3.Row
@@ -141,7 +215,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
 
-        elif self.path == "/api/backups":
+        elif path == "/api/backups":
             try:
                 if not os.path.exists(BACKUP_DIR):
                     os.makedirs(BACKUP_DIR, exist_ok=True)
@@ -167,7 +241,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
 
-        elif self.path == "/api/logo":
+        elif path == "/api/logo":
             try:
                 logo_path = os.path.join(DIRECTORY, "logo.ico")
                 has_custom = os.path.exists(logo_path)
@@ -187,11 +261,75 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_header('Content-Type', 'application/json')
                 self.end_headers()
                 self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
+
+        elif path == "/api/services":
+            try:
+                conn = sqlite3.connect(DB_FILE)
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                status_filter = query.get('status', [None])[0]
+                search_q = query.get('q', [None])[0]
+
+                sql = "SELECT * FROM services"
+                clauses = []
+                args = []
+                if status_filter and status_filter != 'Semua':
+                    clauses.append("status_servis = ?")
+                    args.append(status_filter)
+                if search_q:
+                    clauses.append("(nama_pelanggan LIKE ? OR no_hp LIKE ? OR merk_model LIKE ? OR kode_servis LIKE ? OR keluhan LIKE ?)")
+                    q_like = f"%{search_q}%"
+                    args.extend([q_like, q_like, q_like, q_like, q_like])
+                if clauses:
+                    sql += " WHERE " + " AND ".join(clauses)
+                sql += " ORDER BY id DESC"
+
+                cursor.execute(sql, args)
+                rows = cursor.fetchall()
+                services = [dict(row) for row in rows]
+                conn.close()
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True, "services": services}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
+
+        elif path == "/api/customers":
+            try:
+                conn = sqlite3.connect(DB_FILE)
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                search_q = query.get('q', [None])[0]
+                if search_q:
+                    cursor.execute("SELECT * FROM customers WHERE nama LIKE ? OR no_hp LIKE ? ORDER BY total_servis DESC, nama ASC LIMIT 50", (f"%{search_q}%", f"%{search_q}%"))
+                else:
+                    cursor.execute("SELECT * FROM customers ORDER BY total_servis DESC, nama ASC LIMIT 100")
+                rows = cursor.fetchall()
+                customers = [dict(row) for row in rows]
+                conn.close()
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True, "customers": customers}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
         else:
             super().do_GET()
 
     def do_POST(self):
-        if self.path == "/api/transactions":
+        parsed = urllib.parse.urlparse(self.path)
+        path = parsed.path
+
+        if path == "/api/transactions":
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length)
             
@@ -242,7 +380,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 response = {"success": False, "message": str(e)}
                 self.wfile.write(json.dumps(response).encode('utf-8'))
 
-        elif self.path == "/api/settings":
+        elif path == "/api/settings":
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length)
             
@@ -275,7 +413,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 response = {"success": False, "message": str(e)}
                 self.wfile.write(json.dumps(response).encode('utf-8'))
 
-        elif self.path == "/api/restore":
+        elif path == "/api/restore":
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length)
             
@@ -324,7 +462,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 response = {"success": False, "message": str(e)}
                 self.wfile.write(json.dumps(response).encode('utf-8'))
 
-        elif self.path == "/api/logo":
+        elif path == "/api/logo":
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length)
             
@@ -380,7 +518,185 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 response = {"success": False, "message": str(e)}
                 self.wfile.write(json.dumps(response).encode('utf-8'))
 
-        elif self.path == "/api/export":
+        elif path == "/api/services":
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data.decode('utf-8'))
+                srv_id = data.get('id')
+                nama_pelanggan = str(data.get('nama_pelanggan', '')).strip()
+                no_hp = str(data.get('no_hp', '')).strip()
+                jenis_perangkat = str(data.get('jenis_perangkat', '')).strip()
+                merk_model = str(data.get('merk_model', '')).strip()
+                keluhan = str(data.get('keluhan', '')).strip()
+                catatan_teknisi = str(data.get('catatan_teknisi', '')).strip()
+                menu_servis = str(data.get('menu_servis', 'Diagnosa')).strip()
+                status_servis = str(data.get('status_servis', 'Baru')).strip()
+                estimasi_biaya = float(data.get('estimasi_biaya', 0) or 0)
+                biaya_akhir = float(data.get('biaya_akhir', estimasi_biaya) or 0)
+                status_pembayaran = str(data.get('status_pembayaran', 'Belum Bayar')).strip()
+                tanggal_masuk = str(data.get('tanggal_masuk', datetime.date.today().strftime('%Y-%m-%d'))).strip()
+                tanggal_selesai = str(data.get('tanggal_selesai', '')).strip()
+
+                if not nama_pelanggan:
+                    raise Exception("Nama pelanggan wajib diisi.")
+                if not jenis_perangkat or not merk_model:
+                    raise Exception("Jenis perangkat dan merk/model unit wajib diisi.")
+
+                conn = sqlite3.connect(DB_FILE)
+                cursor = conn.cursor()
+
+                # Simpan otomatis data pelanggan ke tabel customers
+                cust_id = auto_save_customer(cursor, nama_pelanggan, no_hp)
+
+                if srv_id:
+                    cursor.execute('''
+                        UPDATE services SET
+                            customer_id = ?,
+                            nama_pelanggan = ?,
+                            no_hp = ?,
+                            jenis_perangkat = ?,
+                            merk_model = ?,
+                            keluhan = ?,
+                            catatan_teknisi = ?,
+                            menu_servis = ?,
+                            status_servis = ?,
+                            estimasi_biaya = ?,
+                            biaya_akhir = ?,
+                            status_pembayaran = ?,
+                            tanggal_masuk = ?,
+                            tanggal_selesai = ?
+                        WHERE id = ?
+                    ''', (
+                        cust_id, nama_pelanggan, no_hp, jenis_perangkat, merk_model,
+                        keluhan, catatan_teknisi, menu_servis, status_servis,
+                        estimasi_biaya, biaya_akhir, status_pembayaran,
+                        tanggal_masuk, tanggal_selesai, srv_id
+                    ))
+                    saved_id = srv_id
+                    msg = "Data servis berhasil diperbarui."
+                else:
+                    kode_servis = generate_service_code(cursor)
+                    cursor.execute('''
+                        INSERT INTO services (
+                            kode_servis, customer_id, nama_pelanggan, no_hp,
+                            jenis_perangkat, merk_model, keluhan, catatan_teknisi,
+                            menu_servis, status_servis, estimasi_biaya, biaya_akhir,
+                            status_pembayaran, tanggal_masuk, tanggal_selesai
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ''', (
+                        kode_servis, cust_id, nama_pelanggan, no_hp,
+                        jenis_perangkat, merk_model, keluhan, catatan_teknisi,
+                        menu_servis, status_servis, estimasi_biaya, biaya_akhir,
+                        status_pembayaran, tanggal_masuk, tanggal_selesai
+                    ))
+                    saved_id = cursor.lastrowid
+                    msg = f"Tiket servis baru #{kode_servis} berhasil disimpan."
+
+                conn.commit()
+                conn.close()
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                response = {"success": True, "id": saved_id, "message": msg}
+                self.wfile.write(json.dumps(response).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                response = {"success": False, "message": str(e)}
+                self.wfile.write(json.dumps(response).encode('utf-8'))
+
+        elif path == "/api/services/status":
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data.decode('utf-8'))
+                srv_id = data.get('id')
+                new_status = data.get('status_servis')
+                if not srv_id or not new_status:
+                    raise Exception("ID dan status servis diperlukan.")
+
+                conn = sqlite3.connect(DB_FILE)
+                cursor = conn.cursor()
+                if new_status in ('Selesai', 'Diambil'):
+                    today_str = datetime.date.today().strftime('%Y-%m-%d')
+                    cursor.execute("UPDATE services SET status_servis = ?, tanggal_selesai = CASE WHEN tanggal_selesai = '' OR tanggal_selesai IS NULL THEN ? ELSE tanggal_selesai END WHERE id = ?", (new_status, today_str, srv_id))
+                else:
+                    cursor.execute("UPDATE services SET status_servis = ? WHERE id = ?", (new_status, srv_id))
+                conn.commit()
+                conn.close()
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                response = {"success": True, "message": f"Status servis berhasil diubah ke '{new_status}'."}
+                self.wfile.write(json.dumps(response).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                response = {"success": False, "message": str(e)}
+                self.wfile.write(json.dumps(response).encode('utf-8'))
+
+        elif path == "/api/services/delete":
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data.decode('utf-8'))
+                srv_id = data.get('id')
+                if not srv_id:
+                    raise Exception("ID servis diperlukan.")
+
+                conn = sqlite3.connect(DB_FILE)
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM services WHERE id = ?", (srv_id,))
+                conn.commit()
+                conn.close()
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                response = {"success": True, "message": "Data servis berhasil dihapus."}
+                self.wfile.write(json.dumps(response).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                response = {"success": False, "message": str(e)}
+                self.wfile.write(json.dumps(response).encode('utf-8'))
+
+        elif path == "/api/customers":
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data.decode('utf-8'))
+                nama = data.get('nama', '').strip()
+                no_hp = data.get('no_hp', '').strip()
+                alamat = data.get('alamat', '').strip()
+                if not nama:
+                    raise Exception("Nama pelanggan wajib diisi.")
+
+                conn = sqlite3.connect(DB_FILE)
+                cursor = conn.cursor()
+                cust_id = auto_save_customer(cursor, nama, no_hp, alamat)
+                conn.commit()
+                conn.close()
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                response = {"success": True, "id": cust_id, "message": "Data pelanggan berhasil disimpan."}
+                self.wfile.write(json.dumps(response).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                response = {"success": False, "message": str(e)}
+                self.wfile.write(json.dumps(response).encode('utf-8'))
+
+        elif path == "/api/export":
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length)
             

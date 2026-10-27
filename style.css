@@ -502,3 +502,200 @@ table tr:hover {
 [data-theme="dark"] .col-superadmin {
     background: rgba(16, 124, 65, 0.12);
 }
+
+/* ========================================================
+   DASHBOARD SERVIS & REPARASI UNIT
+   ======================================================== */
+.main-dashboard-nav {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    background: var(--card-bg);
+    padding: 8px 12px;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border-color);
+}
+
+.dash-nav-btn {
+    flex: 1;
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.25s ease;
+}
+
+.dash-nav-btn:hover {
+    color: var(--text-color);
+    background: rgba(16, 124, 65, 0.06);
+    border-color: var(--accent-color);
+}
+
+.dash-nav-btn.active {
+    background: var(--accent-color);
+    color: #ffffff;
+    border-color: var(--accent-color);
+    box-shadow: 0 2px 8px rgba(16, 124, 65, 0.3);
+}
+
+.badge-count {
+    background: #d9534f;
+    color: #ffffff;
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-weight: bold;
+    margin-left: 4px;
+}
+
+/* Service Form Layout */
+.service-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+    gap: 16px;
+    margin-top: 10px;
+}
+
+.service-form-section {
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    padding: 14px;
+    border-radius: 8px;
+}
+
+/* Status Badges */
+.badge-status {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.badge-baru {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeeba;
+}
+
+.badge-instan {
+    background: #cce5ff;
+    color: #004085;
+    border: 1px solid #b8daff;
+}
+
+.badge-proses {
+    background: #e2e3e5;
+    color: #383d41;
+    border: 1px solid #d6d8db;
+}
+
+.badge-selesai {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.badge-diambil {
+    background: #e8f4f8;
+    color: #1b4965;
+    border: 1px solid #bee5eb;
+}
+
+.badge-batal {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+[data-theme="dark"] .badge-baru { background: #4a3b00; color: #ffe699; border-color: #665200; }
+[data-theme="dark"] .badge-instan { background: #002752; color: #b8daff; border-color: #003875; }
+[data-theme="dark"] .badge-proses { background: #2f2f35; color: #e0e0e0; border-color: #44444a; }
+[data-theme="dark"] .badge-selesai { background: #0b411d; color: #b1dfbb; border-color: #105929; }
+[data-theme="dark"] .badge-diambil { background: #133246; color: #bfe2f7; border-color: #1d4d6b; }
+[data-theme="dark"] .badge-batal { background: #491217; color: #f5c6cb; border-color: #63181f; }
+
+/* Receipt Print Modal */
+.receipt-modal-card {
+    max-width: 480px;
+    width: 95%;
+    padding: 20px;
+}
+
+.receipt-paper {
+    background: #ffffff;
+    color: #222222;
+    padding: 18px 22px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.receipt-header {
+    text-align: center;
+    margin-bottom: 12px;
+}
+
+.receipt-divider {
+    border-bottom: 2px solid #222;
+    margin: 8px 0;
+}
+
+.receipt-divider-dash {
+    border-bottom: 1px dashed #aaa;
+    margin: 6px 0;
+}
+
+.receipt-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    padding: 3px 0;
+}
+
+.receipt-row .r-label {
+    color: #555;
+    width: 38%;
+}
+
+.receipt-row .r-value {
+    color: #111;
+    width: 62%;
+    text-align: right;
+    word-break: break-word;
+}
+
+/* Print Only Styling */
+@media print {
+    body * {
+        visibility: hidden !important;
+    }
+    #receiptPrintArea, #receiptPrintArea * {
+        visibility: visible !important;
+    }
+    #receiptPrintArea {
+        position: fixed !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        max-width: 400px !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 10px !important;
+    }
+    .no-print {
+        display: none !important;
+    }
+}
