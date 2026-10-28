@@ -153,97 +153,464 @@
         </div>
     </div>
 
-    <!-- Receipt Print Modal (Tanda Terima Servis) -->
+    <!-- Modal Cetak Nota (80x100mm) & Label Stiker (USB/Bluetooth) -->
     <div class="modal-overlay" id="receiptModal" style="display: none;">
         <div class="modal-card receipt-modal-card">
+            <!-- Modal Header -->
             <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 12px;">
-                <h3 style="margin: 0; font-size: 16px;">🖨️ Pratinjau Tanda Terima Servis</h3>
+                <h3 style="margin: 0; font-size: 16px;">🖨️ Cetak Nota & Label Unit</h3>
                 <button class="toast-close" onclick="closeReceiptModal()" title="Tutup">✕</button>
             </div>
-            
-            <!-- Printable Receipt Box -->
-            <div id="receiptPrintArea" class="receipt-paper">
-                <div class="receipt-header">
-                    <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 4px;">
-                        <img id="receiptLogo" src="default_logo.ico" alt="Logo" style="width: 28px; height: 28px; object-fit: contain;">
-                        <h2 style="font-size: 18px; margin: 0; letter-spacing: 0.5px;">KASTOKO SERVIS</h2>
+
+            <!-- Tabs Jenis Cetakan -->
+            <div class="print-tabs no-print">
+                <button class="print-tab-btn active" id="tabPrintMasuk" onclick="switchReceiptType('masuk')">
+                    📥 1. Nota Penerimaan
+                </button>
+                <button class="print-tab-btn" id="tabPrintAmbil" onclick="switchReceiptType('ambil')">
+                    📤 2. Nota Pengambilan
+                </button>
+                <button class="print-tab-btn" id="tabPrintLabel" onclick="switchReceiptType('label')">
+                    🏷️ 3. Label Stiker Unit
+                </button>
+            </div>
+
+            <!-- Box Pengaturan Cetak & Koneksi USB / Bluetooth -->
+            <div class="print-settings-box no-print">
+                <!-- Baris Setting Label & Opsi Otomatis -->
+                <div class="print-settings-row">
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <span style="font-weight: 600;">Ukuran Label:</span>
+                        <select id="labelSizeSelect" class="form-control" style="width: auto; padding: 4px 8px; font-size: 11px; height: 30px;" onchange="onLabelSizeChange(this.value)">
+                            <option value="40x20">40 x 20 mm (Mini Stiker)</option>
+                            <option value="40x30">40 x 30 mm (Standar Stiker)</option>
+                            <option value="50x30">50 x 30 mm (Stiker Lebar)</option>
+                        </select>
                     </div>
-                    <div style="font-size: 11px; color: #555;">TANDA TERIMA PENERIMAAN / REPARASI UNIT</div>
-                    <div style="font-size: 11px; color: #777;" id="receiptDatePrint">-</div>
-                    <div class="receipt-divider"></div>
+                    <label style="cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 11px; user-select: none;">
+                        <input type="checkbox" id="autoPrintLabelCheck" onchange="toggleAutoPrintLabel(this.checked)">
+                        <span>Otomatis cetak label setelah cetak nota</span>
+                    </label>
                 </div>
 
-                <div class="receipt-body">
-                    <div class="receipt-row">
-                        <span class="r-label">No. Tiket</span>
-                        <span class="r-value" id="rKodeServis" style="font-weight: bold;">-</span>
+                <!-- Baris Status & Tombol Koneksi USB / Bluetooth -->
+                <div class="print-settings-row" style="border-top: 1px dashed var(--border-color); padding-top: 8px; margin-top: 6px;">
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <span style="font-weight: 600;">Koneksi Thermal:</span>
+                        <span class="printer-badge disconnected" id="btBadge">📶 Bluetooth: Terputus</span>
+                        <span class="printer-badge disconnected" id="usbBadge">🔌 USB: Terputus</span>
                     </div>
-                    <div class="receipt-row">
-                        <span class="r-label">Pelanggan</span>
-                        <span class="r-value" id="rNama">-</span>
-                    </div>
-                    <div class="receipt-row">
-                        <span class="r-label">No. HP / WA</span>
-                        <span class="r-value" id="rNoHp">-</span>
-                    </div>
-                    <div class="receipt-divider-dash"></div>
-                    <div class="receipt-row">
-                        <span class="r-label">Perangkat</span>
-                        <span class="r-value" id="rPerangkat">-</span>
-                    </div>
-                    <div class="receipt-row">
-                        <span class="r-label">Merk / Model</span>
-                        <span class="r-value" id="rMerkModel">-</span>
-                    </div>
-                    <div class="receipt-row">
-                        <span class="r-label">Layanan</span>
-                        <span class="r-value" id="rMenuServis">-</span>
-                    </div>
-                    <div class="receipt-row">
-                        <span class="r-label">Keluhan</span>
-                        <span class="r-value" id="rKeluhan" style="font-style: italic;">-</span>
-                    </div>
-                    <div class="receipt-row" id="rRowCatatan">
-                        <span class="r-label">Catatan Teknisi</span>
-                        <span class="r-value" id="rCatatanTeknisi">-</span>
-                    </div>
-                    <div class="receipt-divider-dash"></div>
-                    <div class="receipt-row" style="font-size: 14px; font-weight: bold; margin-top: 4px;">
-                        <span class="r-label">Estimasi Biaya</span>
-                        <span class="r-value" id="rBiaya" style="color: #107c41;">Rp 0</span>
-                    </div>
-                    <div class="receipt-row">
-                        <span class="r-label">Status</span>
-                        <span class="r-value" id="rStatus">-</span>
+                    <div style="display: flex; gap: 6px;">
+                        <button class="btn btn-sm" onclick="connectBluetoothPrinter()" id="btnBtConnect" style="font-size: 11px; padding: 3px 8px; background: #e8f4f8; color: #1b4965; border: 1px solid #bee5eb;">
+                            📶 Hubungkan BT
+                        </button>
+                        <button class="btn btn-sm" onclick="connectUsbPrinter()" id="btnUsbConnect" style="font-size: 11px; padding: 3px 8px; background: #e8f4f8; color: #1b4965; border: 1px solid #bee5eb;">
+                            🔌 Hubungkan USB
+                        </button>
                     </div>
                 </div>
 
-                <div class="receipt-footer">
-                    <div style="font-size: 10px; color: #666; margin: 12px 0 8px; line-height: 1.4; border-top: 1px dashed #ccc; padding-top: 6px;">
-                        * Harap membawa tanda terima ini saat pengambilan unit.<br>
-                        * Kerusakan aksesoris yang tidak dicatat di luar tanggung jawab toko.
+                <!-- Baris Khusus Nota Pengambilan: Penyesuaian Harga & Pelunasan -->
+                <div id="boxPengambilanHarga" style="display: none; border-top: 1px solid var(--border-color); padding-top: 8px; margin-top: 8px;">
+                    <div style="font-weight: bold; color: var(--accent-color); margin-bottom: 6px;">
+                        💰 Informasi Pelunasan / Pengambilan Unit:
                     </div>
-                    <div style="display: flex; justify-content: space-between; margin-top: 15px; font-size: 11px;">
-                        <div style="text-align: center; width: 100px;">
-                            <div>Pelanggan</div>
-                            <div style="height: 35px;"></div>
-                            <div>( .................... )</div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                        <div style="flex: 1; min-width: 130px;">
+                            <label style="font-size: 10px; color: var(--text-muted); display: block;">Total Biaya Akhir (Rp)</label>
+                            <input type="text" id="rInputBiayaAkhir" class="form-control" placeholder="0" onkeyup="formatCurrency(this); updateReceiptPricePreview();" style="height: 32px; font-size: 12px; font-weight: bold; color: #107c41;">
                         </div>
-                        <div style="text-align: center; width: 100px;">
-                            <div>Teknisi / Toko</div>
-                            <div style="height: 35px;"></div>
-                            <div>( .................... )</div>
+                        <div style="flex: 1; min-width: 120px;">
+                            <label style="font-size: 10px; color: var(--text-muted); display: block;">Status Pembayaran</label>
+                            <select id="rInputStatusBayar" class="form-control" onchange="updateReceiptPricePreview()" style="height: 32px; font-size: 12px;">
+                                <option value="LUNAS">✅ LUNAS</option>
+                                <option value="Belum Bayar">⏳ Belum Bayar</option>
+                                <option value="DP (Uang Muka)">💵 DP (Uang Muka)</option>
+                            </select>
+                        </div>
+                        <div style="min-width: 140px; margin-top: 14px;">
+                            <button class="btn btn-primary" onclick="savePickupPayment()" style="height: 32px; font-size: 11px; padding: 0 10px; width: 100%;">
+                                💾 Simpan Pelunasan
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="no-print" style="display: flex; gap: 10px; margin-top: 15px;">
-                <button class="btn btn-primary" onclick="window.print()" style="flex: 1; height: 42px; font-weight: bold;">
+            <!-- AREA PRATINJAU NOTA (80 x 100 mm) -->
+            <div id="previewReceiptContainer">
+                <div id="receiptPrintArea" class="receipt-paper-80100">
+                    <div class="receipt-header">
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+                            <img id="receiptLogo" src="default_logo.ico" alt="Logo" style="width: 20px; height: 20px; object-fit: contain;">
+                            <h2 class="store-title" id="rStoreTitle">KASTOKO SERVIS</h2>
+                        </div>
+                        <div class="receipt-sub" id="rReceiptSubtitle">TANDA TERIMA PENERIMAAN UNIT</div>
+                        <div class="receipt-sub" id="rDateTimePrint">-</div>
+                        <div class="receipt-divider-solid"></div>
+                    </div>
+
+                    <div class="receipt-body">
+                        <div class="r-row">
+                            <span class="r-label">No. Tiket:</span>
+                            <span class="r-val" id="rKodeServis" style="font-size: 11px; font-weight: bold; font-family: 'Courier New', monospace;">-</span>
+                        </div>
+                        <div class="r-row">
+                            <span class="r-label">Pelanggan:</span>
+                            <span class="r-val" id="rNama">-</span>
+                        </div>
+                        <div class="r-row">
+                            <span class="r-label">No. HP/WA:</span>
+                            <span class="r-val" id="rNoHp">-</span>
+                        </div>
+                        <div class="receipt-divider-dash"></div>
+                        <div class="r-row">
+                            <span class="r-label">Perangkat:</span>
+                            <span class="r-val" id="rPerangkat">-</span>
+                        </div>
+                        <div class="r-row">
+                            <span class="r-label">Merk/Model:</span>
+                            <span class="r-val" id="rMerkModel">-</span>
+                        </div>
+                        <div class="r-row">
+                            <span class="r-label">Layanan:</span>
+                            <span class="r-val" id="rMenuServis">-</span>
+                        </div>
+                        <div class="r-row">
+                            <span class="r-label">Keluhan:</span>
+                            <span class="r-val" id="rKeluhan" style="font-style: italic;">-</span>
+                        </div>
+                        <div class="r-row" id="rRowCatatan">
+                            <span class="r-label">Catatan Tek:</span>
+                            <span class="r-val" id="rCatatanTeknisi">-</span>
+                        </div>
+                        <div class="r-row" id="rRowSparepart" style="display: none;">
+                            <span class="r-label">Sparepart:</span>
+                            <span class="r-val" id="rSparepart">-</span>
+                        </div>
+                        <div class="receipt-divider-dash"></div>
+
+                        <!-- Kotak Informasi Harga -->
+                        <div class="price-box" id="rPriceBox">
+                            <div class="price-row">
+                                <span id="rPriceLabel">Estimasi Biaya:</span>
+                                <span id="rBiaya">Rp 0</span>
+                            </div>
+                            <div class="r-row" style="margin-top: 2px;">
+                                <span class="r-label" id="rStatusLabel">Status:</span>
+                                <span class="r-val" id="rStatus" style="font-weight: bold;">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="receipt-footer">
+                        <div class="footer-terms" id="rFooterTerms">
+                            * Simpan nota ini sebagai bukti tanda terima saat mengambil unit.<br>
+                            * Kerusakan aksesoris tidak tercatat di luar tanggung jawab toko.
+                        </div>
+                        <div class="sig-row">
+                            <div class="sig-col">
+                                <div>Pelanggan</div>
+                                <div class="sig-space"></div>
+                                <div id="rSigPelanggan">( .................... )</div>
+                            </div>
+                            <div class="sig-col">
+                                <div>Kasir / Teknisi</div>
+                                <div class="sig-space"></div>
+                                <div>( .................... )</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AREA PRATINJAU LABEL STIKER (40x20 / 40x30 / 50x30 mm) -->
+            <div id="previewLabelContainer" style="display: none; padding: 10px 0;">
+                <div id="labelPrintArea" class="label-paper label-size-4030">
+                    <div class="lbl-header">
+                        <span class="lbl-code" id="lblKode">-</span>
+                        <span style="font-size: 7.5px;" id="lblTanggal">-</span>
+                    </div>
+                    <div class="lbl-row"><b>P:</b> <span id="lblNama">-</span> (<span id="lblNoHp">-</span>)</div>
+                    <div class="lbl-row"><b>U:</b> <span id="lblUnit" style="font-weight: bold;">-</span></div>
+                    <div class="lbl-row"><b>K:</b> <span id="lblKeluhan" style="font-style: italic;">-</span></div>
+                    <div class="lbl-row" id="lblRowTeknisi"><b>T:</b> <span id="lblCatatan">-</span></div>
+                </div>
+            </div>
+
+            <!-- Modal Action Buttons -->
+            <div class="no-print" style="display: flex; gap: 8px; margin-top: 15px; flex-wrap: wrap;">
+                <button class="btn btn-primary" onclick="printReceiptOnly()" style="flex: 1.2; height: 42px; font-weight: bold; font-size: 13px;">
                     🖨️ Cetak Nota
                 </button>
-                <button class="btn" onclick="closeReceiptModal()" style="flex: 1; height: 42px; background: #888; color: #fff;">
+                <button class="btn" onclick="printLabelOnly()" style="flex: 1; height: 42px; font-weight: bold; font-size: 13px; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--border-color);">
+                    🏷️ Cetak Label Stiker
+                </button>
+                <button class="btn" onclick="printReceiptAndLabel()" style="flex: 1.4; height: 42px; font-weight: bold; font-size: 13px; background: #e6f4ed; color: #107c41; border: 1px solid #c3e6cb;">
+                    🖨️🏷️ Cetak Nota + Label
+                </button>
+                <button class="btn" onclick="closeReceiptModal()" style="height: 42px; padding: 0 16px; background: #888; color: #fff;">
                     Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Selesaikan Servis & Rincian Sparepart (SPP) -->
+    <div class="modal-overlay" id="completeServiceModal" style="display: none;">
+        <div class="modal-card" style="max-width: 500px; width: 95%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 12px;">
+                <h3 style="margin: 0; font-size: 15px;">🛠️ Selesaikan Servis & Rincian Sparepart (SPP)</h3>
+                <button class="toast-close" onclick="closeCompleteServiceModal()" title="Tutup">✕</button>
+            </div>
+            <input type="hidden" id="csServiceId" value="">
+            
+            <!-- Info Singkat Unit -->
+            <div style="background: var(--input-bg); padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; font-size: 12px; border: 1px solid var(--border-color);">
+                <div><b>No. Tiket:</b> <span id="csModalKode" style="color: var(--accent-color); font-weight: bold;">-</span> | <span id="csModalNama">-</span> (<span id="csModalHp">-</span>)</div>
+                <div><b>Unit:</b> <span id="csModalUnit">-</span></div>
+                <div><b>Keluhan:</b> <span id="csModalKeluhan" style="font-style: italic;">-</span></div>
+            </div>
+
+            <!-- Pilihan Cepat Sparepart -->
+            <div class="form-group" style="margin-bottom: 8px;">
+                <label style="font-size: 11px; font-weight: 600; color: var(--text-color);">Pilih Cepat Sparepart yang Dipakai:</label>
+                <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px;">
+                    <button type="button" class="btn btn-sm" onclick="addSparepartChip('LCD')" style="font-size: 11px; padding: 3px 8px; background: var(--input-bg); border: 1px solid var(--border-color);">📱 + LCD</button>
+                    <button type="button" class="btn btn-sm" onclick="addSparepartChip('Baterai')" style="font-size: 11px; padding: 3px 8px; background: var(--input-bg); border: 1px solid var(--border-color);">🔋 + Baterai</button>
+                    <button type="button" class="btn btn-sm" onclick="addSparepartChip('Tombol On/Off')" style="font-size: 11px; padding: 3px 8px; background: var(--input-bg); border: 1px solid var(--border-color);">🔘 + Tombol On/Off</button>
+                    <button type="button" class="btn btn-sm" onclick="addSparepartChip('Casing')" style="font-size: 11px; padding: 3px 8px; background: var(--input-bg); border: 1px solid var(--border-color);">📱 + Casing</button>
+                    <button type="button" class="btn btn-sm" onclick="addSparepartChip('Port Cas/Flexible')" style="font-size: 11px; padding: 3px 8px; background: var(--input-bg); border: 1px solid var(--border-color);">🔌 + Port Cas</button>
+                    <button type="button" class="btn btn-sm" onclick="addSparepartChip('IC Power')" style="font-size: 11px; padding: 3px 8px; background: var(--input-bg); border: 1px solid var(--border-color);">⚡ + IC Power</button>
+                    <button type="button" class="btn btn-sm" onclick="setTanpaSparepart()" style="font-size: 11px; padding: 3px 8px; background: #fff3cd; color: #856404; border: 1px solid #ffeeba;">❌ Tanpa Sparepart (Jasa Saja)</button>
+                </div>
+            </div>
+
+            <!-- Input Nama Sparepart -->
+            <div class="form-group" style="margin-bottom: 8px;">
+                <label style="font-size: 11px; font-weight: 600;">Nama Sparepart / SPP (Bisa Ketik Manual):</label>
+                <input type="text" id="csInputSparepartNama" class="form-control" placeholder="Contoh: LCD Samsung A12, Tombol On/Off" style="height: 34px; font-size: 12px;">
+            </div>
+
+            <!-- Input Biaya Sparepart (SPP) -->
+            <div class="form-group" style="margin-bottom: 8px;">
+                <label style="font-size: 11px; font-weight: 600;">Biaya / Harga Sparepart (SPP Toko) Rp:</label>
+                <input type="text" id="csInputSparepartBiaya" class="form-control" placeholder="0" onkeyup="formatCurrency(this)" style="height: 34px; font-size: 13px; font-weight: bold; color: #d9534f;">
+                <div style="font-size: 10.5px; color: #0b5e2f; margin-top: 3px;">
+                    💡 Biaya sparepart ini <b>otomatis menambah & mengakumulasi Total SPP</b> di Dashboard Pembukuan Toko.
+                </div>
+            </div>
+
+            <!-- Biaya Akhir Servis untuk Pelanggan -->
+            <div class="form-group" style="margin-bottom: 8px;">
+                <label style="font-size: 11px; font-weight: 600;">Total Biaya Servis Pelanggan (Rp):</label>
+                <input type="text" id="csInputBiayaAkhir" class="form-control" placeholder="0" onkeyup="formatCurrency(this)" style="height: 34px; font-size: 13px; font-weight: bold; color: #107c41;">
+            </div>
+
+            <!-- Catatan Teknisi -->
+            <div class="form-group" style="margin-bottom: 12px;">
+                <label style="font-size: 11px; font-weight: 600;">Catatan Teknisi:</label>
+                <input type="text" id="csInputCatatanTeknisi" class="form-control" placeholder="Catatan hasil servis..." style="height: 32px; font-size: 11px;">
+            </div>
+
+            <!-- Action Buttons -->
+            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                <button class="btn" onclick="closeCompleteServiceModal()" style="height: 36px; padding: 0 14px; background: #888; color: #fff;">Batal</button>
+                <button class="btn btn-primary" onclick="submitCompleteService()" style="height: 36px; padding: 0 16px; font-weight: bold;">💾 Simpan Servis Selesai</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Kasir & Pelunasan Pengambilan Unit -->
+    <div class="modal-overlay" id="cashierPickupModal" style="display: none;">
+        <div class="modal-card" style="max-width: 500px; width: 95%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 12px;">
+                <h3 style="margin: 0; font-size: 15px;">💵 Pembayaran Kasir & Pengambilan Unit</h3>
+                <button class="toast-close" onclick="closeCashierPickupModal()" title="Tutup">✕</button>
+            </div>
+            <input type="hidden" id="cpServiceId" value="">
+
+            <!-- Info Singkat Unit & Pelanggan -->
+            <div style="background: var(--input-bg); padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; font-size: 12px; border: 1px solid var(--border-color);">
+                <div style="display: flex; justify-content: space-between;">
+                    <span><b>No. Tiket:</b> <span id="cpModalKode" style="color: var(--accent-color); font-weight: bold;">-</span></span>
+                    <span id="cpModalTanggal" style="font-size: 11px; color: var(--text-muted);">-</span>
+                </div>
+                <div><b>Pelanggan:</b> <span id="cpModalNama">-</span> (<span id="cpModalHp">-</span>)</div>
+                <div><b>Unit:</b> <span id="cpModalUnit">-</span></div>
+                <div id="cpRowSpp" style="font-size: 11px; color: #888; margin-top: 2px;">
+                    SPP/Sparepart: <span id="cpModalSparepart">-</span>
+                </div>
+            </div>
+
+            <!-- Form Tagihan & Pembayaran -->
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
+                <div style="flex: 1; min-width: 140px;">
+                    <label style="font-size: 11px; font-weight: 600;">Total Biaya Tagihan (Rp):</label>
+                    <input type="text" id="cpInputTotalBiaya" class="form-control" placeholder="0" onkeyup="formatCurrency(this); calculateCashierChange();" style="height: 36px; font-size: 14px; font-weight: bold; color: #107c41;">
+                </div>
+                <div style="flex: 1; min-width: 130px;">
+                    <label style="font-size: 11px; font-weight: 600;">Status Pembayaran:</label>
+                    <select id="cpSelectStatusBayar" class="form-control" style="height: 36px; font-size: 12px;" onchange="calculateCashierChange()">
+                        <option value="LUNAS" selected>✅ LUNAS</option>
+                        <option value="Belum Bayar">⏳ Belum Bayar</option>
+                        <option value="DP (Uang Muka)">💵 DP (Uang Muka)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
+                <div style="flex: 1; min-width: 140px;">
+                    <label style="font-size: 11px; font-weight: 600;">Metode Pembayaran:</label>
+                    <select id="cpSelectMetode" class="form-control" style="height: 34px; font-size: 12px;">
+                        <option value="Tunai" selected>💵 Tunai (Cash)</option>
+                        <option value="Transfer Bank">🏦 Transfer Bank</option>
+                        <option value="QRIS">📱 QRIS</option>
+                    </select>
+                </div>
+                <div style="flex: 1; min-width: 130px;">
+                    <label style="font-size: 11px; font-weight: 600;">Uang Diterima (Rp):</label>
+                    <input type="text" id="cpInputUangBayar" class="form-control" placeholder="0" onkeyup="formatCurrency(this); calculateCashierChange();" style="height: 34px; font-size: 13px;">
+                </div>
+            </div>
+
+            <!-- Kotak Kembalian & Notifikasi Omset -->
+            <div style="background: #e6f4ed; border: 1px solid #c3e6cb; border-radius: 6px; padding: 8px 12px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="font-size: 10px; color: #0b5e2f; font-weight: 600;">Kembalian Kasir:</div>
+                    <div id="cpTextKembalian" style="font-size: 16px; font-weight: bold; color: #107c41;">Rp 0</div>
+                </div>
+                <div style="font-size: 10.5px; color: #0b5e2f; text-align: right; max-width: 60%;">
+                    📈 Pembayaran lunas otomatis masuk ke <b>Total Omset</b> di Dashboard Pembukuan Toko.
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-primary" onclick="submitCashierPickup(false)" style="flex: 1; height: 40px; font-weight: bold;">
+                    💾 Simpan Pelunasan
+                </button>
+                <button class="btn" onclick="submitCashierPickup(true)" style="flex: 1.2; height: 40px; font-weight: bold; background: #e6f4ed; color: #107c41; border: 1px solid #107c41;">
+                    🖨️ Cetak Nota Lunas
+                </button>
+                <button class="btn" onclick="closeCashierPickupModal()" style="height: 40px; padding: 0 14px; background: #888; color: #fff;">
+                    Batal
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Servis Instan (Opsi Pembayaran, Sparepart & Harga) -->
+    <div class="modal-overlay" id="instantServiceModal" style="display: none;">
+        <div class="modal-card" style="max-width: 520px; width: 95%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 12px;">
+                <h3 style="margin: 0; font-size: 15px; color: #0275d8;">⚡ Servis Instan - Pembayaran & Sparepart</h3>
+                <button class="toast-close" onclick="closeInstantServiceModal()" title="Tutup">✕</button>
+            </div>
+            <input type="hidden" id="instServiceId" value="">
+
+            <!-- Ringkasan Singkat Unit & Pelanggan -->
+            <div style="background: var(--input-bg); padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; font-size: 12px; border: 1px solid var(--border-color);">
+                <div style="display: flex; justify-content: space-between;">
+                    <span><b>No. Tiket:</b> <span id="instModalKode" style="color: var(--accent-color); font-weight: bold;">-</span></span>
+                    <span id="instModalTanggal" style="font-size: 11px; color: var(--text-muted);">-</span>
+                </div>
+                <div><b>Pelanggan:</b> <span id="instModalNama">-</span> (<span id="instModalHp">-</span>)</div>
+                <div><b>Unit:</b> <span id="instModalUnit">-</span> | <b>Keluhan:</b> <span id="instModalKeluhan" style="font-style: italic;">-</span></div>
+            </div>
+
+            <!-- BAGIAN 1: SPAREPART (SPP) -->
+            <div style="border: 1px dashed var(--border-color); border-radius: 6px; padding: 10px; margin-bottom: 10px; background: rgba(0,0,0,0.01);">
+                <div style="font-weight: bold; font-size: 12px; color: var(--accent-color); margin-bottom: 6px;">
+                    🔧 Sparepart / SPP yang Digunakan:
+                </div>
+                
+                <!-- Chips Pilihan Cepat -->
+                <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px;">
+                    <button type="button" class="btn btn-sm" onclick="addInstantSparepartChip('LCD')" style="font-size: 11px; padding: 2px 7px; background: var(--input-bg); border: 1px solid var(--border-color);">📱 + LCD</button>
+                    <button type="button" class="btn btn-sm" onclick="addInstantSparepartChip('Baterai')" style="font-size: 11px; padding: 2px 7px; background: var(--input-bg); border: 1px solid var(--border-color);">🔋 + Baterai</button>
+                    <button type="button" class="btn btn-sm" onclick="addInstantSparepartChip('Tombol On/Off')" style="font-size: 11px; padding: 2px 7px; background: var(--input-bg); border: 1px solid var(--border-color);">🔘 + Tombol</button>
+                    <button type="button" class="btn btn-sm" onclick="addInstantSparepartChip('Casing')" style="font-size: 11px; padding: 2px 7px; background: var(--input-bg); border: 1px solid var(--border-color);">📱 + Casing</button>
+                    <button type="button" class="btn btn-sm" onclick="addInstantSparepartChip('Port Cas')" style="font-size: 11px; padding: 2px 7px; background: var(--input-bg); border: 1px solid var(--border-color);">🔌 + Port Cas</button>
+                    <button type="button" class="btn btn-sm" onclick="setInstantTanpaSparepart()" style="font-size: 11px; padding: 2px 7px; background: #fff3cd; color: #856404; border: 1px solid #ffeeba;">❌ Tanpa Sparepart</button>
+                </div>
+
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <div style="flex: 1.3; min-width: 140px;">
+                        <label style="font-size: 10.5px; font-weight: 600;">Nama Sparepart (Bisa Manual):</label>
+                        <input type="text" id="instInputSparepartNama" class="form-control" placeholder="Contoh: LCD Samsung A12, Baterai" style="height: 32px; font-size: 12px;">
+                    </div>
+                    <div style="flex: 1; min-width: 120px;">
+                        <label style="font-size: 10.5px; font-weight: 600;">Modal Sparepart (SPP) Rp:</label>
+                        <input type="text" id="instInputSparepartBiaya" class="form-control" placeholder="0" onkeyup="formatCurrency(this)" style="height: 32px; font-size: 13px; font-weight: bold; color: #d9534f;">
+                    </div>
+                </div>
+                <div style="font-size: 10px; color: #0b5e2f; margin-top: 3px;">
+                    💡 Modal sparepart (SPP) otomatis mengakumulasi <b>Total SPP</b> di Pembukuan Toko.
+                </div>
+            </div>
+
+            <!-- BAGIAN 2: OPSI PEMBAYARAN KASIR -->
+            <div style="border: 1px dashed var(--border-color); border-radius: 6px; padding: 10px; margin-bottom: 10px; background: rgba(0,0,0,0.01);">
+                <div style="font-weight: bold; font-size: 12px; color: #107c41; margin-bottom: 6px;">
+                    💰 Opsi Pembayaran Tagihan:
+                </div>
+
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 6px;">
+                    <div style="flex: 1; min-width: 140px;">
+                        <label style="font-size: 10.5px; font-weight: 600;">Total Biaya Servis (Rp):</label>
+                        <input type="text" id="instInputTotalBiaya" class="form-control" placeholder="0" onkeyup="formatCurrency(this); calculateInstantChange();" style="height: 34px; font-size: 14px; font-weight: bold; color: #107c41;">
+                    </div>
+                    <div style="flex: 1; min-width: 120px;">
+                        <label style="font-size: 10.5px; font-weight: 600;">Status Pembayaran:</label>
+                        <select id="instSelectStatusBayar" class="form-control" style="height: 34px; font-size: 12px;" onchange="calculateInstantChange()">
+                            <option value="LUNAS" selected>✅ LUNAS</option>
+                            <option value="Belum Bayar">⏳ Belum Bayar</option>
+                            <option value="DP (Uang Muka)">💵 DP (Uang Muka)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 6px;">
+                    <div style="flex: 1; min-width: 140px;">
+                        <label style="font-size: 10.5px; font-weight: 600;">Metode Bayar:</label>
+                        <select id="instSelectMetodeBayar" class="form-control" style="height: 32px; font-size: 12px;">
+                            <option value="Tunai" selected>💵 Tunai (Cash)</option>
+                            <option value="Transfer Bank">🏦 Transfer Bank</option>
+                            <option value="QRIS">📱 QRIS</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1; min-width: 120px;">
+                        <label style="font-size: 10.5px; font-weight: 600;">Uang Diterima (Rp):</label>
+                        <input type="text" id="instInputUangBayar" class="form-control" placeholder="0" onkeyup="formatCurrency(this); calculateInstantChange();" style="height: 32px; font-size: 13px;">
+                    </div>
+                </div>
+
+                <!-- Kembalian Kasir -->
+                <div style="display: flex; justify-content: space-between; align-items: center; background: #e6f4ed; border: 1px solid #c3e6cb; border-radius: 4px; padding: 6px 10px; margin-top: 4px;">
+                    <span style="font-size: 11px; font-weight: 600; color: #0b5e2f;">Kembalian Kasir:</span>
+                    <span id="instTextKembalian" style="font-size: 15px; font-weight: bold; color: #107c41;">Rp 0</span>
+                </div>
+            </div>
+
+            <!-- BAGIAN 3: STATUS AKHIR TIKET -->
+            <div style="display: flex; align-items: center; justify-content: space-between; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 12px; margin-bottom: 12px;">
+                <label style="font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; margin: 0;">
+                    <input type="checkbox" id="instCheckLangsungDiambil" checked style="width: 16px; height: 16px; cursor: pointer;">
+                    <span>Unit langsung selesai & diambil pelanggan (Status: Diambil)</span>
+                </label>
+            </div>
+
+            <!-- Action Buttons -->
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-primary" onclick="submitInstantService(false)" style="flex: 1; height: 40px; font-weight: bold;">
+                    💾 Simpan Servis Instan
+                </button>
+                <button class="btn" onclick="submitInstantService(true)" style="flex: 1.2; height: 40px; font-weight: bold; background: #e6f4ed; color: #107c41; border: 1px solid #107c41;">
+                    🖨️ Simpan & Cetak Nota Lunas
+                </button>
+                <button class="btn" onclick="closeInstantServiceModal()" style="height: 40px; padding: 0 14px; background: #888; color: #fff;">
+                    Batal
                 </button>
             </div>
         </div>
@@ -982,9 +1349,19 @@
         .then(function(data) {
             if (data.success) {
                 showToast(data.message || "Data servis berhasil disimpan!", "success");
+                var savedSrvId = data.id || (idVal ? parseInt(idVal) : null);
                 cancelServiceEdit();
                 loadServices();
                 loadCustomers();
+
+                // Jika servis berstatus/bermenu Instan, otomatis buka popup opsi pembayaran & sparepart!
+                if (statusServis === 'Instan' || menuServis === 'Servis Instan') {
+                    setTimeout(function() {
+                        if (savedSrvId) {
+                            openInstantServiceModal(savedSrvId);
+                        }
+                    }, 400);
+                }
             } else {
                 alert("Gagal menyimpan servis: " + data.message);
             }
@@ -1041,8 +1418,25 @@
         activeReceiptService = null;
     }
 
-    function quickUpdateServiceStatus(id, newStatus) {
+    function quickUpdateServiceStatus(id, newStatus, selectEl) {
         if (!newStatus) return;
+        if (selectEl) selectEl.value = ""; // Reset dropdown selector
+
+        if (newStatus === 'Instan') {
+            openInstantServiceModal(id);
+            return;
+        }
+
+        if (newStatus === 'Selesai') {
+            openCompleteServiceModal(id);
+            return;
+        }
+
+        if (newStatus === 'Diambil') {
+            openCashierPickupModal(id);
+            return;
+        }
+
         fetch('/api/services/status', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1053,8 +1447,380 @@
             if (data.success) {
                 showToast(data.message, "success");
                 loadServices();
+                loadTransactions();
             } else {
                 alert("Gagal update status: " + data.message);
+            }
+        })
+        .catch(function(err) {
+            alert("Terjadi kesalahan: " + err);
+        });
+    }
+
+    // ========================================================
+    // MODAL SELESAIKAN SERVIS & RINCIAN SPAREPART (SPP)
+    // ========================================================
+    function openCompleteServiceModal(id) {
+        var s = services.find(function(item) { return item.id === id; });
+        if (!s) return;
+
+        document.getElementById('csServiceId').value = s.id;
+        document.getElementById('csModalKode').innerText = s.kode_servis || ('#' + s.id);
+        document.getElementById('csModalNama').innerText = s.nama_pelanggan || '-';
+        document.getElementById('csModalHp').innerText = s.no_hp || '-';
+        document.getElementById('csModalUnit').innerText = (s.merk_model || '-') + ' (' + (s.jenis_perangkat || '') + ')';
+        document.getElementById('csModalKeluhan').innerText = s.keluhan || '-';
+
+        document.getElementById('csInputSparepartNama').value = s.sparepart_nama || '';
+        document.getElementById('csInputSparepartBiaya').value = (s.sparepart_biaya || 0) > 0 ? (s.sparepart_biaya || 0).toLocaleString('id-ID') : '';
+        
+        var biayaAkhir = (s.biaya_akhir || 0) > 0 ? s.biaya_akhir : (s.estimasi_biaya || 0);
+        document.getElementById('csInputBiayaAkhir').value = biayaAkhir > 0 ? biayaAkhir.toLocaleString('id-ID') : '';
+        document.getElementById('csInputCatatanTeknisi').value = s.catatan_teknisi || '';
+
+        document.getElementById('completeServiceModal').style.display = 'flex';
+    }
+
+    function closeCompleteServiceModal() {
+        document.getElementById('completeServiceModal').style.display = 'none';
+    }
+
+    function addSparepartChip(name) {
+        var input = document.getElementById('csInputSparepartNama');
+        if (!input) return;
+        var current = input.value.trim();
+        if (current.includes(name)) return;
+        if (current && current !== 'Tanpa Sparepart (Jasa Saja)') {
+            input.value = current + ', ' + name;
+        } else {
+            input.value = name;
+        }
+        document.getElementById('csInputSparepartBiaya').focus();
+    }
+
+    function setTanpaSparepart() {
+        document.getElementById('csInputSparepartNama').value = 'Tanpa Sparepart (Jasa Saja)';
+        document.getElementById('csInputSparepartBiaya').value = '0';
+    }
+
+    function submitCompleteService() {
+        var id = parseInt(document.getElementById('csServiceId').value);
+        if (!id) return;
+
+        var spNama = (document.getElementById('csInputSparepartNama').value || '').trim();
+        var spBiaya = parseNumber(document.getElementById('csInputSparepartBiaya').value);
+        var biayaAkhir = parseNumber(document.getElementById('csInputBiayaAkhir').value);
+        var catatanTek = (document.getElementById('csInputCatatanTeknisi').value || '').trim();
+
+        fetch('/api/services/status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                id: id,
+                status_servis: 'Selesai',
+                sparepart_nama: spNama,
+                sparepart_biaya: spBiaya,
+                biaya_akhir: biayaAkhir,
+                catatan_teknisi: catatanTek
+            })
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data.success) {
+                var toastMsg = "Servis ditandai 'Selesai'!";
+                if (spBiaya > 0) {
+                    toastMsg += " Biaya SPP Rp " + spBiaya.toLocaleString('id-ID') + " otomatis terakumulasi di Dashboard Pembukuan Toko.";
+                }
+                showToast(toastMsg, "success");
+                closeCompleteServiceModal();
+                loadServices();
+                loadTransactions();
+            } else {
+                alert("Gagal menyelesaikan servis: " + data.message);
+            }
+        })
+        .catch(function(err) {
+            alert("Terjadi kesalahan: " + err);
+        });
+    }
+
+    // ========================================================
+    // MODAL KASIR & PENGAMBILAN UNIT
+    // ========================================================
+    function openCashierPickupModal(id) {
+        var s = services.find(function(item) { return item.id === id; });
+        if (!s) return;
+
+        document.getElementById('cpServiceId').value = s.id;
+        document.getElementById('cpModalKode').innerText = s.kode_servis || ('#' + s.id);
+        document.getElementById('cpModalTanggal').innerText = 'Tgl: ' + (s.tanggal_masuk || getSystemDate());
+        document.getElementById('cpModalNama').innerText = s.nama_pelanggan || '-';
+        document.getElementById('cpModalHp').innerText = s.no_hp || '-';
+        document.getElementById('cpModalUnit').innerText = (s.merk_model || '-') + ' (' + (s.jenis_perangkat || '') + ') - ' + (s.keluhan || '');
+
+        var rowSpp = document.getElementById('cpRowSpp');
+        var lblSpp = document.getElementById('cpModalSparepart');
+        if (s.sparepart_nama || (s.sparepart_biaya || 0) > 0) {
+            rowSpp.style.display = 'block';
+            lblSpp.innerText = (s.sparepart_nama || '-') + ' (Modal SPP: Rp ' + Number(s.sparepart_biaya || 0).toLocaleString('id-ID') + ')';
+        } else {
+            rowSpp.style.display = 'none';
+        }
+
+        var tagihan = (s.biaya_akhir || 0) > 0 ? s.biaya_akhir : (s.estimasi_biaya || 0);
+        document.getElementById('cpInputTotalBiaya').value = tagihan > 0 ? tagihan.toLocaleString('id-ID') : '';
+        document.getElementById('cpSelectStatusBayar').value = s.status_pembayaran || 'LUNAS';
+        document.getElementById('cpSelectMetode').value = s.metode_pembayaran || 'Tunai';
+        document.getElementById('cpInputUangBayar').value = tagihan > 0 ? tagihan.toLocaleString('id-ID') : '';
+
+        calculateCashierChange();
+        document.getElementById('cashierPickupModal').style.display = 'flex';
+    }
+
+    function closeCashierPickupModal() {
+        document.getElementById('cashierPickupModal').style.display = 'none';
+    }
+
+    function calculateCashierChange() {
+        var total = parseNumber(document.getElementById('cpInputTotalBiaya').value);
+        var bayar = parseNumber(document.getElementById('cpInputUangBayar').value);
+        var statusBayar = document.getElementById('cpSelectStatusBayar').value;
+
+        var kembalianEl = document.getElementById('cpTextKembalian');
+        if (statusBayar !== 'LUNAS') {
+            kembalianEl.innerText = '(Belum Lunas)';
+            kembalianEl.style.color = '#d9534f';
+            return;
+        }
+
+        var diff = bayar - total;
+        if (diff >= 0) {
+            kembalianEl.innerText = 'Rp ' + diff.toLocaleString('id-ID');
+            kembalianEl.style.color = '#107c41';
+        } else {
+            kembalianEl.innerText = 'Kurang Rp ' + Math.abs(diff).toLocaleString('id-ID');
+            kembalianEl.style.color = '#d9534f';
+        }
+    }
+
+    function submitCashierPickup(shouldPrintReceipt) {
+        var id = parseInt(document.getElementById('cpServiceId').value);
+        if (!id) return;
+
+        var totalTagihan = parseNumber(document.getElementById('cpInputTotalBiaya').value);
+        var statusBayar = document.getElementById('cpSelectStatusBayar').value;
+        var metodeBayar = document.getElementById('cpSelectMetode').value;
+
+        // Update objek lokal segera untuk menghindari race condition cetak nota
+        var localS = services.find(function(item) { return item.id === id; });
+        if (localS) {
+            localS.status_servis = 'Diambil';
+            localS.biaya_akhir = totalTagihan;
+            localS.status_pembayaran = statusBayar;
+            localS.metode_pembayaran = metodeBayar;
+            if (!localS.tanggal_selesai) localS.tanggal_selesai = getSystemDate();
+        }
+
+        fetch('/api/services/status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                id: id,
+                status_servis: 'Diambil',
+                biaya_akhir: totalTagihan,
+                status_pembayaran: statusBayar,
+                metode_pembayaran: metodeBayar
+            })
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data.success) {
+                var toastMsg = "Unit berhasil ditandai 'Diambil'!";
+                if (statusBayar === 'LUNAS') {
+                    toastMsg += " Pembayaran Rp " + totalTagihan.toLocaleString('id-ID') + " otomatis masuk ke Total Omset Pembukuan Toko.";
+                }
+                showToast(toastMsg, "success");
+                closeCashierPickupModal();
+                loadServices();
+                loadTransactions();
+
+                if (shouldPrintReceipt) {
+                    setTimeout(function() {
+                        openReceiptModal(id, 'ambil');
+                        printReceiptOnly();
+                    }, 400);
+                }
+            } else {
+                alert("Gagal memproses pelunasan kasir: " + data.message);
+            }
+        })
+        .catch(function(err) {
+            alert("Terjadi kesalahan: " + err);
+        });
+    }
+
+    // ========================================================
+    // MODAL SERVIS INSTAN (PEMBAYARAN, SPAREPART & HARGA)
+    // ========================================================
+    function openInstantServiceModal(id) {
+        var s = services.find(function(item) { return item.id === id; });
+        if (!s) {
+            fetch('/api/services')
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.success && data.services) {
+                    services = data.services;
+                    var found = services.find(function(item) { return item.id === id; });
+                    if (found) populateAndShowInstantModal(found);
+                }
+            });
+            return;
+        }
+        populateAndShowInstantModal(s);
+    }
+
+    function populateAndShowInstantModal(s) {
+        document.getElementById('instServiceId').value = s.id;
+        document.getElementById('instModalKode').innerText = s.kode_servis || ('#' + s.id);
+        document.getElementById('instModalTanggal').innerText = 'Tgl: ' + (s.tanggal_masuk || getSystemDate());
+        document.getElementById('instModalNama').innerText = s.nama_pelanggan || '-';
+        document.getElementById('instModalHp').innerText = s.no_hp || '-';
+        document.getElementById('instModalUnit').innerText = (s.merk_model || '-') + ' (' + (s.jenis_perangkat || '') + ')';
+        document.getElementById('instModalKeluhan').innerText = s.keluhan || '-';
+
+        document.getElementById('instInputSparepartNama').value = s.sparepart_nama || '';
+        document.getElementById('instInputSparepartBiaya').value = (s.sparepart_biaya || 0) > 0 ? Number(s.sparepart_biaya).toLocaleString('id-ID') : '';
+
+        var total = (s.biaya_akhir || 0) > 0 ? s.biaya_akhir : (s.estimasi_biaya || 0);
+        document.getElementById('instInputTotalBiaya').value = total > 0 ? Number(total).toLocaleString('id-ID') : '';
+        document.getElementById('instSelectStatusBayar').value = s.status_pembayaran || 'LUNAS';
+        document.getElementById('instSelectMetodeBayar').value = s.metode_pembayaran || 'Tunai';
+        document.getElementById('instInputUangBayar').value = total > 0 ? Number(total).toLocaleString('id-ID') : '';
+        document.getElementById('instCheckLangsungDiambil').checked = true;
+
+        calculateInstantChange();
+        document.getElementById('instantServiceModal').style.display = 'flex';
+    }
+
+    function closeInstantServiceModal() {
+        document.getElementById('instantServiceModal').style.display = 'none';
+    }
+
+    function addInstantSparepartChip(name) {
+        var input = document.getElementById('instInputSparepartNama');
+        if (!input) return;
+        var current = input.value.trim();
+        if (current.includes(name)) return;
+        if (current && current !== 'Tanpa Sparepart (Jasa Saja)') {
+            input.value = current + ', ' + name;
+        } else {
+            input.value = name;
+        }
+        var biayaInput = document.getElementById('instInputSparepartBiaya');
+        if (biayaInput) {
+            biayaInput.focus();
+        }
+    }
+
+    function setInstantTanpaSparepart() {
+        var input = document.getElementById('instInputSparepartNama');
+        var biayaInput = document.getElementById('instInputSparepartBiaya');
+        if (input) input.value = 'Tanpa Sparepart (Jasa Saja)';
+        if (biayaInput) biayaInput.value = '0';
+    }
+
+    function calculateInstantChange() {
+        var total = parseNumber(document.getElementById('instInputTotalBiaya').value);
+        var bayar = parseNumber(document.getElementById('instInputUangBayar').value);
+        var statusBayar = document.getElementById('instSelectStatusBayar').value;
+
+        var kembalianEl = document.getElementById('instTextKembalian');
+        if (!kembalianEl) return;
+
+        if (statusBayar !== 'LUNAS') {
+            kembalianEl.innerText = '(Belum Lunas)';
+            kembalianEl.style.color = '#d9534f';
+            return;
+        }
+
+        var diff = bayar - total;
+        if (diff >= 0) {
+            kembalianEl.innerText = 'Rp ' + diff.toLocaleString('id-ID');
+            kembalianEl.style.color = '#107c41';
+        } else {
+            kembalianEl.innerText = 'Kurang Rp ' + Math.abs(diff).toLocaleString('id-ID');
+            kembalianEl.style.color = '#d9534f';
+        }
+    }
+
+    function submitInstantService(shouldPrint) {
+        var id = parseInt(document.getElementById('instServiceId').value);
+        if (!id) return;
+
+        var spNama = (document.getElementById('instInputSparepartNama').value || '').trim();
+        var spBiaya = parseNumber(document.getElementById('instInputSparepartBiaya').value);
+        var totalBiaya = parseNumber(document.getElementById('instInputTotalBiaya').value);
+        var statusBayar = document.getElementById('instSelectStatusBayar').value;
+        var metodeBayar = document.getElementById('instSelectMetodeBayar').value;
+        var langsungDiambil = document.getElementById('instCheckLangsungDiambil').checked;
+
+        var targetStatus = langsungDiambil ? 'Diambil' : 'Instan';
+
+        // Update objek lokal segera agar sinkron saat cetak nota
+        var s = services.find(function(item) { return item.id === id; });
+        if (s) {
+            s.status_servis = targetStatus;
+            s.sparepart_nama = spNama;
+            s.sparepart_biaya = spBiaya;
+            s.biaya_akhir = totalBiaya;
+            s.status_pembayaran = statusBayar;
+            s.metode_pembayaran = metodeBayar;
+            if (!s.tanggal_selesai) {
+                s.tanggal_selesai = getSystemDate();
+            }
+        }
+
+        fetch('/api/services/status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                id: id,
+                status_servis: targetStatus,
+                sparepart_nama: spNama,
+                sparepart_biaya: spBiaya,
+                biaya_akhir: totalBiaya,
+                status_pembayaran: statusBayar,
+                metode_pembayaran: metodeBayar
+            })
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data.success) {
+                var toastMsg = "⚡ Servis Instan berhasil diproses!";
+                if (langsungDiambil) {
+                    toastMsg += " Status: Diambil.";
+                } else {
+                    toastMsg += " Status: Instan.";
+                }
+                if (spBiaya > 0) {
+                    toastMsg += " SPP: Rp " + spBiaya.toLocaleString('id-ID');
+                }
+                if (statusBayar === 'LUNAS') {
+                    toastMsg += " | Omset: Rp " + totalBiaya.toLocaleString('id-ID');
+                }
+                showToast(toastMsg, "success");
+                closeInstantServiceModal();
+                loadServices();
+                loadTransactions();
+
+                if (shouldPrint) {
+                    setTimeout(function() {
+                        openReceiptModal(id, 'ambil');
+                        printReceiptOnly();
+                    }, 300);
+                }
+            } else {
+                alert("Gagal memproses servis instan: " + data.message);
             }
         })
         .catch(function(err) {
@@ -1168,7 +1934,25 @@
             if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.slice(1);
             var waLink = cleanPhone ? '<a href="https://wa.me/' + cleanPhone + '?text=Halo%20' + encodeURIComponent(s.nama_pelanggan) + ',%20update%20servis%20' + encodeURIComponent(s.merk_model) + '%20(' + encodeURIComponent(s.kode_servis) + ')" target="_blank" style="font-size: 11px; text-decoration: none; margin-left: 4px;" title="Hubungi via WhatsApp">💬</a>' : '';
 
+            var sppInfo = '';
+            if (s.sparepart_nama || (s.sparepart_biaya || 0) > 0) {
+                sppInfo = '<div style="font-size: 10.5px; color: #b71c1c; margin-top: 2px;"><b>SPP:</b> ' + escapeHtml(s.sparepart_nama || '-') + ' (Rp ' + Number(s.sparepart_biaya || 0).toLocaleString('id-ID') + ')</div>';
+            }
+
             var biayaStr = (s.estimasi_biaya || 0) > 0 ? 'Rp ' + (s.estimasi_biaya || 0).toLocaleString('id-ID') : '-';
+            if (s.status_servis === 'Diambil' && (s.biaya_akhir || s.estimasi_biaya || 0) > 0) {
+                var finalBiaya = s.biaya_akhir || s.estimasi_biaya;
+                biayaStr = 'Rp ' + Number(finalBiaya).toLocaleString('id-ID') + '<div style="font-size: 10px; color: ' + (s.status_pembayaran === 'LUNAS' ? '#107c41' : '#d9534f') + '; font-weight: normal;">' + escapeHtml(s.status_pembayaran || 'LUNAS') + '</div>';
+            }
+
+            var badgeOnClick = '';
+            if (st === 'Instan' || s.menu_servis === 'Servis Instan') {
+                badgeOnClick = ' onclick="openInstantServiceModal(' + s.id + ')" style="cursor: pointer;" title="Klik untuk Pembayaran & Sparepart Servis Instan"';
+            } else if (st === 'Selesai') {
+                badgeOnClick = ' onclick="openCompleteServiceModal(' + s.id + ')" style="cursor: pointer;" title="Klik untuk Edit Sparepart / Selesai"';
+            } else if (st === 'Diambil') {
+                badgeOnClick = ' onclick="openCashierPickupModal(' + s.id + ')" style="cursor: pointer;" title="Klik untuk Rincian Pelunasan Kasir"';
+            }
 
             tr.innerHTML = 
                 '<td>' + (idx + 1) + '</td>' +
@@ -1186,16 +1970,17 @@
                 '<td>' +
                     '<div><b>K:</b> ' + escapeHtml(s.keluhan) + '</div>' +
                     (s.catatan_teknisi ? '<div style="font-size: 11px; color: #107c41;"><b>T:</b> ' + escapeHtml(s.catatan_teknisi) + '</div>' : '') +
+                    sppInfo +
                 '</td>' +
                 '<td class="text-right" style="font-weight: bold;">' + biayaStr + '</td>' +
                 '<td style="text-align: center;">' +
-                    '<span class="badge-status ' + badgeClass + '">' + escapeHtml(s.status_servis) + '</span>' +
+                    '<span class="badge-status ' + badgeClass + '"' + badgeOnClick + '>' + escapeHtml(s.status_servis) + '</span>' +
                 '</td>' +
                 '<td class="no-print" style="text-align: center;">' +
                     '<div style="display: flex; gap: 4px; justify-content: center; flex-wrap: wrap;">' +
                         '<button class="btn btn-sm" onclick="editServiceOrder(' + s.id + ')" title="Edit Tiket" style="padding: 3px 8px; font-size: 11px;">✏️</button>' +
                         '<button class="btn btn-sm" onclick="openReceiptModal(' + s.id + ')" title="Cetak Nota" style="padding: 3px 8px; font-size: 11px; background: #e6f4ed; color: #107c41;">🖨️</button>' +
-                        '<select onchange="quickUpdateServiceStatus(' + s.id + ', this.value)" style="font-size: 11px; padding: 2px 4px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color); cursor: pointer;" title="Ganti Status Cepat">' +
+                        '<select onchange="quickUpdateServiceStatus(' + s.id + ', this.value, this)" style="font-size: 11px; padding: 2px 4px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color); cursor: pointer;" title="Ganti Status Cepat">' +
                             '<option value="" disabled selected>⚡ Status</option>' +
                             '<option value="Baru">Baru</option>' +
                             '<option value="Instan">Instan</option>' +
@@ -1214,42 +1999,642 @@
         applyRolePermissions();
     }
 
-    function openReceiptModal(id) {
+    // ========================================================
+    // LOGIKA CETAK NOTA (80x100mm) & LABEL STIKER (USB/BT)
+    // ========================================================
+    var currentReceiptType = 'masuk'; // 'masuk' | 'ambil' | 'label'
+    var currentLabelSize = localStorage.getItem('calasetoko_label_size') || '40x30';
+    var autoPrintLabel = localStorage.getItem('calasetoko_auto_print_label') === 'true';
+
+    // Bluetooth & USB Thermal printer states
+    var btDevice = null;
+    var btCharacteristic = null;
+    var usbPort = null;
+
+    function openReceiptModal(id, defaultType) {
         var s = services.find(function(item) { return item.id === id; });
         if (!s) return;
-        populateReceipt(s);
+        activeReceiptService = s;
+
+        // Terapkan preferensi ukuran label & auto-print
+        var sizeSelect = document.getElementById('labelSizeSelect');
+        if (sizeSelect) sizeSelect.value = currentLabelSize;
+        var autoCheck = document.getElementById('autoPrintLabelCheck');
+        if (autoCheck) autoCheck.checked = autoPrintLabel;
+        onLabelSizeChange(currentLabelSize);
+
+        // Isi form pelunasan pengambilan unit jika ada
+        var inputBiayaAkhir = document.getElementById('rInputBiayaAkhir');
+        var inputStatusBayar = document.getElementById('rInputStatusBayar');
+        if (inputBiayaAkhir) {
+            var valAkhir = (s.biaya_akhir !== undefined && s.biaya_akhir !== null && s.biaya_akhir > 0) ? s.biaya_akhir : (s.estimasi_biaya || 0);
+            inputBiayaAkhir.value = valAkhir > 0 ? valAkhir.toLocaleString('id-ID') : '';
+        }
+        if (inputStatusBayar) {
+            inputStatusBayar.value = s.status_pembayaran || (s.status_servis === 'Diambil' ? 'LUNAS' : 'Belum Bayar');
+        }
+
+        // Tentukan tab awal
+        var chosenType = defaultType;
+        if (!chosenType) {
+            chosenType = (s.status_servis === 'Diambil' || s.status_servis === 'Selesai') ? 'ambil' : 'masuk';
+        }
+        switchReceiptType(chosenType);
+
         document.getElementById('receiptModal').style.display = 'flex';
     }
 
     function openPrintModalCurrent() {
         if (activeReceiptService) {
-            populateReceipt(activeReceiptService);
-            document.getElementById('receiptModal').style.display = 'flex';
+            openReceiptModal(activeReceiptService.id);
         }
-    }
-
-    function populateReceipt(s) {
-        document.getElementById('receiptDatePrint').innerText = 'Tanggal: ' + (s.tanggal_masuk || getSystemDate());
-        document.getElementById('rKodeServis').innerText = s.kode_servis || ('#' + s.id);
-        document.getElementById('rNama').innerText = s.nama_pelanggan || '-';
-        document.getElementById('rNoHp').innerText = s.no_hp || '-';
-        document.getElementById('rPerangkat').innerText = s.jenis_perangkat || '-';
-        document.getElementById('rMerkModel').innerText = s.merk_model || '-';
-        document.getElementById('rMenuServis').innerText = s.menu_servis || '-';
-        document.getElementById('rKeluhan').innerText = s.keluhan || '-';
-        var rowCatatan = document.getElementById('rRowCatatan');
-        if (s.catatan_teknisi) {
-            rowCatatan.style.display = 'flex';
-            document.getElementById('rCatatanTeknisi').innerText = s.catatan_teknisi;
-        } else {
-            rowCatatan.style.display = 'none';
-        }
-        document.getElementById('rBiaya').innerText = (s.estimasi_biaya || 0) > 0 ? 'Rp ' + (s.estimasi_biaya || 0).toLocaleString('id-ID') : 'Rp 0';
-        document.getElementById('rStatus').innerText = s.status_servis || 'Baru';
     }
 
     function closeReceiptModal() {
         document.getElementById('receiptModal').style.display = 'none';
+    }
+
+    function setPrintPageSize(widthMm, heightMm) {
+        var styleEl = document.getElementById('dynamicPrintStyle');
+        if (!styleEl) {
+            styleEl = document.createElement('style');
+            styleEl.id = 'dynamicPrintStyle';
+            document.head.appendChild(styleEl);
+        }
+        styleEl.textContent = '@page { size: ' + widthMm + 'mm ' + heightMm + 'mm; margin: 0; } @media print { body { margin: 0; padding: 0; } }';
+    }
+
+    function switchReceiptType(type) {
+        currentReceiptType = type;
+        var tabMasuk = document.getElementById('tabPrintMasuk');
+        var tabAmbil = document.getElementById('tabPrintAmbil');
+        var tabLabel = document.getElementById('tabPrintLabel');
+        if (tabMasuk) tabMasuk.classList.toggle('active', type === 'masuk');
+        if (tabAmbil) tabAmbil.classList.toggle('active', type === 'ambil');
+        if (tabLabel) tabLabel.classList.toggle('active', type === 'label');
+
+        var rcptContainer = document.getElementById('previewReceiptContainer');
+        var lblContainer = document.getElementById('previewLabelContainer');
+        var boxHarga = document.getElementById('boxPengambilanHarga');
+
+        if (type === 'label') {
+            if (rcptContainer) rcptContainer.style.display = 'none';
+            if (lblContainer) lblContainer.style.display = 'block';
+            if (boxHarga) boxHarga.style.display = 'none';
+        } else {
+            if (rcptContainer) rcptContainer.style.display = 'block';
+            if (lblContainer) lblContainer.style.display = 'none';
+            if (boxHarga) boxHarga.style.display = (type === 'ambil') ? 'block' : 'none';
+        }
+
+        if (activeReceiptService) {
+            populateReceipt(activeReceiptService);
+            populateLabel(activeReceiptService);
+        }
+    }
+
+    function onLabelSizeChange(size) {
+        currentLabelSize = size;
+        localStorage.setItem('calasetoko_label_size', size);
+        var labelEl = document.getElementById('labelPrintArea');
+        if (labelEl) {
+            labelEl.className = 'label-paper label-size-' + size.replace('x', '');
+        }
+    }
+
+    function toggleAutoPrintLabel(checked) {
+        autoPrintLabel = checked;
+        localStorage.setItem('calasetoko_auto_print_label', checked ? 'true' : 'false');
+    }
+
+    function populateReceipt(s) {
+        if (!s) return;
+        var isAmbil = (currentReceiptType === 'ambil');
+
+        // Subtitle & Tanggal
+        var subEl = document.getElementById('rReceiptSubtitle');
+        if (subEl) {
+            subEl.innerText = isAmbil ? 'NOTA PENGAMBILAN & KWITANSI' : 'TANDA TERIMA PENERIMAAN UNIT';
+        }
+        var dateEl = document.getElementById('rDateTimePrint');
+        if (dateEl) {
+            if (isAmbil) {
+                var tglKeluar = s.tanggal_selesai || getSystemDate();
+                dateEl.innerText = 'Masuk: ' + (s.tanggal_masuk || '-') + ' | Keluar: ' + tglKeluar;
+            } else {
+                dateEl.innerText = 'Tanggal: ' + (s.tanggal_masuk || getSystemDate());
+            }
+        }
+
+        // Data Tiket & Pelanggan
+        var rKode = document.getElementById('rKodeServis');
+        if (rKode) rKode.innerText = s.kode_servis || ('#' + s.id);
+        var rNama = document.getElementById('rNama');
+        if (rNama) rNama.innerText = s.nama_pelanggan || '-';
+        var rNoHp = document.getElementById('rNoHp');
+        if (rNoHp) rNoHp.innerText = s.no_hp || '-';
+        var rPerangkat = document.getElementById('rPerangkat');
+        if (rPerangkat) rPerangkat.innerText = s.jenis_perangkat || '-';
+        var rMerkModel = document.getElementById('rMerkModel');
+        if (rMerkModel) rMerkModel.innerText = s.merk_model || '-';
+        var rMenu = document.getElementById('rMenuServis');
+        if (rMenu) rMenu.innerText = s.menu_servis || '-';
+        var rKeluhan = document.getElementById('rKeluhan');
+        if (rKeluhan) rKeluhan.innerText = s.keluhan || '-';
+
+        var rowCatatan = document.getElementById('rRowCatatan');
+        if (rowCatatan) {
+            if (s.catatan_teknisi) {
+                rowCatatan.style.display = 'flex';
+                document.getElementById('rCatatanTeknisi').innerText = s.catatan_teknisi;
+            } else {
+                rowCatatan.style.display = 'none';
+            }
+        }
+
+        var rowSparepart = document.getElementById('rRowSparepart');
+        if (rowSparepart) {
+            if (s.sparepart_nama) {
+                rowSparepart.style.display = 'flex';
+                document.getElementById('rSparepart').innerText = s.sparepart_nama;
+            } else {
+                rowSparepart.style.display = 'none';
+            }
+        }
+
+        // Box Info Harga & Status
+        var priceLabel = document.getElementById('rPriceLabel');
+        var rBiaya = document.getElementById('rBiaya');
+        var rStatusLabel = document.getElementById('rStatusLabel');
+        var rStatus = document.getElementById('rStatus');
+        var rFooter = document.getElementById('rFooterTerms');
+        var rSigPelanggan = document.getElementById('rSigPelanggan');
+
+        if (isAmbil) {
+            if (priceLabel) priceLabel.innerText = 'Total Biaya Akhir:';
+            var akhirVal = parseNumber(document.getElementById('rInputBiayaAkhir').value);
+            if (isNaN(akhirVal) || akhirVal <= 0) {
+                akhirVal = (s.biaya_akhir !== undefined && s.biaya_akhir !== null && s.biaya_akhir > 0) ? s.biaya_akhir : (s.estimasi_biaya || 0);
+            }
+            var statusBayar = document.getElementById('rInputStatusBayar').value || s.status_pembayaran || 'LUNAS';
+
+            if (rBiaya) {
+                rBiaya.innerHTML = 'Rp ' + akhirVal.toLocaleString('id-ID') +
+                    (s.estimasi_biaya ? ' <small style="font-size: 9px; color: #666; font-weight: normal;">(Est: Rp ' + (s.estimasi_biaya || 0).toLocaleString('id-ID') + ')</small>' : '');
+            }
+            if (rStatusLabel) rStatusLabel.innerText = 'Status Bayar:';
+            if (rStatus) {
+                var color = (statusBayar === 'LUNAS') ? '#107c41' : '#d9534f';
+                rStatus.innerHTML = '<span style="color: ' + color + '; font-weight: bold;">[ ' + escapeHtml(statusBayar) + ' ]</span>';
+            }
+            if (rFooter) {
+                rFooter.innerHTML = '* Terima kasih atas kepercayaan Anda.<br>* Garansi servis berlaku 7 hari untuk kerusakan yang sama.<br>* Unit telah dicek dan diambil dalam kondisi baik.';
+            }
+        } else {
+            if (priceLabel) priceLabel.innerText = 'Estimasi Biaya:';
+            if (rBiaya) {
+                rBiaya.innerText = (s.estimasi_biaya || 0) > 0 ? 'Rp ' + (s.estimasi_biaya || 0).toLocaleString('id-ID') : 'Rp 0';
+            }
+            if (rStatusLabel) rStatusLabel.innerText = 'Status Servis:';
+            if (rStatus) {
+                rStatus.innerHTML = '<span style="font-weight: bold;">' + escapeHtml(s.status_servis || 'Baru') + '</span>';
+            }
+            if (rFooter) {
+                rFooter.innerHTML = '* Simpan nota ini sebagai tanda bukti resmi saat mengambil unit.<br>* Kerusakan aksesoris tidak tercatat di luar tanggung jawab toko.';
+            }
+        }
+
+        if (rSigPelanggan) {
+            rSigPelanggan.innerText = '( ' + (s.nama_pelanggan || '....................') + ' )';
+        }
+    }
+
+    function populateLabel(s) {
+        if (!s) return;
+        var lblKode = document.getElementById('lblKode');
+        if (lblKode) lblKode.innerText = s.kode_servis || ('#' + s.id);
+        var lblTgl = document.getElementById('lblTanggal');
+        if (lblTgl) lblTgl.innerText = (s.tanggal_masuk || getSystemDate()).substring(0, 10);
+        var lblNama = document.getElementById('lblNama');
+        if (lblNama) lblNama.innerText = s.nama_pelanggan || '-';
+        var lblNoHp = document.getElementById('lblNoHp');
+        if (lblNoHp) lblNoHp.innerText = s.no_hp || '-';
+        var lblUnit = document.getElementById('lblUnit');
+        if (lblUnit) lblUnit.innerText = (s.merk_model || '-') + ' (' + (s.jenis_perangkat || '') + ')';
+        var lblKeluhan = document.getElementById('lblKeluhan');
+        if (lblKeluhan) lblKeluhan.innerText = s.keluhan || '-';
+        var lblCatatan = document.getElementById('lblCatatan');
+        var rowCat = document.getElementById('lblRowTeknisi');
+        if (lblCatatan && rowCat) {
+            if (s.catatan_teknisi) {
+                rowCat.style.display = 'block';
+                lblCatatan.innerText = s.catatan_teknisi;
+            } else {
+                rowCat.style.display = 'none';
+            }
+        }
+    }
+
+    function updateReceiptPricePreview() {
+        if (!activeReceiptService) return;
+        populateReceipt(activeReceiptService);
+    }
+
+    function savePickupPayment() {
+        if (!activeReceiptService) return;
+        var akhir = parseNumber(document.getElementById('rInputBiayaAkhir').value);
+        var statusBayar = document.getElementById('rInputStatusBayar').value;
+
+        fetch('/api/services/status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                id: activeReceiptService.id,
+                status_servis: 'Diambil',
+                biaya_akhir: akhir,
+                status_pembayaran: statusBayar
+            })
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data.success) {
+                showToast("Pelunasan & status 'Diambil' berhasil disimpan!", "success");
+                activeReceiptService.biaya_akhir = akhir;
+                activeReceiptService.status_pembayaran = statusBayar;
+                activeReceiptService.status_servis = 'Diambil';
+                populateReceipt(activeReceiptService);
+                loadServices();
+            } else {
+                alert("Gagal menyimpan pelunasan: " + data.message);
+            }
+        })
+        .catch(function(err) {
+            alert("Terjadi kesalahan: " + err);
+        });
+    }
+
+    function buildReceiptEscPos(s, type) {
+        var isAmbil = (type === 'ambil');
+        var cmd = '';
+        cmd += '\x1B\x40'; // Reset / Init printer
+        cmd += '\x1B\x61\x01'; // Center
+        cmd += '\x1B\x45\x01'; // Bold ON
+        cmd += 'KASTOKO SERVIS\n';
+        cmd += '\x1B\x45\x00'; // Bold OFF
+        cmd += (isAmbil ? 'NOTA PENGAMBILAN & KWITANSI\n' : 'TANDA TERIMA PENERIMAAN UNIT\n');
+        cmd += (isAmbil ? ('Tgl Keluar: ' + (s.tanggal_selesai || getSystemDate()) + '\n') : ('Tanggal: ' + (s.tanggal_masuk || getSystemDate()) + '\n'));
+        cmd += '================================\n';
+        
+        cmd += '\x1B\x61\x00'; // Left align
+        cmd += 'No. Tiket  : ' + (s.kode_servis || ('#' + s.id)) + '\n';
+        cmd += 'Pelanggan  : ' + (s.nama_pelanggan || '-') + '\n';
+        cmd += 'No. HP/WA  : ' + (s.no_hp || '-') + '\n';
+        cmd += '--------------------------------\n';
+        cmd += 'Perangkat  : ' + (s.jenis_perangkat || '-') + '\n';
+        cmd += 'Merk/Model : ' + (s.merk_model || '-') + '\n';
+        cmd += 'Layanan    : ' + (s.menu_servis || '-') + '\n';
+        cmd += 'Keluhan    : ' + (s.keluhan || '-') + '\n';
+        if (s.catatan_teknisi) {
+            cmd += 'Catatan T. : ' + s.catatan_teknisi + '\n';
+        }
+        cmd += '--------------------------------\n';
+        
+        if (isAmbil) {
+            var inputAkhir = document.getElementById('rInputBiayaAkhir');
+            var akhirVal = inputAkhir ? parseNumber(inputAkhir.value) : (s.biaya_akhir || s.estimasi_biaya || 0);
+            var bayarVal = document.getElementById('rInputStatusBayar') ? document.getElementById('rInputStatusBayar').value : (s.status_pembayaran || 'LUNAS');
+            if (s.estimasi_biaya) {
+                cmd += 'Est. Awal  : Rp ' + (s.estimasi_biaya || 0).toLocaleString('id-ID') + '\n';
+            }
+            cmd += '\x1B\x45\x01'; // Bold ON
+            cmd += 'TOTAL BIAYA: Rp ' + akhirVal.toLocaleString('id-ID') + '\n';
+            cmd += 'STATUS     : ' + bayarVal + '\n';
+            cmd += '\x1B\x45\x00'; // Bold OFF
+        } else {
+            cmd += '\x1B\x45\x01'; // Bold ON
+            cmd += 'Estimasi   : Rp ' + (s.estimasi_biaya || 0).toLocaleString('id-ID') + '\n';
+            cmd += 'Status     : ' + (s.status_servis || 'Baru') + '\n';
+            cmd += '\x1B\x45\x00'; // Bold OFF
+        }
+        cmd += '================================\n';
+        cmd += '\x1B\x61\x01'; // Center
+        if (isAmbil) {
+            cmd += '* Terima kasih atas kepercayaan Anda *\n';
+            cmd += '* Garansi 7 hari kerusakan sama *\n';
+        } else {
+            cmd += '* Simpan nota bukti penerimaan *\n';
+            cmd += '* Bawa saat pengambilan unit *\n';
+        }
+        cmd += '\n';
+        cmd += 'Pelanggan            Kasir/Teknisi\n\n\n';
+        var custName = (s.nama_pelanggan || '...............');
+        if (custName.length > 15) custName = custName.substring(0, 15);
+        cmd += '(' + custName + ')       (...........)\n';
+        cmd += '\n\n\n';
+        cmd += '\x1D\x56\x41\x00'; // Partial Cut
+        return cmd;
+    }
+
+    function buildLabelEscPos(s, size) {
+        var cmd = '';
+        cmd += '\x1B\x40'; // Init
+        cmd += '\x1B\x61\x01'; // Center
+        cmd += '\x1B\x45\x01'; // Bold ON
+        cmd += '[' + (s.kode_servis || ('#' + s.id)) + ']\n';
+        cmd += '\x1B\x45\x00'; // Bold OFF
+        cmd += '\x1B\x61\x00'; // Left align
+        cmd += 'Tgl : ' + (s.tanggal_masuk || getSystemDate()).substring(0, 10) + '\n';
+        cmd += 'Nama: ' + (s.nama_pelanggan || '-') + ' (' + (s.no_hp || '-') + ')\n';
+        cmd += 'Unit: ' + (s.merk_model || '-') + ' - ' + (s.jenis_perangkat || '') + '\n';
+        cmd += 'Klh : ' + (s.keluhan || '-') + '\n';
+        if (s.catatan_teknisi) {
+            cmd += 'Cat : ' + s.catatan_teknisi + '\n';
+        }
+        cmd += '--------------------------------\n';
+        cmd += '\n\n';
+        cmd += '\x1D\x56\x41\x00'; // Cut
+        return cmd;
+    }
+
+    async function sendRawEscPos(escPosStr, target) {
+        var encoder = new TextEncoder();
+        var bytes = encoder.encode(escPosStr);
+
+        if (target === 'bluetooth' && btCharacteristic) {
+            var CHUNK = 64;
+            for (var i = 0; i < bytes.length; i += CHUNK) {
+                var chunk = bytes.slice(i, i + CHUNK);
+                if (btCharacteristic.writeValueWithoutResponse) {
+                    await btCharacteristic.writeValueWithoutResponse(chunk);
+                } else {
+                    await btCharacteristic.writeValue(chunk);
+                }
+                await new Promise(function(r) { setTimeout(r, 25); });
+            }
+            return true;
+        } else if (target === 'usb' && usbPort) {
+            var writer = usbPort.writable.getWriter();
+            await writer.write(bytes);
+            writer.releaseLock();
+            return true;
+        }
+        return false;
+    }
+
+    async function connectBluetoothPrinter() {
+        if (!navigator.bluetooth) {
+            alert("Browser Anda tidak mendukung Web Bluetooth.\nSilakan gunakan Google Chrome / Microsoft Edge, atau cetak langsung via Driver Printer Windows.");
+            return;
+        }
+        try {
+            if (btDevice && btDevice.gatt && btDevice.gatt.connected) {
+                btDevice.gatt.disconnect();
+                btDevice = null;
+                btCharacteristic = null;
+                var badge = document.getElementById('btBadge');
+                if (badge) {
+                    badge.className = 'printer-badge disconnected';
+                    badge.innerText = '📶 Bluetooth: Terputus';
+                }
+                var btn = document.getElementById('btnBtConnect');
+                if (btn) btn.innerText = '📶 Hubungkan BT';
+                showToast("Koneksi Bluetooth diputus.", "info");
+                return;
+            }
+
+            var device;
+            try {
+                device = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: [
+                        '000018f0-0000-1000-8000-00805f9b34fb',
+                        '0000ffe0-0000-1000-8000-00805f9b34fb',
+                        '0000ff00-0000-1000-8000-00805f9b34fb',
+                        'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
+                        '49535343-fe7d-4ae5-8fa9-9fafd205e455'
+                    ]
+                });
+            } catch(e) {
+                console.log("Request Bluetooth dibatalkan user.");
+                return;
+            }
+
+            if (!device) return;
+            var server = await device.gatt.connect();
+            var services = await server.getPrimaryServices();
+            var writeChar = null;
+
+            for (var svc of services) {
+                var chars = await svc.getCharacteristics();
+                for (var c of chars) {
+                    if (c.properties.write || c.properties.writeWithoutResponse) {
+                        writeChar = c;
+                        break;
+                    }
+                }
+                if (writeChar) break;
+            }
+
+            if (!writeChar) {
+                alert("Printer Bluetooth terhubung tapi tidak ditemukan characteristic untuk menulis data.");
+                return;
+            }
+
+            btDevice = device;
+            btCharacteristic = writeChar;
+
+            var badge = document.getElementById('btBadge');
+            if (badge) {
+                badge.className = 'printer-badge connected';
+                badge.innerText = '📶 BT: ' + (device.name || 'Terhubung');
+            }
+            var btn = document.getElementById('btnBtConnect');
+            if (btn) btn.innerText = '📶 Putus BT';
+            showToast("Printer Bluetooth terhubung: " + (device.name || 'Printer Thermal'), "success");
+
+            device.addEventListener('gattserverdisconnected', function() {
+                btDevice = null;
+                btCharacteristic = null;
+                if (badge) {
+                    badge.className = 'printer-badge disconnected';
+                    badge.innerText = '📶 Bluetooth: Terputus';
+                }
+                if (btn) btn.innerText = '📶 Hubungkan BT';
+                showToast("Printer Bluetooth terputus.", "warning");
+            });
+        } catch(err) {
+            console.error("Bluetooth error:", err);
+            alert("Gagal menghubungkan Bluetooth: " + err.message);
+        }
+    }
+
+    async function connectUsbPrinter() {
+        if (!navigator.serial) {
+            alert("Browser Anda tidak mendukung Web Serial/USB.\nSilakan gunakan Google Chrome / Microsoft Edge, atau cetak langsung via Driver Printer Windows.");
+            return;
+        }
+        try {
+            if (usbPort) {
+                await usbPort.close();
+                usbPort = null;
+                var badge = document.getElementById('usbBadge');
+                if (badge) {
+                    badge.className = 'printer-badge disconnected';
+                    badge.innerText = '🔌 USB: Terputus';
+                }
+                var btn = document.getElementById('btnUsbConnect');
+                if (btn) btn.innerText = '🔌 Hubungkan USB';
+                showToast("Koneksi USB printer ditutup.", "info");
+                return;
+            }
+
+            var port = await navigator.serial.requestPort();
+            await port.open({ baudRate: 9600 });
+            usbPort = port;
+
+            var badge = document.getElementById('usbBadge');
+            if (badge) {
+                badge.className = 'printer-badge connected';
+                badge.innerText = '🔌 USB: Terhubung';
+            }
+            var btn = document.getElementById('btnUsbConnect');
+            if (btn) btn.innerText = '🔌 Putus USB';
+            showToast("Printer USB berhasil terhubung!", "success");
+        } catch(err) {
+            if (err.name !== 'NotFoundError') {
+                console.error("USB error:", err);
+                alert("Gagal membuka port USB: " + err.message);
+            }
+        }
+    }
+
+    function printElementDirectly(elementId, widthMm, heightMm, callback) {
+        var sourceEl = document.getElementById(elementId);
+        if (!sourceEl) return;
+
+        var iframe = document.getElementById('printIsolationFrame');
+        if (iframe) {
+            iframe.remove();
+        }
+        iframe = document.createElement('iframe');
+        iframe.id = 'printIsolationFrame';
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = 'none';
+        iframe.style.visibility = 'hidden';
+        document.body.appendChild(iframe);
+
+        var doc = iframe.contentWindow.document;
+        doc.open();
+        doc.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Cetak</title>');
+        doc.write('<link rel="stylesheet" href="style.css">');
+        doc.write('<style>');
+        doc.write('@page { size: ' + widthMm + 'mm ' + heightMm + 'mm; margin: 0 !important; }');
+        doc.write('html, body { margin: 0 !important; padding: 0 !important; width: 100% !important; height: auto !important; background: #ffffff !important; overflow: hidden !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }');
+        doc.write('body { display: flex; justify-content: center; align-items: flex-start; margin: 0 !important; padding: 0 !important; }');
+        if (elementId === 'receiptPrintArea') {
+            doc.write('#receiptPrintArea { border: none !important; box-shadow: none !important; width: 76mm !important; max-width: 80mm !important; max-height: ' + (heightMm - 2) + 'mm !important; margin: 0 auto !important; padding: 2mm 3mm !important; page-break-after: avoid !important; break-after: avoid !important; page-break-inside: avoid !important; break-inside: avoid !important; overflow: hidden !important; }');
+        } else {
+            doc.write('#labelPrintArea { border: none !important; box-shadow: none !important; margin: 0 auto !important; page-break-after: avoid !important; break-after: avoid !important; page-break-inside: avoid !important; break-inside: avoid !important; overflow: hidden !important; }');
+        }
+        doc.write('</style></head><body>');
+        doc.write(sourceEl.outerHTML);
+        doc.write('</body></html>');
+        doc.close();
+
+        var printed = false;
+        var triggerPrint = function() {
+            if (printed) return;
+            printed = true;
+            try {
+                iframe.contentWindow.focus();
+                iframe.contentWindow.print();
+            } catch(e) {
+                console.error("Print iframe error, fallback to window.print:", e);
+                window.print();
+            }
+            if (callback) {
+                setTimeout(callback, 600);
+            }
+        };
+
+        iframe.onload = function() {
+            setTimeout(triggerPrint, 150);
+        };
+        setTimeout(triggerPrint, 350);
+    }
+
+    function printViaBrowser(mode, widthMm, heightMm, callback) {
+        var elementId = (mode === 'print-mode-receipt') ? 'receiptPrintArea' : 'labelPrintArea';
+        printElementDirectly(elementId, widthMm, heightMm, callback);
+    }
+
+    function printReceiptOnly() {
+        if (!activeReceiptService) return;
+        if (autoPrintLabel) {
+            printReceiptAndLabel();
+            return;
+        }
+
+        var target = btCharacteristic ? 'bluetooth' : (usbPort ? 'usb' : null);
+        if (target) {
+            showToast("Mencetak Nota via " + target.toUpperCase() + "...", "info");
+            var cmd = buildReceiptEscPos(activeReceiptService, currentReceiptType);
+            sendRawEscPos(cmd, target).then(function() {
+                showToast("Nota berhasil dicetak via " + target.toUpperCase() + "!", "success");
+            });
+        } else {
+            showToast("Mencetak Nota 80x100mm via Driver Printer...", "info");
+            printViaBrowser('print-mode-receipt', 80, 100);
+        }
+    }
+
+    function printLabelOnly() {
+        if (!activeReceiptService) return;
+        var sizeParts = currentLabelSize.split('x');
+        var w = parseInt(sizeParts[0]) || 40;
+        var h = parseInt(sizeParts[1]) || 30;
+        var mode = 'print-mode-label-' + currentLabelSize.replace('x', '');
+
+        var target = btCharacteristic ? 'bluetooth' : (usbPort ? 'usb' : null);
+        if (target) {
+            showToast("Mencetak Label Stiker (" + currentLabelSize + "mm) via " + target.toUpperCase() + "...", "info");
+            var cmd = buildLabelEscPos(activeReceiptService, currentLabelSize);
+            sendRawEscPos(cmd, target).then(function() {
+                showToast("Label berhasil dicetak via " + target.toUpperCase() + "!", "success");
+            });
+        } else {
+            showToast("Mencetak Label Stiker (" + currentLabelSize + "mm) via Driver Printer...", "info");
+            printViaBrowser(mode, w, h);
+        }
+    }
+
+    async function printReceiptAndLabel() {
+        if (!activeReceiptService) return;
+        var target = btCharacteristic ? 'bluetooth' : (usbPort ? 'usb' : null);
+        if (target) {
+            showToast("Mencetak Nota & Label via " + target.toUpperCase() + "...", "info");
+            var receiptCmd = buildReceiptEscPos(activeReceiptService, currentReceiptType);
+            await sendRawEscPos(receiptCmd, target);
+            await new Promise(function(r) { setTimeout(r, 600); });
+            var labelCmd = buildLabelEscPos(activeReceiptService, currentLabelSize);
+            await sendRawEscPos(labelCmd, target);
+            showToast("Nota dan Label berhasil dicetak via " + target.toUpperCase() + "!", "success");
+        } else {
+            showToast("Mencetak Nota (80x100mm), lalu otomatis Label Stiker...", "info");
+            printViaBrowser('print-mode-receipt', 80, 100, function() {
+                setTimeout(function() {
+                    var sizeParts = currentLabelSize.split('x');
+                    var w = parseInt(sizeParts[0]) || 40;
+                    var h = parseInt(sizeParts[1]) || 30;
+                    var mode = 'print-mode-label-' + currentLabelSize.replace('x', '');
+                    printViaBrowser(mode, w, h);
+                }, 500);
+            });
+        }
     }
 
     function escapeHtml(str) {
@@ -1260,6 +2645,72 @@
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
+    }
+
+    // ========================================================
+    // AUTO-CLOSE POPUP KETIKA KLIK DI MANAPUN (DI LUAR MODAL CARD)
+    // ========================================================
+    function initModalOutsideClickClose() {
+        var modalCloseMap = {
+            'settingsModal': function() { if (typeof closeSettingsModal === 'function') closeSettingsModal(); },
+            'receiptModal': function() { if (typeof closeReceiptModal === 'function') closeReceiptModal(); },
+            'completeServiceModal': function() { if (typeof closeCompleteServiceModal === 'function') closeCompleteServiceModal(); },
+            'cashierPickupModal': function() { if (typeof closeCashierPickupModal === 'function') closeCashierPickupModal(); },
+            'instantServiceModal': function() { if (typeof closeInstantServiceModal === 'function') closeInstantServiceModal(); },
+            'forgotPassModal': function() { if (typeof closeForgotModal === 'function') closeForgotModal(); },
+            'changePassModal': function() { if (typeof closeChangePassModal === 'function') closeChangePassModal(); },
+            'confirmModal': function() { if (typeof executeReset === 'function') executeReset(false); }
+        };
+
+        var overlays = document.querySelectorAll('.modal-overlay');
+        overlays.forEach(function(overlay) {
+            if (overlay.id === 'loginModal') return; // Login wajib, jangan auto-close jika belum login
+
+            var isDownOutside = false;
+
+            overlay.addEventListener('mousedown', function(e) {
+                // Cek apakah mousedown terjadi di luar modal-card (pada backdrop)
+                isDownOutside = !e.target.closest('.modal-card');
+            });
+
+            overlay.addEventListener('touchstart', function(e) {
+                isDownOutside = !e.target.closest('.modal-card');
+            }, { passive: true });
+
+            overlay.addEventListener('click', function(e) {
+                // Tutup popup jika klik terjadi di luar modal-card (di manapun pada backdrop)
+                var isClickOutside = !e.target.closest('.modal-card');
+                if (isClickOutside && (isDownOutside || e.detail === 0)) {
+                    if (modalCloseMap[overlay.id]) {
+                        modalCloseMap[overlay.id]();
+                    } else {
+                        overlay.style.display = 'none';
+                    }
+                }
+                isDownOutside = false;
+            });
+        });
+
+        // Dukungan tombol Escape (ESC) pada keyboard untuk menutup popup teratas
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' || e.key === 'Esc') {
+                var visibleOverlays = [];
+                overlays.forEach(function(ov) {
+                    if (ov.id === 'loginModal') return;
+                    if (ov.style.display !== 'none' && window.getComputedStyle(ov).display !== 'none') {
+                        visibleOverlays.push(ov);
+                    }
+                });
+                if (visibleOverlays.length > 0) {
+                    var topOverlay = visibleOverlays[visibleOverlays.length - 1];
+                    if (modalCloseMap[topOverlay.id]) {
+                        modalCloseMap[topOverlay.id]();
+                    } else {
+                        topOverlay.style.display = 'none';
+                    }
+                }
+            }
+        });
     }
 
     function initApp() {
@@ -1306,6 +2757,16 @@
         // Load active main dashboard tab
         var savedMainDashboard = localStorage.getItem('calasetoko_main_dashboard') || 'pembukuan';
         switchMainDashboard(savedMainDashboard);
+
+        // Load preferensi cetak label & auto-print
+        var sizeSelect = document.getElementById('labelSizeSelect');
+        if (sizeSelect) sizeSelect.value = currentLabelSize;
+        var autoCheck = document.getElementById('autoPrintLabelCheck');
+        if (autoCheck) autoCheck.checked = autoPrintLabel;
+        onLabelSizeChange(currentLabelSize);
+
+        // Inisialisasi auto-close popup ketika klik di luar kartu (di manapun) & tombol ESC
+        initModalOutsideClickClose();
 
         document.getElementById('inputTanggal').value = getSystemDate();
         var srvDate = document.getElementById('srvTanggalMasuk');
@@ -1449,6 +2910,8 @@
         if (headerImg) headerImg.src = url;
         var preview = document.getElementById('settingsLogoPreview');
         if (preview) preview.src = url;
+        var receiptLogo = document.getElementById('receiptLogo');
+        if (receiptLogo) receiptLogo.src = url;
         var label = document.getElementById('logoStatusLabel');
         if (label) {
             label.innerText = isCustom ? 'Logo Kustom Aktif' : 'Logo Bawaan KasToko (KT) Aktif';

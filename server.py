@@ -87,6 +87,35 @@ def init_db():
             print("[INFO] Kolom 'catatan' berhasil ditambahkan ke tabel transactions.")
         except Exception as e:
             print(f"[WARNING] Gagal migrasi kolom catatan: {e}")
+    if "service_id" not in cols:
+        try:
+            cursor.execute("ALTER TABLE transactions ADD COLUMN service_id INTEGER DEFAULT NULL")
+            conn.commit()
+            print("[INFO] Kolom 'service_id' berhasil ditambahkan ke tabel transactions.")
+        except Exception as e:
+            print(f"[WARNING] Gagal migrasi kolom service_id: {e}")
+
+    # Migrasi kolom sparepart & metode bayar pada services
+    cursor.execute("PRAGMA table_info(services)")
+    s_cols = [col[1] for col in cursor.fetchall()]
+    if "sparepart_nama" not in s_cols:
+        try:
+            cursor.execute("ALTER TABLE services ADD COLUMN sparepart_nama TEXT DEFAULT ''")
+            conn.commit()
+        except Exception as e:
+            print(f"[WARNING] Gagal migrasi sparepart_nama: {e}")
+    if "sparepart_biaya" not in s_cols:
+        try:
+            cursor.execute("ALTER TABLE services ADD COLUMN sparepart_biaya REAL DEFAULT 0")
+            conn.commit()
+        except Exception as e:
+            print(f"[WARNING] Gagal migrasi sparepart_biaya: {e}")
+    if "metode_pembayaran" not in s_cols:
+        try:
+            cursor.execute("ALTER TABLE services ADD COLUMN metode_pembayaran TEXT DEFAULT 'Tunai'")
+            conn.commit()
+        except Exception as e:
+            print(f"[WARNING] Gagal migrasi metode_pembayaran: {e}")
 
     # Migrasi otomatis dari transactions.json lama jika database masih kosong
     cursor.execute("SELECT COUNT(*) FROM transactions")
@@ -165,7 +194,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 conn = sqlite3.connect(DB_FILE)
                 conn.row_factory = sqlite3.Row
                 cursor = conn.cursor()
-                cursor.execute("SELECT id, tanggal, omset, spp, opp, jasa, hasil, catatan FROM transactions ORDER BY id ASC")
+                cursor.execute("SELECT id, tanggal, omset, spp, opp, jasa, hasil, catatan, service_id FROM transactions ORDER BY id ASC")
                 rows = cursor.fetchall()
                 
                 transactions = []
@@ -178,7 +207,8 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                         "opp": float(row["opp"] or 0),
                         "jasa": float(row["jasa"] or 0),
                         "hasil": float(row["hasil"] or 0),
-                        "catatan": row["catatan"] or ""
+                        "catatan": row["catatan"] or "",
+                        "service_id": row["service_id"] if "service_id" in row.keys() else None
                     })
                 conn.close()
 
@@ -344,8 +374,8 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 cursor.execute("DELETE FROM transactions")
                 for t in transactions:
                     cursor.execute('''
-                        INSERT INTO transactions (tanggal, omset, spp, opp, jasa, hasil, catatan)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        INSERT INTO transactions (tanggal, omset, spp, opp, jasa, hasil, catatan, service_id)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     ''', (
                         t.get('tanggal', ''),
                         float(t.get('omset', 0) or 0),
@@ -353,7 +383,8 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                         float(t.get('opp', 0) or 0),
                         float(t.get('jasa', 0) or 0),
                         float(t.get('hasil', 0) or 0),
-                        str(t.get('catatan', '') or '')
+                        str(t.get('catatan', '') or ''),
+                        t.get('service_id')
                     ))
                 conn.commit()
                 conn.close()
@@ -535,6 +566,9 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 estimasi_biaya = float(data.get('estimasi_biaya', 0) or 0)
                 biaya_akhir = float(data.get('biaya_akhir', estimasi_biaya) or 0)
                 status_pembayaran = str(data.get('status_pembayaran', 'Belum Bayar')).strip()
+                sparepart_nama = str(data.get('sparepart_nama', '')).strip()
+                sparepart_biaya = float(data.get('sparepart_biaya', 0) or 0)
+                metode_pembayaran = str(data.get('metode_pembayaran', 'Tunai')).strip()
                 tanggal_masuk = str(data.get('tanggal_masuk', datetime.date.today().strftime('%Y-%m-%d'))).strip()
                 tanggal_selesai = str(data.get('tanggal_selesai', '')).strip()
 
@@ -564,6 +598,9 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                             estimasi_biaya = ?,
                             biaya_akhir = ?,
                             status_pembayaran = ?,
+                            sparepart_nama = ?,
+                            sparepart_biaya = ?,
+                            metode_pembayaran = ?,
                             tanggal_masuk = ?,
                             tanggal_selesai = ?
                         WHERE id = ?
@@ -571,6 +608,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                         cust_id, nama_pelanggan, no_hp, jenis_perangkat, merk_model,
                         keluhan, catatan_teknisi, menu_servis, status_servis,
                         estimasi_biaya, biaya_akhir, status_pembayaran,
+                        sparepart_nama, sparepart_biaya, metode_pembayaran,
                         tanggal_masuk, tanggal_selesai, srv_id
                     ))
                     saved_id = srv_id
@@ -582,13 +620,15 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                             kode_servis, customer_id, nama_pelanggan, no_hp,
                             jenis_perangkat, merk_model, keluhan, catatan_teknisi,
                             menu_servis, status_servis, estimasi_biaya, biaya_akhir,
-                            status_pembayaran, tanggal_masuk, tanggal_selesai
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            status_pembayaran, sparepart_nama, sparepart_biaya,
+                            metode_pembayaran, tanggal_masuk, tanggal_selesai
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ''', (
                         kode_servis, cust_id, nama_pelanggan, no_hp,
                         jenis_perangkat, merk_model, keluhan, catatan_teknisi,
                         menu_servis, status_servis, estimasi_biaya, biaya_akhir,
-                        status_pembayaran, tanggal_masuk, tanggal_selesai
+                        status_pembayaran, sparepart_nama, sparepart_biaya,
+                        metode_pembayaran, tanggal_masuk, tanggal_selesai
                     ))
                     saved_id = cursor.lastrowid
                     msg = f"Tiket servis baru #{kode_servis} berhasil disimpan."
@@ -615,16 +655,144 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 data = json.loads(post_data.decode('utf-8'))
                 srv_id = data.get('id')
                 new_status = data.get('status_servis')
+                biaya_akhir = data.get('biaya_akhir')
+                status_pembayaran = data.get('status_pembayaran')
+                sparepart_nama = data.get('sparepart_nama')
+                sparepart_biaya = data.get('sparepart_biaya')
+                metode_pembayaran = data.get('metode_pembayaran')
+                catatan_teknisi = data.get('catatan_teknisi')
+
                 if not srv_id or not new_status:
                     raise Exception("ID dan status servis diperlukan.")
 
                 conn = sqlite3.connect(DB_FILE)
+                conn.row_factory = sqlite3.Row
                 cursor = conn.cursor()
-                if new_status in ('Selesai', 'Diambil'):
-                    today_str = datetime.date.today().strftime('%Y-%m-%d')
-                    cursor.execute("UPDATE services SET status_servis = ?, tanggal_selesai = CASE WHEN tanggal_selesai = '' OR tanggal_selesai IS NULL THEN ? ELSE tanggal_selesai END WHERE id = ?", (new_status, today_str, srv_id))
-                else:
-                    cursor.execute("UPDATE services SET status_servis = ? WHERE id = ?", (new_status, srv_id))
+                today_str = datetime.date.today().strftime('%Y-%m-%d')
+
+                # Ambil data tiket saat ini
+                cursor.execute("SELECT * FROM services WHERE id = ?", (srv_id,))
+                srv_row = cursor.fetchone()
+                if not srv_row:
+                    conn.close()
+                    raise Exception("Data servis tidak ditemukan.")
+
+                updates = ["status_servis = ?"]
+                params = [new_status]
+
+                if new_status in ('Instan', 'Selesai', 'Diambil'):
+                    updates.append("tanggal_selesai = CASE WHEN tanggal_selesai = '' OR tanggal_selesai IS NULL THEN ? ELSE tanggal_selesai END")
+                    params.append(today_str)
+                if biaya_akhir is not None:
+                    updates.append("biaya_akhir = ?")
+                    params.append(float(biaya_akhir or 0))
+                if status_pembayaran:
+                    updates.append("status_pembayaran = ?")
+                    params.append(str(status_pembayaran))
+                if sparepart_nama is not None:
+                    updates.append("sparepart_nama = ?")
+                    params.append(str(sparepart_nama).strip())
+                if sparepart_biaya is not None:
+                    updates.append("sparepart_biaya = ?")
+                    params.append(float(sparepart_biaya or 0))
+                if metode_pembayaran is not None:
+                    updates.append("metode_pembayaran = ?")
+                    params.append(str(metode_pembayaran).strip())
+                if catatan_teknisi is not None:
+                    updates.append("catatan_teknisi = ?")
+                    params.append(str(catatan_teknisi).strip())
+
+                params.append(srv_id)
+                cursor.execute(f"UPDATE services SET {', '.join(updates)} WHERE id = ?", params)
+
+                # Ambil data terbaru setelah update untuk sinkronisasi ke pembukuan
+                cursor.execute("SELECT * FROM services WHERE id = ?", (srv_id,))
+                updated_srv = cursor.fetchone()
+                kode_servis = updated_srv["kode_servis"]
+                nama_pelanggan = updated_srv["nama_pelanggan"]
+                s_spp_biaya = float(updated_srv["sparepart_biaya"] or 0)
+                s_spp_nama = str(updated_srv["sparepart_nama"] or "").strip()
+                s_biaya_akhir = float(updated_srv["biaya_akhir"] or updated_srv["estimasi_biaya"] or 0)
+                s_status_bayar = str(updated_srv["status_pembayaran"] or "Belum Bayar").strip()
+
+                # Persentase jasa dari settings (default 20%)
+                cursor.execute("SELECT value FROM settings WHERE key = 'inputPersenJasa'")
+                persen_row = cursor.fetchone()
+                persen_jasa = 20.0
+                if persen_row and persen_row[0]:
+                    try:
+                        persen_jasa = float(persen_row[0])
+                    except Exception:
+                        persen_jasa = 20.0
+
+                # Sinkronisasi ke tabel transactions (Pembukuan Toko) untuk Instan, Selesai, dan Diambil
+                if new_status in ('Instan', 'Selesai', 'Diambil'):
+                    if s_status_bayar == 'LUNAS':
+                        omset_val = s_biaya_akhir
+                        spp_val = s_spp_biaya
+                        base_jasa = max(0.0, omset_val - spp_val)
+                        jasa_val = round(base_jasa * (persen_jasa / 100.0))
+                        hasil_val = round(omset_val - spp_val - jasa_val)
+                        if new_status == 'Instan':
+                            desc = f"Servis Instan Lunas #{kode_servis} - {nama_pelanggan}"
+                        elif new_status == 'Diambil':
+                            desc = f"Servis Lunas #{kode_servis} - {nama_pelanggan}"
+                        else:
+                            desc = f"Servis Selesai (Lunas) #{kode_servis} - {nama_pelanggan}"
+                        if s_spp_nama:
+                            desc += f" ({s_spp_nama})"
+
+                        cursor.execute("SELECT id FROM transactions WHERE service_id = ?", (srv_id,))
+                        trans_row = cursor.fetchone()
+                        if trans_row:
+                            cursor.execute('''
+                                UPDATE transactions SET
+                                    tanggal = ?,
+                                    omset = ?,
+                                    spp = ?,
+                                    jasa = ?,
+                                    hasil = ?,
+                                    catatan = ?
+                                WHERE service_id = ?
+                            ''', (today_str, omset_val, spp_val, jasa_val, hasil_val, desc, srv_id))
+                        else:
+                            cursor.execute('''
+                                INSERT INTO transactions (tanggal, omset, spp, opp, jasa, hasil, catatan, service_id)
+                                VALUES (?, ?, ?, 0, ?, ?, ?, ?)
+                            ''', (today_str, omset_val, spp_val, jasa_val, hasil_val, desc, srv_id))
+                    else:
+                        # Jika belum lunas, catat modal sparepart (SPP) jika ada
+                        desc_prefix = "Servis Instan" if new_status == 'Instan' else ("Servis Diambil" if new_status == 'Diambil' else "SPP Servis")
+                        desc = f"{desc_prefix} (Belum Lunas) #{kode_servis} - {nama_pelanggan}"
+                        if s_spp_nama:
+                            desc += f" ({s_spp_nama})"
+
+                        cursor.execute("SELECT id FROM transactions WHERE service_id = ?", (srv_id,))
+                        trans_row = cursor.fetchone()
+                        if s_spp_biaya > 0:
+                            if trans_row:
+                                cursor.execute('''
+                                    UPDATE transactions SET
+                                        tanggal = ?,
+                                        omset = 0,
+                                        spp = ?,
+                                        jasa = 0,
+                                        hasil = -?,
+                                        catatan = ?
+                                    WHERE service_id = ?
+                                ''', (today_str, s_spp_biaya, s_spp_biaya, desc, srv_id))
+                            else:
+                                cursor.execute('''
+                                    INSERT INTO transactions (tanggal, omset, spp, opp, jasa, hasil, catatan, service_id)
+                                    VALUES (?, 0, ?, 0, 0, ?, ?, ?)
+                                ''', (today_str, s_spp_biaya, -s_spp_biaya, desc, srv_id))
+                        elif trans_row:
+                            cursor.execute("DELETE FROM transactions WHERE service_id = ?", (srv_id,))
+
+                elif new_status in ('Baru', 'Batal'):
+                    # Jika dibatalkan atau dikembalikan ke baru, hapus transaksi pembukuan terkait
+                    cursor.execute("DELETE FROM transactions WHERE service_id = ?", (srv_id,))
+
                 conn.commit()
                 conn.close()
 
@@ -652,6 +820,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 conn = sqlite3.connect(DB_FILE)
                 cursor = conn.cursor()
                 cursor.execute("DELETE FROM services WHERE id = ?", (srv_id,))
+                cursor.execute("DELETE FROM transactions WHERE service_id = ?", (srv_id,))
                 conn.commit()
                 conn.close()
 
