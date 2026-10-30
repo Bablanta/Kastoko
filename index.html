@@ -115,7 +115,7 @@
             <h2>🔐 Login Akses Pengguna</h2>
             <div class="form-group">
                 <label>Pilih Role</label>
-                <select id="loginRole" class="form-control">
+                <select id="loginRole" class="form-control" onchange="applyRoleTheme(this.value)">
                     <option value="superadmin">Superadmin</option>
                     <option value="admin">Admin</option>
                 </select>
@@ -148,12 +148,18 @@
             <div class="settings-modal-body">
                 <!-- Kolom Kiri -->
                 <div class="settings-col">
-                    <!-- Section 1: Theme -->
+                    <!-- Section 1: Theme (Tersimpan Terpisah Sesuai Role) -->
                     <div class="settings-section" style="border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; background: rgba(0,0,0,0.01);">
-                        <h3 style="font-size: 13px; font-weight: bold; letter-spacing: 0.5px; margin: 0 0 8px 0; color: var(--accent-color);">THEMA</h3>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <h3 style="font-size: 13px; font-weight: bold; letter-spacing: 0.5px; margin: 0; color: var(--accent-color);">🎨 THEMA APLIKASI</h3>
+                            <span id="themeRoleBadge" style="font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 4px; background: #e0f2fe; color: #0284c7;">Role: Admin</span>
+                        </div>
                         <button type="button" class="btn" id="themeBtnSingle" onclick="toggleTheme()" style="width: 100%; height: 46px; font-size: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 8px; border: 1px solid var(--border-color); transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(0,0,0,0.1);" title="Klik 1x untuk beralih tema (Gelap / Terang)">
                             🌙
                         </button>
+                        <div id="themeRoleHint" style="font-size: 10.5px; color: var(--text-muted); margin-top: 6px; text-align: center; line-height: 1.4;">
+                            Tersimpan khusus untuk akun <b id="themeRoleName">Admin</b> (tidak akan merubah tema Superadmin).
+                        </div>
                         <button id="themeBtnModal" onclick="toggleTheme()" style="display: none;"></button>
                     </div>
 
@@ -3864,9 +3870,8 @@
 
     function initApp() {
         migrateLegacyStorage();
-        var savedTheme = localStorage.getItem('autocash_theme') || 'light';
-        document.documentElement.setAttribute('data-theme', savedTheme);
-        updateThemeButton(savedTheme);
+        var savedRole = sessionStorage.getItem('autocash_current_role') || 'admin';
+        applyRoleTheme(savedRole);
 
         // Load status hide history dari localStorage
         var hideHistory = localStorage.getItem('autocash_hide_history') === 'true';
@@ -3880,7 +3885,7 @@
         }
 
         // Load view tab preference (harian / mingguan / bulanan)
-        var savedBookView = localStorage.getItem('autocash_book_view') || 'harian';
+        var savedBookView = localStorage.getItem('autocash_book_view_' + savedRole) || localStorage.getItem('autocash_book_view') || 'harian';
         switchBookView(savedBookView);
 
         // Load logo (kustom permanen atau default KT)
@@ -3965,6 +3970,8 @@
         }
 
         updateRecordCount();
+        var curR = getCurrentRole();
+        localStorage.setItem('autocash_book_view_' + curR, view);
         localStorage.setItem('autocash_book_view', view);
     }
 
@@ -4052,6 +4059,11 @@
                     }
                     var setWa = document.getElementById('settingWaTarget');
                     if (setWa) setWa.value = localStorage.getItem('autocash_wa_target') || 'desktop';
+
+                    if (s.theme_superadmin) localStorage.setItem('autocash_theme_superadmin', s.theme_superadmin);
+                    if (s.theme_admin) localStorage.setItem('autocash_theme_admin', s.theme_admin);
+                    var curR = getCurrentRole();
+                    applyRoleTheme(curR);
 
                     if (s.nota_connection) localStorage.setItem('autocash_nota_connection', s.nota_connection);
                     if (s.label_connection) localStorage.setItem('autocash_label_connection', s.label_connection);
@@ -4247,6 +4259,8 @@
                     'store_name': currentStoreProfile.name,
                     'store_address': currentStoreProfile.address,
                     'store_phone': currentStoreProfile.phone,
+                    'theme_superadmin': getRoleTheme('superadmin'),
+                    'theme_admin': getRoleTheme('admin'),
                     'nota_paper_size': currentReceiptPaperSize,
                     'label_paper_size': currentLabelSize,
                     'auto_print_label': String(autoPrintLabel),
@@ -4323,8 +4337,10 @@
         if (inpAddr) inpAddr.value = currentStoreProfile.address || '';
         if (inpPhone) inpPhone.value = currentStoreProfile.phone || '';
 
-        var curTheme = document.documentElement.getAttribute('data-theme') || 'light';
-        updateThemeButton(curTheme);
+        var curRole = getCurrentRole();
+        var curTheme = getRoleTheme(curRole);
+        document.documentElement.setAttribute('data-theme', curTheme);
+        updateThemeButton(curTheme, curRole);
         var setNotaSize = document.getElementById('settingNotaPaperSize');
         if (setNotaSize) setNotaSize.value = currentReceiptPaperSize;
         var setLabelSize = document.getElementById('settingLabelPaperSize');
@@ -4499,6 +4515,7 @@
             document.getElementById('appContainer').style.opacity = '1';
             document.getElementById('appContainer').style.pointerEvents = 'auto';
             document.getElementById('loginPassword').value = '';
+            applyRoleTheme(currentUser.role);
             applyRolePermissions();
             loadTransactions();
             showToast("Selamat datang, " + role.toUpperCase() + "!", "success");
@@ -4513,6 +4530,10 @@
         document.getElementById('loginModal').style.display = 'flex';
         document.getElementById('appContainer').style.opacity = '0';
         document.getElementById('appContainer').style.pointerEvents = 'none';
+        var loginRoleEl = document.getElementById('loginRole');
+        if (loginRoleEl) {
+            applyRoleTheme(loginRoleEl.value);
+        }
     }
 
     function openForgotModal() {
@@ -4635,6 +4656,12 @@
             el.style.display = isSuperadmin ? 'inline-block' : 'none';
         });
 
+        var curR = (currentUser && currentUser.role) ? currentUser.role : 'admin';
+        var savedBookView = localStorage.getItem('autocash_book_view_' + curR) || localStorage.getItem('autocash_book_view') || 'harian';
+        if (typeof switchBookView === 'function' && currentBookView !== savedBookView) {
+            switchBookView(savedBookView);
+        }
+
         renderAllData();
     }
 
@@ -4652,36 +4679,88 @@
         }
     }
 
-    function toggleTheme() {
-        var currentTheme = document.documentElement.getAttribute('data-theme');
-        var newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        setAppTheme(newTheme);
+    // ========================================================
+    // MANAJEMEN TEMA & PREFERENSI TERPISAH PER-ROLE
+    // ========================================================
+    function getCurrentRole() {
+        return (currentUser && currentUser.role) ? currentUser.role : (sessionStorage.getItem('autocash_current_role') || 'admin');
     }
 
-    function setAppTheme(newTheme) {
-        document.documentElement.setAttribute('data-theme', newTheme);
-        localStorage.setItem('autocash_theme', newTheme);
-        updateThemeButton(newTheme);
-        if (currentUser && currentUser.role === 'superadmin') {
+    function getRoleTheme(role) {
+        var r = role || getCurrentRole();
+        var key = 'autocash_theme_' + r;
+        var saved = localStorage.getItem(key);
+        if (!saved) {
+            // Default bawaan: Superadmin default 'dark', Admin default 'light'
+            saved = (r === 'superadmin') ? 'dark' : 'light';
+        }
+        return saved;
+    }
+
+    function applyRoleTheme(role) {
+        var r = role || getCurrentRole();
+        var targetTheme = getRoleTheme(r);
+        document.documentElement.setAttribute('data-theme', targetTheme);
+        updateThemeButton(targetTheme, r);
+        if (r === 'superadmin' && typeof renderChart === 'function') {
             renderChart();
         }
     }
 
-    function updateThemeButton(theme) {
+    function toggleTheme() {
+        var r = getCurrentRole();
+        var currentTheme = getRoleTheme(r);
+        var newTheme = (currentTheme === 'dark') ? 'light' : 'dark';
+        setAppTheme(newTheme, r);
+        var roleTitle = (r === 'superadmin') ? 'Superadmin' : 'Admin';
+        showToast("Tema " + (newTheme === 'dark' ? '🌙 Gelap' : '☀️ Terang') + " aktif khusus untuk " + roleTitle + "!", "info");
+    }
+
+    function setAppTheme(newTheme, targetRole) {
+        var r = targetRole || getCurrentRole();
+        var key = 'autocash_theme_' + r;
+        localStorage.setItem(key, newTheme);
+        localStorage.setItem('autocash_theme', newTheme); // Fallback umum
+        
+        if (r === getCurrentRole()) {
+            document.documentElement.setAttribute('data-theme', newTheme);
+            updateThemeButton(newTheme, r);
+            if (r === 'superadmin' && typeof renderChart === 'function') {
+                renderChart();
+            }
+        }
+
+        // Simpan permanen ke server SQLite per-role (theme_superadmin / theme_admin)
+        var settingKey = 'theme_' + r;
+        fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: settingKey, value: newTheme })
+        }).catch(function(e) { console.warn("Gagal simpan tema role ke server:", e); });
+    }
+
+    function updateThemeButton(theme, role) {
+        var r = role || getCurrentRole();
         var btnSingle = document.getElementById('themeBtnSingle');
         var btnModal = document.getElementById('themeBtnModal');
+        var badge = document.getElementById('themeRoleBadge');
+        var hint = document.getElementById('themeRoleHint');
+        var nameSpan = document.getElementById('themeRoleName');
+
+        var roleTitle = (r === 'superadmin') ? 'Superadmin' : 'Admin';
+        var otherRole = (r === 'superadmin') ? 'Admin' : 'Superadmin';
 
         if (btnSingle) {
             if (theme === 'dark') {
                 btnSingle.innerHTML = '☀️';
-                btnSingle.title = 'Klik untuk beralih ke Mode Terang';
+                btnSingle.title = 'Mode Gelap Aktif (' + roleTitle + '). Klik untuk beralih ke Mode Terang';
                 btnSingle.style.background = '#f39c12';
                 btnSingle.style.borderColor = '#d68910';
                 btnSingle.style.color = '#ffffff';
                 btnSingle.style.boxShadow = '0 0 12px rgba(243, 156, 18, 0.4)';
             } else {
                 btnSingle.innerHTML = '🌙';
-                btnSingle.title = 'Klik untuk beralih ke Mode Gelap';
+                btnSingle.title = 'Mode Terang Aktif (' + roleTitle + '). Klik untuk beralih ke Mode Gelap';
                 btnSingle.style.background = '#2c3e50';
                 btnSingle.style.borderColor = '#1a252f';
                 btnSingle.style.color = '#ffffff';
@@ -4690,6 +4769,23 @@
         }
         if (btnModal) {
             btnModal.innerText = (theme === 'dark') ? '☀️' : '🌙';
+        }
+        if (badge) {
+            if (r === 'superadmin') {
+                badge.innerText = 'Role: Superadmin';
+                badge.style.background = '#0b5e2f';
+                badge.style.color = '#ffffff';
+            } else {
+                badge.innerText = 'Role: Admin';
+                badge.style.background = '#0284c7';
+                badge.style.color = '#ffffff';
+            }
+        }
+        if (nameSpan) {
+            nameSpan.innerText = roleTitle;
+        }
+        if (hint) {
+            hint.innerHTML = 'Tersimpan khusus untuk role <b>' + roleTitle + '</b> (tidak akan merubah tema ' + otherRole + ').';
         }
     }
 
