@@ -7,6 +7,38 @@ import datetime
 import urllib.parse
 import threading
 import signal
+import time
+
+try:
+    import printer_service
+except Exception as e:
+    printer_service = None
+    print(f"[WARN] Module printer_service tidak dapat dimuat: {e}")
+
+def get_store_settings_dict():
+    """Mengambil setting toko & printer dari database pembukuan.db"""
+    res = {
+        "store_name": "AUTOCASH SERVIS",
+        "store_address": "",
+        "store_phone": "",
+        "nota_paper_size": "58",
+        "label_paper_size": "40x30",
+        "nota_printer_name": "",
+        "label_printer_name": "",
+        "label_mode": "tspl",
+        "print_density": "high",
+        "print_delay_ms": 600
+    }
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("SELECT key, value FROM settings")
+        for k, v in cursor.fetchall():
+            res[k] = v
+        conn.close()
+    except Exception:
+        pass
+    return res
 
 PORT = 8080
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
@@ -184,6 +216,12 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=DIRECTORY, **kwargs)
 
+    def end_headers(self):
+        self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+        self.send_header('Pragma', 'no-cache')
+        self.send_header('Expires', '0')
+        super().end_headers()
+
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
@@ -329,6 +367,20 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
 
+        elif path == "/api/printers":
+            try:
+                printers = printer_service.get_installed_printers() if printer_service else []
+                def_printer = printer_service.get_default_printer() if printer_service else None
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True, "printers": printers, "default": def_printer}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
+
         elif path == "/api/customers":
             try:
                 conn = sqlite3.connect(DB_FILE)
@@ -417,18 +469,26 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             
             try:
                 data = json.loads(post_data.decode('utf-8'))
-                key = data.get('key')
-                value = data.get('value')
-
-                if not key:
-                    raise Exception("Setting key is required")
-
                 conn = sqlite3.connect(DB_FILE)
                 cursor = conn.cursor()
-                cursor.execute('''
-                    INSERT INTO settings (key, value) VALUES (?, ?)
-                    ON CONFLICT(key) DO UPDATE SET value = ?
-                ''', (key, str(value) if value is not None else '', str(value) if value is not None else ''))
+
+                if "settings" in data and isinstance(data["settings"], dict):
+                    for k, v in data["settings"].items():
+                        cursor.execute('''
+                            INSERT INTO settings (key, value) VALUES (?, ?)
+                            ON CONFLICT(key) DO UPDATE SET value = ?
+                        ''', (k, str(v) if v is not None else '', str(v) if v is not None else ''))
+                else:
+                    key = data.get('key')
+                    value = data.get('value')
+                    if not key:
+                        conn.close()
+                        raise Exception("Setting key is required")
+                    cursor.execute('''
+                        INSERT INTO settings (key, value) VALUES (?, ?)
+                        ON CONFLICT(key) DO UPDATE SET value = ?
+                    ''', (key, str(value) if value is not None else '', str(value) if value is not None else ''))
+
                 conn.commit()
                 conn.close()
 
@@ -836,6 +896,51 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 response = {"success": False, "message": str(e)}
                 self.wfile.write(json.dumps(response).encode('utf-8'))
 
+        elif path == "/api/services/clear":
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length) if content_length > 0 else b'{}'
+            try:
+                data = json.loads(post_data.decode('utf-8')) if post_data else {}
+                role = str(data.get('role', '')).strip().lower()
+                if role != 'superadmin':
+                    raise Exception("Akses Ditolak: Hanya Superadmin yang berhak mereset data servis & nomor nota.")
+
+                conn = sqlite3.connect(DB_FILE)
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+
+                # Safety: Buat snapshot cadangan sebelum clear data
+                if not os.path.exists(BACKUP_DIR):
+                    os.makedirs(BACKUP_DIR, exist_ok=True)
+                cursor.execute("SELECT * FROM services")
+                s_rows = [dict(r) for r in cursor.fetchall()]
+                cursor.execute("SELECT * FROM customers")
+                c_rows = [dict(r) for r in cursor.fetchall()]
+                timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                backup_path = os.path.join(BACKUP_DIR, f"backup_pre_clear_services_{timestamp}.json")
+                with open(backup_path, 'w', encoding='utf-8') as bf:
+                    json.dump({"services": s_rows, "customers": c_rows}, bf, ensure_ascii=False, indent=2)
+
+                # Reset data servis, pelanggan, transaksi terkait servis, dan reset urutan nomor nota ke 001
+                cursor.execute("DELETE FROM services")
+                cursor.execute("DELETE FROM customers")
+                cursor.execute("DELETE FROM transactions WHERE service_id IS NOT NULL")
+                cursor.execute("DELETE FROM sqlite_sequence WHERE name IN ('services', 'customers')")
+                conn.commit()
+                conn.close()
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                response = {"success": True, "message": "Seluruh data servis & pelanggan berhasil di-reset! Nomor nota kembali ke 001."}
+                self.wfile.write(json.dumps(response).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                response = {"success": False, "message": str(e)}
+                self.wfile.write(json.dumps(response).encode('utf-8'))
+
         elif path == "/api/customers":
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length)
@@ -892,6 +997,207 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 response = {"success": False, "message": str(e)}
                 self.wfile.write(json.dumps(response).encode('utf-8'))
+
+        elif path == "/api/print/test":
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data.decode('utf-8')) if post_data else {}
+                p_name = data.get('printer_name') or (printer_service.get_default_printer() if printer_service else None)
+                p_type = data.get('type', 'receipt')
+                paper_w = str(data.get('paper_width', '58'))
+                lbl_size = str(data.get('label_size', '40x30'))
+                lbl_mode = str(data.get('mode', 'tspl'))
+                density = str(data.get('density', 'high'))
+
+                if not p_name:
+                    raise Exception("Printer tidak ditemukan atau belum dipilih.")
+
+                if p_type == 'label':
+                    raw_bytes = printer_service.format_label_test_page(p_name, label_size=lbl_size, mode=lbl_mode)
+                    doc_title = "KasToko Test Label"
+                else:
+                    raw_bytes = printer_service.format_receipt_test_page(p_name, paper_width=paper_w, density=density)
+                    doc_title = "KasToko Test Receipt"
+
+                printer_service.send_raw_to_printer(p_name, raw_bytes, doc_name=doc_title)
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True, "message": f"Uji cetak berhasil dikirim langsung ke '{p_name}'!"}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
+
+        elif path == "/api/print/receipt":
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data.decode('utf-8')) if post_data else {}
+                settings = get_store_settings_dict()
+                srv_id = data.get('service_id')
+                srv_obj = data.get('service')
+                p_name = data.get('printer_name') or settings.get('nota_printer_name') or (printer_service.get_default_printer() if printer_service else None)
+                paper_w = str(data.get('paper_width') or settings.get('nota_paper_size') or '58')
+                density = str(data.get('density') or settings.get('print_density') or 'high')
+                receipt_type = str(data.get('receipt_type') or 'terima')
+                is_ambil = (receipt_type == 'ambil')
+
+                if not p_name:
+                    raise Exception("Printer Nota belum dipilih. Silakan atur printer di menu Pengaturan.")
+
+                if not srv_obj and srv_id:
+                    conn = sqlite3.connect(DB_FILE)
+                    conn.row_factory = sqlite3.Row
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT * FROM services WHERE id = ?", (srv_id,))
+                    row = cursor.fetchone()
+                    conn.close()
+                    if row:
+                        srv_obj = dict(row)
+
+                if not srv_obj:
+                    raise Exception("Data servis tidak ditemukan untuk dicetak.")
+
+                store_prof = data.get('store_profile') or {
+                    "name": settings.get('store_name', 'AUTOCASH SERVIS'),
+                    "address": settings.get('store_address', ''),
+                    "phone": settings.get('store_phone', '')
+                }
+
+                raw_bytes = printer_service.format_escpos_receipt(srv_obj, store_profile=store_prof, paper_width=paper_w, density=density, is_ambil=is_ambil)
+                doc_title = f"Nota {srv_obj.get('kode_servis', '')}"
+                printer_service.send_raw_to_printer(p_name, raw_bytes, doc_name=doc_title)
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True, "message": f"Nota berhasil dicetak langsung ke printer '{p_name}'!"}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
+
+        elif path == "/api/print/label":
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data.decode('utf-8')) if post_data else {}
+                settings = get_store_settings_dict()
+                srv_id = data.get('service_id')
+                srv_obj = data.get('service')
+                p_name = data.get('printer_name') or settings.get('label_printer_name') or (printer_service.get_default_printer() if printer_service else None)
+                lbl_size = str(data.get('label_size') or settings.get('label_paper_size') or '40x30')
+                lbl_mode = str(data.get('mode') or settings.get('label_mode') or 'tspl')
+
+                if not p_name:
+                    raise Exception("Printer Label belum dipilih. Silakan atur printer di menu Pengaturan.")
+
+                if not srv_obj and srv_id:
+                    conn = sqlite3.connect(DB_FILE)
+                    conn.row_factory = sqlite3.Row
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT * FROM services WHERE id = ?", (srv_id,))
+                    row = cursor.fetchone()
+                    conn.close()
+                    if row:
+                        srv_obj = dict(row)
+
+                if not srv_obj:
+                    raise Exception("Data tiket servis tidak ditemukan untuk dicetak.")
+
+                store_prof = data.get('store_profile') or {
+                    "name": settings.get('store_name', 'AUTOCASH SERVIS')
+                }
+
+                if lbl_mode == 'escpos':
+                    raw_bytes = printer_service.format_escpos_label(srv_obj, label_size=lbl_size, store_profile=store_prof)
+                else:
+                    raw_bytes = printer_service.format_tspl_label(srv_obj, label_size=lbl_size, store_profile=store_prof)
+
+                doc_title = f"Label {srv_obj.get('kode_servis', '')}"
+                printer_service.send_raw_to_printer(p_name, raw_bytes, doc_name=doc_title)
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True, "message": f"Label stiker berhasil dicetak langsung ke '{p_name}'!"}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
+
+        elif path == "/api/print/both":
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data.decode('utf-8')) if post_data else {}
+                settings = get_store_settings_dict()
+                srv_id = data.get('service_id')
+                srv_obj = data.get('service')
+
+                nota_p = data.get('receipt_printer') or settings.get('nota_printer_name') or (printer_service.get_default_printer() if printer_service else None)
+                label_p = data.get('label_printer') or settings.get('label_printer_name') or (printer_service.get_default_printer() if printer_service else None)
+                paper_w = str(data.get('paper_width') or settings.get('nota_paper_size') or '58')
+                density = str(data.get('density') or settings.get('print_density') or 'high')
+                receipt_type = str(data.get('receipt_type') or 'terima')
+                is_ambil = (receipt_type == 'ambil')
+                lbl_size = str(data.get('label_size') or settings.get('label_paper_size') or '40x30')
+                lbl_mode = str(data.get('label_mode') or settings.get('label_mode') or 'tspl')
+                delay_ms = int(data.get('delay_ms') or settings.get('print_delay_ms') or 600)
+
+                if not nota_p or not label_p:
+                    raise Exception("Printer Nota atau Printer Label belum dikonfigurasi.")
+
+                if not srv_obj and srv_id:
+                    conn = sqlite3.connect(DB_FILE)
+                    conn.row_factory = sqlite3.Row
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT * FROM services WHERE id = ?", (srv_id,))
+                    row = cursor.fetchone()
+                    conn.close()
+                    if row:
+                        srv_obj = dict(row)
+
+                if not srv_obj:
+                    raise Exception("Data servis tidak ditemukan.")
+
+                store_prof = data.get('store_profile') or {
+                    "name": settings.get('store_name', 'AUTOCASH SERVIS'),
+                    "address": settings.get('store_address', ''),
+                    "phone": settings.get('store_phone', '')
+                }
+
+                # 1. Cetak Nota ke Printer 1
+                receipt_bytes = printer_service.format_escpos_receipt(srv_obj, store_profile=store_prof, paper_width=paper_w, density=density, is_ambil=is_ambil)
+                printer_service.send_raw_to_printer(nota_p, receipt_bytes, doc_name=f"Nota {srv_obj.get('kode_servis', '')}")
+
+                # Jeda waktu (delay)
+                if delay_ms > 0:
+                    time.sleep(delay_ms / 1000.0)
+
+                # 2. Cetak Label ke Printer 2
+                if lbl_mode == 'escpos':
+                    label_bytes = printer_service.format_escpos_label(srv_obj, label_size=lbl_size, store_profile=store_prof)
+                else:
+                    label_bytes = printer_service.format_tspl_label(srv_obj, label_size=lbl_size, store_profile=store_prof)
+
+                printer_service.send_raw_to_printer(label_p, label_bytes, doc_name=f"Label {srv_obj.get('kode_servis', '')}")
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True, "message": f"Nota tercetak di '{nota_p}', Label tercetak di '{label_p}' bergiliran!"}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
 
         else:
             self.send_response(404)

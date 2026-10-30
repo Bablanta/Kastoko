@@ -1,6 +1,6 @@
-# 📊 Panduan Penggunaan & Dokumentasi CalAseToko
+# 📊 Panduan Penggunaan & Dokumentasi Autocash
 
-Aplikasi **CalAseToko** adalah aplikasi pembukuan toko modern berbasis web (HTML5, CSS3, JavaScript) dengan backend Python (`server.py`) dan database **SQLite (`pembukuan.db`)** yang mendukung sinkronisasi data real-time antar perangkat dalam jaringan lokal, pembagian hak akses (Superadmin & Admin), visualisasi grafik omset & hasil, riwayat buku toko terpadu (Harian, Mingguan, Bulanan), serta pencadangan database otomatis.
+Aplikasi **Autocash** adalah aplikasi pembukuan toko modern berbasis web (HTML5, CSS3, JavaScript) dengan backend Python (`server.py`) dan database **SQLite (`pembukuan.db`)** yang mendukung sinkronisasi data real-time antar perangkat dalam jaringan lokal, pembagian hak akses (Superadmin & Admin), visualisasi grafik omset & hasil, riwayat buku toko terpadu (Harian, Mingguan, Bulanan), serta pencadangan database otomatis.
 
 ---
 
@@ -47,6 +47,7 @@ Fitur analitik dan finansial sensitif dirancang khusus hanya dapat diakses penuh
 | **Kas (30%) & Bonus (10%)** | ✅ **Terlihat** | ❌ **Disembunyikan** |
 | **📈 Grafik Tren Omset & Hasil** | ✅ **Terlihat** | ❌ **Disembunyikan** |
 | Hapus Transaksi & Reset Data | ✅ Ya | ❌ Tidak |
+| **🗑️ Clear Data Servis (Reset No. Nota ke 001)** | ✅ **Ya (Khusus Superadmin)** | ❌ **Disembunyikan** |
 
 ---
 
@@ -91,6 +92,30 @@ Fitur analitik dan finansial sensitif dirancang khusus hanya dapat diakses penuh
   - Tombol ganti status cepat (*Baru* -> *Diproses* -> *Selesai* -> *Diambil*).
 - **🖨️ Cetak Nota Tanda Terima:**
   - Pratinjau nota tanda terima profesional lengkap dengan rincian unit, keluhan, estimasi biaya, dan kolom tanda tangan pelanggan & teknisi yang siap dicetak ke printer biasa maupun thermal.
+
+### 🖨️ F. Dual Thermal Printer & Fitur "Print All"
+- **Printer 1 (Nota/Struk):** Mendukung ukuran kertas 58mm (POS-58 Mini) dan 80mm (POS-80 Standar).
+- **Printer 2 (Label Stiker Unit):** Mendukung stiker 40x20mm, 40x30mm, dan 50x30mm untuk ditempel pada unit pelanggan.
+- **Tombol `Print All`:** Mencetak nota dan label stiker unit secara bergiliran otomatis dengan jeda delay yang dapat diatur di menu Pengaturan.
+
+### 💬 G. Integrasi WhatsApp Desktop & Notifikasi Gambar Nota
+- **Direct WhatsApp Desktop:** Menggunakan protokol `whatsapp://send` langsung membuka aplikasi WhatsApp di Windows tanpa browser.
+- **Nota Format Gambar (1-Klik via Clipboard):** Nota dirender menjadi gambar PNG resolusi tinggi secara offline dan otomatis disalin ke Clipboard Windows (`Ctrl + V` di WhatsApp).
+- **Otomasi Servis Baru:** Setiap menyimpan servis baru berstatus "Baru", popup nota dan WhatsApp Desktop otomatis terbuka.
+- **Unduh Manual PNG:** Tombol "📥 Unduh PNG" untuk menyimpan arsip file gambar ke komputer.
+
+### 🗑️ H. Clear Data Servis & Reset Nomor Nota (Khusus Superadmin)
+- **Reset Urutan Nota:** Mengembalikan urutan nomor tiket dan nota servis kembali ke awal (`001`), misal: `SRV-YYYYMMDD-001`.
+- **Proteksi Akses:** Tombol hanya tampil untuk role Superadmin; disembunyikan sepenuhnya untuk Admin biasa.
+- **Auto-Backup & Konfirmasi:** Dilengkapi modal peringatan dengan opsi Yes/No serta pembuatan file cadangan JSON otomatis di folder `backup/` sebelum data dibersihkan.
+
+### ⚡ I. Direct Raw Thermal Printing (0% Dialog Windows)
+- **Bypass Windows Print Dialog:** Menggunakan pustaka standard CPython `ctypes.WinDLL("winspool.drv")` (`printer_service.py`) untuk mengirim byte raw langsung ke printer via spooler `RAW`. Kertas langsung tercetak dalam hitungan milidetik tanpa jendela konfirmasi print peramban.
+- **Hasil Cetak Pekat & Timbul (Heating Density):** Fitur pemanasan ganda (*Double-Strike / Emphasize*) hardware thermal untuk menghasilkan teks hitam pekat, tajam, dan timbul.
+- **Dukungan Multi-Protokol:**
+  - **Printer 1 (Nota 58mm / 80mm):** Protokol native **ESC/POS** dengan format kolom otomatis (32 kolom untuk 58mm, 48 kolom untuk 80mm) dan perataan tengah/kiri/kanan yang proporsional.
+  - **Printer 2 (Label Stiker):** Protokol native **TSPL** dengan pembacaan sensor gap presisi agar stiker tercetak pas di tengah dan tidak selip.
+- **Pendeteksian Printer Otomatis:** Menemukan printer yang terpasang di Windows (misal: `POS-58( USB )` & `80Label Printer ( USB )`) lengkap dengan tombol uji coba langsung di Pengaturan.
 
 ---
 
