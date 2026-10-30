@@ -129,20 +129,24 @@ Fitur analitik dan finansial sensitif dirancang khusus hanya dapat diakses penuh
 
 ## 🚀 6. Cara Deploy / Update ke Server Ubuntu (192.168.1.8)
 
-Aplikasi telah terhubung ke server Ubuntu di jaringan lokal (`192.168.1.8`) yang dikelola oleh **PM2**. Untuk memperbarui fitur setiap kali ada perubahan:
+Anda memiliki 2 pilihan praktis untuk memperbarui server Ubuntu di `192.168.1.8`:
 
-### Cara 1: 1-Klik dari Komputer Windows (Paling Mudah)
-Cukup jalankan file **`deploy_ke_ubuntu.bat`** (klik ganda).
-Skrip otomatis:
-1. Mendorong (*push*) commit terbaru ke GitHub (`origin/main`).
-2. Menghubungi server Ubuntu via SSH tanpa perlu mengetik password (otentikasi kunci SSH terpasang).
-3. Melakukan `git pull` dan me-restart proses KasToko di PM2.
-4. Server Ubuntu langsung aktif menjalankan fitur terbaru dalam hitungan detik.
+### ⚡ Pilihan A: Deploy LANGSUNG dari PC ke Ubuntu via LAN (100% Offline, Tanpa GitHub)
+**Sangat cocok saat:** Anda sedang aktif mengubah fitur, mengedit tampilan, dan ingin perubahan langsung aktif di Ubuntu tanpa perlu commit/push ke GitHub atau saat koneksi internet mati.
 
-### Cara 2: Dari Terminal Server Ubuntu
-Jika Anda sedang membuka SSH / terminal di Ubuntu:
-```bash
-cd /home/bablanta/Kastoko
-./deploy.sh
-```
-Skrip `deploy.sh` akan otomatis menarik kode terbaru dari GitHub dan me-restart proses PM2 secara instan.
+1. Cukup klik ganda (double-click) file: **`deploy_langsung_lan.bat`**
+2. Skrip otomatis:
+   - Mentransfer file-file yang baru diedit dari PC lokal (`E:\KasToko`) langsung ke server Ubuntu (`/home/bablanta/Kastoko`) lewat Wi-Fi/kabel LAN dalam hitungan 2-3 detik.
+   - Database server (`pembukuan.db`) dan folder `backup/` aman terlindungi (tidak ditimpa).
+   - Me-restart proses PM2 secara instan.
+3. Server langsung aktif dengan fitur terbaru di: **`http://192.168.1.8:8080`**.
+
+---
+
+### 🌐 Pilihan B: Deploy via GitHub (Untuk Versi Rilis Tersimpan)
+**Sangat cocok saat:** Anda ingin menyimpan catatan riwayat versi di GitHub sekaligus memperbarui server Ubuntu.
+
+1. Klik ganda file: **`deploy_ke_ubuntu.bat`**
+2. Skrip otomatis:
+   - Mendorong (*push*) commit ke GitHub `origin/main`.
+   - Menginstruksikan server Ubuntu untuk `git pull origin main` dan me-restart PM2.
