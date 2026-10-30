@@ -124,3 +124,25 @@ Fitur analitik dan finansial sensitif dirancang khusus hanya dapat diakses penuh
 - **Auto-Backup JSON:** Snapshot otomatis tersimpan di folder **`backup/`** setiap kali transaksi disimpan.
 - **Fitur Restore:** Pemulihan database dapat dilakukan melalui menu Pengaturan (`⚙️`).
 - **Ekspor Excel (.xls):** Tombol **Export (.xls)** langsung mengunduh file laporan dan mencadangkannya di folder `backup/`.
+
+---
+
+## 🚀 6. Cara Deploy / Update ke Server Ubuntu (192.168.1.8)
+
+Aplikasi telah terhubung ke server Ubuntu di jaringan lokal (`192.168.1.8`) yang dikelola oleh **PM2**. Untuk memperbarui fitur setiap kali ada perubahan:
+
+### Cara 1: 1-Klik dari Komputer Windows (Paling Mudah)
+Cukup jalankan file **`deploy_ke_ubuntu.bat`** (klik ganda).
+Skrip otomatis:
+1. Mendorong (*push*) commit terbaru ke GitHub (`origin/main`).
+2. Menghubungi server Ubuntu via SSH tanpa perlu mengetik password (otentikasi kunci SSH terpasang).
+3. Melakukan `git pull` dan me-restart proses KasToko di PM2.
+4. Server Ubuntu langsung aktif menjalankan fitur terbaru dalam hitungan detik.
+
+### Cara 2: Dari Terminal Server Ubuntu
+Jika Anda sedang membuka SSH / terminal di Ubuntu:
+```bash
+cd /home/bablanta/Kastoko
+./deploy.sh
+```
+Skrip `deploy.sh` akan otomatis menarik kode terbaru dari GitHub dan me-restart proses PM2 secara instan.
