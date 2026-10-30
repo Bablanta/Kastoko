@@ -1778,8 +1778,9 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
 
 if __name__ == "__main__":
-    socketserver.TCPServer.allow_reuse_address = True
-    with socketserver.TCPServer(("", PORT), CustomHandler) as httpd:
+    socketserver.ThreadingTCPServer.allow_reuse_address = True
+    with socketserver.ThreadingTCPServer(("", PORT), CustomHandler) as httpd:
+        httpd.daemon_threads = True
         print(f"==============================================================")
         print(f"  KasToko - Server Pembukuan Toko")
         print(f"  Port: {PORT}")
