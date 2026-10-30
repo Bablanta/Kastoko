@@ -1,42 +1,59 @@
 @echo off
-title Deploy KasToko ke Server Ubuntu (192.168.1.8)
+title Deploy dan Sinkronisasi KasToko ke Server Ubuntu
 color 0B
 cd /d "%~dp0"
 
 echo ======================================================================
-echo             DEPLOY KASTOKO KE SERVER UBUNTU (192.168.1.8)
+echo           AUTOCASH - DEPLOY DAN SINKRONISASI SERVER UBUNTU
+echo                          (192.168.1.8)
 echo ======================================================================
 echo.
-
-echo [1/3] Memeriksa status git lokal...
-git status -s
+echo  Pilih tindakan yang ingin dilakukan:
 echo.
-
-echo [2/3] Mendorong (push) commit terbaru ke GitHub...
-git push origin main
-if %ERRORLEVEL% NEQ 0 (
-    echo [PERINGATAN] Git push menemui kendala. Mencoba melanjutkan deploy...
-)
+echo    [1] Update Lengkap: Kode Fitur + Database Pembukuan (Rekomendasi)
+echo    [2] Update Kode dan Fitur Saja (Database server tidak diubah)
+echo    [3] Ambil Database dari Server Ubuntu ke PC Lokal (Tarik Data Kasir)
+echo    [4] Push ke GitHub + Update Server Ubuntu
+echo    [5] Batal
 echo.
+set /p PILIHAN="Masukkan nomor pilihan [Default: 1]: "
 
-echo [3/3] Menghubungi server Ubuntu via SSH dan memperbarui KasToko...
-ssh -o StrictHostKeyChecking=accept-new bablanta@192.168.1.8 "/home/bablanta/Kastoko/deploy.sh"
-if %ERRORLEVEL% NEQ 0 (
+if "%PILIHAN%"=="" set PILIHAN=1
+
+if "%PILIHAN%"=="1" (
     echo.
-    echo ======================================================================
-    echo [GAGAL] Tidak dapat menghubungi server Ubuntu 192.168.1.8 via SSH!
-    echo Pastikan komputer Ubuntu hidup dan terhubung ke jaringan Wi-Fi/LAN.
-    echo ======================================================================
-    echo.
-    pause
-    exit /b 1
+    python deploy_manager.py full
+    goto SELESAI
 )
 
-echo.
-echo ======================================================================
-echo   [BERHASIL] KASTOKO DI SERVER UBUNTU TELAH DIPERBARUI DAN RESTART!
-echo   Akses di browser: http://192.168.1.8:8080
-echo ======================================================================
-echo.
+if "%PILIHAN%"=="2" (
+    echo.
+    python deploy_manager.py code
+    goto SELESAI
+)
 
+if "%PILIHAN%"=="3" (
+    echo.
+    python deploy_manager.py pull_db
+    goto SELESAI
+)
+
+if "%PILIHAN%"=="4" (
+    echo.
+    echo Mendorong perubahan ke GitHub...
+    git push origin main
+    echo.
+    python deploy_manager.py full
+    goto SELESAI
+)
+
+if "%PILIHAN%"=="5" (
+    echo Dibatalkan.
+    exit /b 0
+)
+
+echo Pilihan tidak valid.
+
+:SELESAI
+echo.
 pause

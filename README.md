@@ -127,26 +127,19 @@ Fitur analitik dan finansial sensitif dirancang khusus hanya dapat diakses penuh
 
 ---
 
-## 🚀 6. Cara Deploy / Update ke Server Ubuntu (192.168.1.8)
+## 🚀 6. Cara Deploy & Sinkronisasi ke Server Ubuntu (192.168.1.8)
 
-Anda memiliki 2 pilihan praktis untuk memperbarui server Ubuntu di `192.168.1.8`:
+Untuk memperbarui server Ubuntu di `192.168.1.8`, kini cukup menggunakan **1 file tunggal**:
+👉 **`deploy_ke_ubuntu.bat`** (klik ganda).
 
-### ⚡ Pilihan A: Deploy LANGSUNG dari PC ke Ubuntu via LAN (100% Offline, Tanpa GitHub)
-**Sangat cocok saat:** Anda sedang aktif mengubah fitur, mengedit tampilan, dan ingin perubahan langsung aktif di Ubuntu tanpa perlu commit/push ke GitHub atau saat koneksi internet mati.
-
-1. Cukup klik ganda (double-click) file: **`deploy_langsung_lan.bat`**
-2. Skrip otomatis:
-   - Mentransfer file-file yang baru diedit dari PC lokal (`E:\KasToko`) langsung ke server Ubuntu (`/home/bablanta/Kastoko`) lewat Wi-Fi/kabel LAN dalam hitungan 2-3 detik.
-   - Database server (`pembukuan.db`) dan folder `backup/` aman terlindungi (tidak ditimpa).
-   - Me-restart proses PM2 secara instan.
-3. Server langsung aktif dengan fitur terbaru di: **`http://192.168.1.8:8080`**.
-
----
-
-### 🌐 Pilihan B: Deploy via GitHub (Untuk Versi Rilis Tersimpan)
-**Sangat cocok saat:** Anda ingin menyimpan catatan riwayat versi di GitHub sekaligus memperbarui server Ubuntu.
-
-1. Klik ganda file: **`deploy_ke_ubuntu.bat`**
-2. Skrip otomatis:
-   - Mendorong (*push*) commit ke GitHub `origin/main`.
-   - Menginstruksikan server Ubuntu untuk `git pull origin main` dan me-restart PM2.
+Skrip akan menampilkan menu interaktif:
+1. **`[1] Update Lengkap: Kode Fitur + Database Pembukuan (Default / Rekomendasi)`**
+   - Mentransfer file-file kode terbaru (`index.html`, `server.py`, `style.css`, dll).
+   - Menyinkronkan database pembukuan terbaru (`pembukuan.db`) dari PC ke Ubuntu, dengan backup otomatis sebelum ditimpa.
+   - Me-restart proses PM2 di Ubuntu dalam ~3 detik.
+2. **`[2] Update Kode & Fitur Saja`**
+   - Hanya memperbarui tampilan dan logika program tanpa mengubah database server (database server dipertahankan).
+3. **`[3] Ambil Database dari Server Ubuntu ke PC Lokal`**
+   - Menarik data transaksi kasir terbaru dari Ubuntu ke PC (misal setelah toko tutup).
+4. **`[4] Push ke GitHub + Update Server Ubuntu`**
+   - Mendorong (*push*) commit ke GitHub sekaligus memperbarui server Ubuntu.
