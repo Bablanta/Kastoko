@@ -4,7 +4,8 @@ echo "=========================================="
 echo "  Deploying KasToko to Ubuntu Server..."
 echo "=========================================="
 cd /home/bablanta/Kastoko
-git pull origin main
+git fetch origin main
+git reset --hard origin/main
 npx pm2 restart Kastoko
 echo ""
 echo "=========================================="
