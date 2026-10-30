@@ -1,4 +1,6 @@
 import http.server
+import hashlib
+import re
 import socketserver
 import os
 import json
@@ -39,6 +41,13 @@ def get_store_settings_dict():
     except Exception:
         pass
     return res
+
+
+def hash_password(password: str) -> str:
+    """Hash password menggunakan SHA-256 (0 library eksternal)"""
+    if not password:
+        return ""
+    return hashlib.sha256(password.encode('utf-8')).hexdigest()
 
 PORT = 8080
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
@@ -108,6 +117,52 @@ def init_db():
         )
     ''')
     conn.commit()
+
+    # Tabel pengguna (users) & otorisasi role (Superadmin, Admin, Teknisi, Mitra)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            fullname TEXT NOT NULL,
+            password_hash TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'admin',
+            phone TEXT DEFAULT '',
+            status TEXT NOT NULL DEFAULT 'pending',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            approved_by TEXT DEFAULT '',
+            approved_at TEXT DEFAULT '',
+            notes TEXT DEFAULT ''
+        )
+    ''')
+    conn.commit()
+
+    # Seed akun Superadmin utama jika belum ada
+    cursor.execute("SELECT COUNT(*) FROM users WHERE role = 'superadmin'")
+    if cursor.fetchone()[0] == 0:
+        cursor.execute('''
+            INSERT INTO users (username, fullname, password_hash, role, phone, status, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', ('superadmin', 'Super Admin (Owner)', hash_password('super123'), 'superadmin', '0812-9876-5432', 'active', 'Akun Utama Master Toko'))
+        conn.commit()
+
+    # Seed akun Admin kasir bawaan jika belum ada
+    cursor.execute("SELECT COUNT(*) FROM users WHERE username = 'admin'")
+    if cursor.fetchone()[0] == 0:
+        cursor.execute('''
+            INSERT INTO users (username, fullname, password_hash, role, phone, status, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', ('admin', 'Kasir / Admin Toko', hash_password('admin123'), 'admin', '', 'active', 'Akun Kasir Bawaan Toko'))
+        conn.commit()
+
+    # Migrasi kolom teknisi_nama pada services
+    cursor.execute("PRAGMA table_info(services)")
+    s_cols_check = [col[1] for col in cursor.fetchall()]
+    if "teknisi_nama" not in s_cols_check:
+        try:
+            cursor.execute("ALTER TABLE services ADD COLUMN teknisi_nama TEXT DEFAULT ''")
+            conn.commit()
+        except Exception:
+            pass
 
     # Migrasi kolom catatan jika tabel sudah ada dari versi sebelumnya
     cursor.execute("PRAGMA table_info(transactions)")
@@ -260,6 +315,220 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
 
+
+        elif path == "/api/auth/register":
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data.decode('utf-8'))
+                username = str(data.get('username', '')).strip().lower()
+                fullname = str(data.get('fullname', '')).strip()
+                password = str(data.get('password', '')).strip()
+                role = str(data.get('role', 'teknisi')).strip().lower()
+                phone = str(data.get('phone', '')).strip()
+
+                if not username or len(username) < 3:
+                    raise Exception("Username minimal 3 karakter (hanya huruf, angka, underscore).")
+                if not re.match(r'^[a-z0-9_]+$', username):
+                    raise Exception("Username hanya boleh berisi huruf kecil, angka, dan garis bawah (_).")
+                if not fullname:
+                    raise Exception("Nama lengkap wajib diisi.")
+                if not password or len(password) < 4:
+                    raise Exception("Password minimal 4 karakter.")
+                if role not in ('admin', 'teknisi', 'mitra'):
+                    role = 'teknisi'
+
+                conn = sqlite3.connect(DB_FILE)
+                cursor = conn.cursor()
+                cursor.execute("SELECT id FROM users WHERE LOWER(username) = ?", (username,))
+                if cursor.fetchone():
+                    conn.close()
+                    raise Exception(f"Username '{username}' sudah terdaftar. Silakan gunakan username lain.")
+
+                pass_hash = hash_password(password)
+                now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                cursor.execute('''
+                    INSERT INTO users (username, fullname, password_hash, role, phone, status, created_at, notes)
+                    VALUES (?, ?, ?, ?, ?, 'pending', ?, 'Pendaftaran mandiri pengguna baru')
+                ''', (username, fullname, pass_hash, role, phone, now_str))
+                conn.commit()
+                conn.close()
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    "success": True,
+                    "message": "Pendaftaran berhasil! Akun Anda sedang menunggu persetujuan Super Admin."
+                }).encode('utf-8'))
+            except Exception as e:
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
+
+        elif path == "/api/auth/login":
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data.decode('utf-8'))
+                username = str(data.get('username', '')).strip().lower()
+                password = str(data.get('password', '')).strip()
+
+                if not username or not password:
+                    raise Exception("Username dan password wajib diisi.")
+
+                conn = sqlite3.connect(DB_FILE)
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute("SELECT id, username, fullname, password_hash, role, phone, status FROM users WHERE LOWER(username) = ?", (username,))
+                user_row = cursor.fetchone()
+                conn.close()
+
+                if not user_row:
+                    raise Exception(f"Akun dengan username '{username}' tidak ditemukan.")
+
+                pass_hash = hash_password(password)
+                if user_row["password_hash"] != pass_hash:
+                    # Cek juga jika password disimpan plain (backward compatibility)
+                    if user_row["password_hash"] != password:
+                        raise Exception("Password yang Anda masukkan salah!")
+
+                status = user_row["status"]
+                if status == "pending":
+                    self.send_response(403)
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({
+                        "success": False,
+                        "status": "pending",
+                        "message": f"⏳ Akun '{user_row['username']}' ({user_row['fullname']}) masih MENUNGGU PERSETUJUAN Super Admin toko.\n\nSilakan hubungi Super Admin untuk mengaktifkan akun Anda."
+                    }).encode('utf-8'))
+                    return
+                elif status == "rejected":
+                    self.send_response(403)
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({
+                        "success": False,
+                        "status": "rejected",
+                        "message": f"❌ Pendaftaran akun '{user_row['username']}' DITOLAK oleh Super Admin toko."
+                    }).encode('utf-8'))
+                    return
+                elif status != "active":
+                    raise Exception("Status akun Anda saat ini tidak aktif.")
+
+                user_dict = {
+                    "id": user_row["id"],
+                    "username": user_row["username"],
+                    "fullname": user_row["fullname"],
+                    "role": user_row["role"],
+                    "phone": user_row["phone"]
+                }
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    "success": True,
+                    "message": "Login berhasil!",
+                    "user": user_dict
+                }).encode('utf-8'))
+            except Exception as e:
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
+
+        elif path == "/api/users/action":
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data.decode('utf-8'))
+                action = str(data.get('action', '')).strip()
+                user_id = data.get('user_id')
+                actor = str(data.get('actor', 'superadmin')).strip()
+                new_role = str(data.get('role', '')).strip().lower()
+                new_pass = str(data.get('new_password', '')).strip()
+                notes = str(data.get('notes', '')).strip()
+
+                if not user_id or not action:
+                    raise Exception("user_id dan action diperlukan.")
+
+                conn = sqlite3.connect(DB_FILE)
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+                target_user = cursor.fetchone()
+                if not target_user:
+                    conn.close()
+                    raise Exception("Pengguna tidak ditemukan.")
+
+                now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+                if action == "approve":
+                    assigned_role = new_role if new_role in ('superadmin', 'admin', 'teknisi', 'mitra') else target_user['role']
+                    cursor.execute('''
+                        UPDATE users SET
+                            status = 'active',
+                            role = ?,
+                            approved_by = ?,
+                            approved_at = ?,
+                            notes = CASE WHEN ? != '' THEN ? ELSE notes END
+                        WHERE id = ?
+                    ''', (assigned_role, actor, now_str, notes, notes, user_id))
+                    msg = f"Akun '{target_user['username']}' berhasil DISETUJUI dan aktif sebagai role {assigned_role.upper()}."
+
+                elif action == "reject":
+                    cursor.execute('''
+                        UPDATE users SET
+                            status = 'rejected',
+                            approved_by = ?,
+                            approved_at = ?,
+                            notes = CASE WHEN ? != '' THEN ? ELSE 'Ditolak oleh Super Admin' END
+                        WHERE id = ?
+                    ''', (actor, now_str, notes, notes, user_id))
+                    msg = f"Pendaftaran akun '{target_user['username']}' berhasil DITOLAK."
+
+                elif action == "delete":
+                    if target_user["username"] == "superadmin":
+                        conn.close()
+                        raise Exception("Akun master superadmin tidak boleh dihapus!")
+                    cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+                    msg = f"Akun '{target_user['username']}' berhasil DIHAPUS dari sistem."
+
+                elif action == "change_role":
+                    if new_role not in ('superadmin', 'admin', 'teknisi', 'mitra'):
+                        raise Exception("Pilihan role tidak valid.")
+                    if target_user["username"] == "superadmin" and new_role != "superadmin":
+                        raise Exception("Role akun master superadmin tidak boleh diubah!")
+                    cursor.execute("UPDATE users SET role = ? WHERE id = ?", (new_role, user_id))
+                    msg = f"Role akun '{target_user['username']}' diubah menjadi {new_role.upper()}."
+
+                elif action == "reset_password":
+                    if not new_pass or len(new_pass) < 4:
+                        raise Exception("Password baru minimal 4 karakter.")
+                    new_hash = hash_password(new_pass)
+                    cursor.execute("UPDATE users SET password_hash = ? WHERE id = ?", (new_hash, user_id))
+                    msg = f"Password akun '{target_user['username']}' berhasil diperbarui."
+
+                else:
+                    conn.close()
+                    raise Exception(f"Action '{action}' tidak dikenal.")
+
+                conn.commit()
+                conn.close()
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True, "message": msg}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
+
         elif path == "/api/settings":
             try:
                 conn = sqlite3.connect(DB_FILE)
@@ -381,6 +650,49 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
 
+
+        elif path == "/api/users":
+            try:
+                status_filter = query.get("status", [None])[0]
+                conn = sqlite3.connect(DB_FILE)
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                if status_filter and status_filter != "all":
+                    cursor.execute("SELECT id, username, fullname, role, phone, status, created_at, approved_by, approved_at, notes FROM users WHERE status = ? ORDER BY id DESC", (status_filter,))
+                else:
+                    cursor.execute("SELECT id, username, fullname, role, phone, status, created_at, approved_by, approved_at, notes FROM users ORDER BY id DESC")
+                rows = cursor.fetchall()
+                users_list = [dict(row) for row in rows]
+                conn.close()
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True, "users": users_list}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
+
+        elif path == "/api/users/pending_count":
+            try:
+                conn = sqlite3.connect(DB_FILE)
+                cursor = conn.cursor()
+                cursor.execute("SELECT COUNT(*) FROM users WHERE status = 'pending'")
+                count = cursor.fetchone()[0]
+                conn.close()
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True, "pending_count": count}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
+
         elif path == "/api/customers":
             try:
                 conn = sqlite3.connect(DB_FILE)
@@ -462,6 +774,220 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 response = {"success": False, "message": str(e)}
                 self.wfile.write(json.dumps(response).encode('utf-8'))
+
+
+        elif path == "/api/auth/register":
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data.decode('utf-8'))
+                username = str(data.get('username', '')).strip().lower()
+                fullname = str(data.get('fullname', '')).strip()
+                password = str(data.get('password', '')).strip()
+                role = str(data.get('role', 'teknisi')).strip().lower()
+                phone = str(data.get('phone', '')).strip()
+
+                if not username or len(username) < 3:
+                    raise Exception("Username minimal 3 karakter (hanya huruf, angka, underscore).")
+                if not re.match(r'^[a-z0-9_]+$', username):
+                    raise Exception("Username hanya boleh berisi huruf kecil, angka, dan garis bawah (_).")
+                if not fullname:
+                    raise Exception("Nama lengkap wajib diisi.")
+                if not password or len(password) < 4:
+                    raise Exception("Password minimal 4 karakter.")
+                if role not in ('admin', 'teknisi', 'mitra'):
+                    role = 'teknisi'
+
+                conn = sqlite3.connect(DB_FILE)
+                cursor = conn.cursor()
+                cursor.execute("SELECT id FROM users WHERE LOWER(username) = ?", (username,))
+                if cursor.fetchone():
+                    conn.close()
+                    raise Exception(f"Username '{username}' sudah terdaftar. Silakan gunakan username lain.")
+
+                pass_hash = hash_password(password)
+                now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                cursor.execute('''
+                    INSERT INTO users (username, fullname, password_hash, role, phone, status, created_at, notes)
+                    VALUES (?, ?, ?, ?, ?, 'pending', ?, 'Pendaftaran mandiri pengguna baru')
+                ''', (username, fullname, pass_hash, role, phone, now_str))
+                conn.commit()
+                conn.close()
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    "success": True,
+                    "message": "Pendaftaran berhasil! Akun Anda sedang menunggu persetujuan Super Admin."
+                }).encode('utf-8'))
+            except Exception as e:
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
+
+        elif path == "/api/auth/login":
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data.decode('utf-8'))
+                username = str(data.get('username', '')).strip().lower()
+                password = str(data.get('password', '')).strip()
+
+                if not username or not password:
+                    raise Exception("Username dan password wajib diisi.")
+
+                conn = sqlite3.connect(DB_FILE)
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute("SELECT id, username, fullname, password_hash, role, phone, status FROM users WHERE LOWER(username) = ?", (username,))
+                user_row = cursor.fetchone()
+                conn.close()
+
+                if not user_row:
+                    raise Exception(f"Akun dengan username '{username}' tidak ditemukan.")
+
+                pass_hash = hash_password(password)
+                if user_row["password_hash"] != pass_hash:
+                    # Cek juga jika password disimpan plain (backward compatibility)
+                    if user_row["password_hash"] != password:
+                        raise Exception("Password yang Anda masukkan salah!")
+
+                status = user_row["status"]
+                if status == "pending":
+                    self.send_response(403)
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({
+                        "success": False,
+                        "status": "pending",
+                        "message": f"⏳ Akun '{user_row['username']}' ({user_row['fullname']}) masih MENUNGGU PERSETUJUAN Super Admin toko.\n\nSilakan hubungi Super Admin untuk mengaktifkan akun Anda."
+                    }).encode('utf-8'))
+                    return
+                elif status == "rejected":
+                    self.send_response(403)
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({
+                        "success": False,
+                        "status": "rejected",
+                        "message": f"❌ Pendaftaran akun '{user_row['username']}' DITOLAK oleh Super Admin toko."
+                    }).encode('utf-8'))
+                    return
+                elif status != "active":
+                    raise Exception("Status akun Anda saat ini tidak aktif.")
+
+                user_dict = {
+                    "id": user_row["id"],
+                    "username": user_row["username"],
+                    "fullname": user_row["fullname"],
+                    "role": user_row["role"],
+                    "phone": user_row["phone"]
+                }
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    "success": True,
+                    "message": "Login berhasil!",
+                    "user": user_dict
+                }).encode('utf-8'))
+            except Exception as e:
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
+
+        elif path == "/api/users/action":
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data.decode('utf-8'))
+                action = str(data.get('action', '')).strip()
+                user_id = data.get('user_id')
+                actor = str(data.get('actor', 'superadmin')).strip()
+                new_role = str(data.get('role', '')).strip().lower()
+                new_pass = str(data.get('new_password', '')).strip()
+                notes = str(data.get('notes', '')).strip()
+
+                if not user_id or not action:
+                    raise Exception("user_id dan action diperlukan.")
+
+                conn = sqlite3.connect(DB_FILE)
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+                target_user = cursor.fetchone()
+                if not target_user:
+                    conn.close()
+                    raise Exception("Pengguna tidak ditemukan.")
+
+                now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+                if action == "approve":
+                    assigned_role = new_role if new_role in ('superadmin', 'admin', 'teknisi', 'mitra') else target_user['role']
+                    cursor.execute('''
+                        UPDATE users SET
+                            status = 'active',
+                            role = ?,
+                            approved_by = ?,
+                            approved_at = ?,
+                            notes = CASE WHEN ? != '' THEN ? ELSE notes END
+                        WHERE id = ?
+                    ''', (assigned_role, actor, now_str, notes, notes, user_id))
+                    msg = f"Akun '{target_user['username']}' berhasil DISETUJUI dan aktif sebagai role {assigned_role.upper()}."
+
+                elif action == "reject":
+                    cursor.execute('''
+                        UPDATE users SET
+                            status = 'rejected',
+                            approved_by = ?,
+                            approved_at = ?,
+                            notes = CASE WHEN ? != '' THEN ? ELSE 'Ditolak oleh Super Admin' END
+                        WHERE id = ?
+                    ''', (actor, now_str, notes, notes, user_id))
+                    msg = f"Pendaftaran akun '{target_user['username']}' berhasil DITOLAK."
+
+                elif action == "delete":
+                    if target_user["username"] == "superadmin":
+                        conn.close()
+                        raise Exception("Akun master superadmin tidak boleh dihapus!")
+                    cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+                    msg = f"Akun '{target_user['username']}' berhasil DIHAPUS dari sistem."
+
+                elif action == "change_role":
+                    if new_role not in ('superadmin', 'admin', 'teknisi', 'mitra'):
+                        raise Exception("Pilihan role tidak valid.")
+                    if target_user["username"] == "superadmin" and new_role != "superadmin":
+                        raise Exception("Role akun master superadmin tidak boleh diubah!")
+                    cursor.execute("UPDATE users SET role = ? WHERE id = ?", (new_role, user_id))
+                    msg = f"Role akun '{target_user['username']}' diubah menjadi {new_role.upper()}."
+
+                elif action == "reset_password":
+                    if not new_pass or len(new_pass) < 4:
+                        raise Exception("Password baru minimal 4 karakter.")
+                    new_hash = hash_password(new_pass)
+                    cursor.execute("UPDATE users SET password_hash = ? WHERE id = ?", (new_hash, user_id))
+                    msg = f"Password akun '{target_user['username']}' berhasil diperbarui."
+
+                else:
+                    conn.close()
+                    raise Exception(f"Action '{action}' tidak dikenal.")
+
+                conn.commit()
+                conn.close()
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True, "message": msg}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
 
         elif path == "/api/settings":
             content_length = int(self.headers.get('Content-Length', 0))
@@ -629,6 +1155,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 sparepart_nama = str(data.get('sparepart_nama', '')).strip()
                 sparepart_biaya = float(data.get('sparepart_biaya', 0) or 0)
                 metode_pembayaran = str(data.get('metode_pembayaran', 'Tunai')).strip()
+                teknisi_nama = str(data.get('teknisi_nama', '')).strip()
                 tanggal_masuk = str(data.get('tanggal_masuk', datetime.date.today().strftime('%Y-%m-%d'))).strip()
                 tanggal_selesai = str(data.get('tanggal_selesai', '')).strip()
 
@@ -661,6 +1188,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                             sparepart_nama = ?,
                             sparepart_biaya = ?,
                             metode_pembayaran = ?,
+                            teknisi_nama = CASE WHEN ? != '' THEN ? ELSE teknisi_nama END,
                             tanggal_masuk = ?,
                             tanggal_selesai = ?
                         WHERE id = ?
@@ -669,7 +1197,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                         keluhan, catatan_teknisi, menu_servis, status_servis,
                         estimasi_biaya, biaya_akhir, status_pembayaran,
                         sparepart_nama, sparepart_biaya, metode_pembayaran,
-                        tanggal_masuk, tanggal_selesai, srv_id
+                        teknisi_nama, teknisi_nama, tanggal_masuk, tanggal_selesai, srv_id
                     ))
                     saved_id = srv_id
                     msg = "Data servis berhasil diperbarui."
@@ -681,14 +1209,14 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                             jenis_perangkat, merk_model, keluhan, catatan_teknisi,
                             menu_servis, status_servis, estimasi_biaya, biaya_akhir,
                             status_pembayaran, sparepart_nama, sparepart_biaya,
-                            metode_pembayaran, tanggal_masuk, tanggal_selesai
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            metode_pembayaran, teknisi_nama, tanggal_masuk, tanggal_selesai
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ''', (
                         kode_servis, cust_id, nama_pelanggan, no_hp,
                         jenis_perangkat, merk_model, keluhan, catatan_teknisi,
                         menu_servis, status_servis, estimasi_biaya, biaya_akhir,
                         status_pembayaran, sparepart_nama, sparepart_biaya,
-                        metode_pembayaran, tanggal_masuk, tanggal_selesai
+                        metode_pembayaran, teknisi_nama, tanggal_masuk, tanggal_selesai
                     ))
                     saved_id = cursor.lastrowid
                     msg = f"Tiket servis baru #{kode_servis} berhasil disimpan."
@@ -761,6 +1289,9 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 if catatan_teknisi is not None:
                     updates.append("catatan_teknisi = ?")
                     params.append(str(catatan_teknisi).strip())
+                if data.get('teknisi_nama') is not None:
+                    updates.append("teknisi_nama = ?")
+                    params.append(str(data.get('teknisi_nama', '')).strip())
 
                 params.append(srv_id)
                 cursor.execute(f"UPDATE services SET {', '.join(updates)} WHERE id = ?", params)
@@ -940,6 +1471,49 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 response = {"success": False, "message": str(e)}
                 self.wfile.write(json.dumps(response).encode('utf-8'))
+
+
+        elif path == "/api/users":
+            try:
+                status_filter = query.get("status", [None])[0]
+                conn = sqlite3.connect(DB_FILE)
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                if status_filter and status_filter != "all":
+                    cursor.execute("SELECT id, username, fullname, role, phone, status, created_at, approved_by, approved_at, notes FROM users WHERE status = ? ORDER BY id DESC", (status_filter,))
+                else:
+                    cursor.execute("SELECT id, username, fullname, role, phone, status, created_at, approved_by, approved_at, notes FROM users ORDER BY id DESC")
+                rows = cursor.fetchall()
+                users_list = [dict(row) for row in rows]
+                conn.close()
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True, "users": users_list}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
+
+        elif path == "/api/users/pending_count":
+            try:
+                conn = sqlite3.connect(DB_FILE)
+                cursor = conn.cursor()
+                cursor.execute("SELECT COUNT(*) FROM users WHERE status = 'pending'")
+                count = cursor.fetchone()[0]
+                conn.close()
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True, "pending_count": count}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
 
         elif path == "/api/customers":
             content_length = int(self.headers.get('Content-Length', 0))
