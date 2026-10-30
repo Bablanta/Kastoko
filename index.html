@@ -111,23 +111,12 @@
 
     <!-- Pro POS Authentication Modal (Login & Register Pengguna) -->
     <div class="modal-overlay" id="loginModal">
-        <div class="modal-card" style="max-width: 440px; width: 92%; padding: 24px; border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-            
-            <!-- Auth Navigation Tabs -->
-            <div style="display: flex; background: rgba(0,0,0,0.06); padding: 4px; border-radius: 10px; margin-bottom: 20px;">
-                <button type="button" id="tabAuthLoginBtn" onclick="switchAuthTab('login')" style="flex: 1; padding: 10px; font-weight: bold; font-size: 13px; border: none; border-radius: 8px; cursor: pointer; background: var(--card-bg, #fff); color: var(--accent-color, #107c41); box-shadow: 0 2px 6px rgba(0,0,0,0.1); transition: all 0.2s;">
-                    🔐 Masuk Akun
-                </button>
-                <button type="button" id="tabAuthRegisterBtn" onclick="switchAuthTab('register')" style="flex: 1; padding: 10px; font-weight: bold; font-size: 13px; border: none; border-radius: 8px; cursor: pointer; background: transparent; color: var(--text-muted, #666); transition: all 0.2s;">
-                    📝 Daftar Baru
-                </button>
-            </div>
+        <div class="modal-card" style="max-width: 440px; width: 92%; padding: 26px; border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
 
             <!-- TAB 1: FORM LOGIN -->
             <div id="authLoginFormContent">
-                <div style="text-align: center; margin-bottom: 16px;">
-                    <h2 style="margin: 0 0 6px 0; font-size: 20px;">🔐 Masuk Sistem KasToko</h2>
-                    <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Masuk akun (Superadmin / Admin Kasir / Teknisi / Mitra)</p>
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <h2 style="margin: 0; font-size: 21px; color: var(--accent-color, #107c41);">🔐 Autocash Login</h2>
                 </div>
 
                 <div class="form-group" style="margin-bottom: 14px;">
@@ -136,15 +125,17 @@
                 </div>
 
                 <div class="form-group" style="margin-bottom: 14px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                        <label style="font-size: 12px; font-weight: 600;">Password</label>
-                        <a href="javascript:void(0)" onclick="togglePasswordVisibility('loginPassword')" style="font-size: 11px; color: var(--accent-color); text-decoration: none;">👁️ Lihat</a>
+                    <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 5px;">Password</label>
+                    <div style="position: relative; display: flex; align-items: center;">
+                        <input type="password" id="loginPassword" class="form-control" placeholder="Masukkan password..." style="height: 42px; font-size: 14px; padding-right: 44px; width: 100%;" onkeydown="if(event.key==='Enter') handleLogin()">
+                        <button type="button" onclick="togglePasswordVisibility('loginPassword', this)" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: transparent; border: none; cursor: pointer; font-size: 18px; padding: 4px; color: var(--text-muted); display: flex; align-items: center; justify-content: center; user-select: none;" title="Lihat / Sembunyikan Password">
+                            👁️
+                        </button>
                     </div>
-                    <input type="password" id="loginPassword" class="form-control" placeholder="Masukkan password..." style="height: 42px; font-size: 14px;" onkeydown="if(event.key==='Enter') handleLogin()">
                 </div>
 
                 <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; margin-bottom: 16px;">
-                    <span style="color: var(--text-muted);">Bawaan: superadmin / admin</span>
+                    <span style="color: var(--text-muted);">default :superadmin/admin</span>
                     <a href="#" onclick="openForgotModal()" style="color: var(--accent-color); text-decoration: none; font-weight: 600;">Bantuan Akun</a>
                 </div>
 
@@ -190,12 +181,18 @@
 
                 <div style="display: flex; gap: 10px; margin-bottom: 12px;">
                     <div class="form-group" style="flex: 1; margin: 0;">
-                        <label style="font-size: 11.5px; font-weight: 600;">Password *</label>
-                        <input type="password" id="regPassword" class="form-control" placeholder="Min. 4 karakter" style="height: 38px; font-size: 13px;">
+                        <label style="font-size: 11.5px; font-weight: 600; display: block; margin-bottom: 4px;">Password *</label>
+                        <div style="position: relative; display: flex; align-items: center;">
+                            <input type="password" id="regPassword" class="form-control" placeholder="Min. 4 karakter" style="height: 38px; font-size: 13px; padding-right: 36px; width: 100%;">
+                            <button type="button" onclick="togglePasswordVisibility('regPassword', this)" style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: transparent; border: none; cursor: pointer; font-size: 16px; padding: 2px; color: var(--text-muted);" title="Lihat Password">👁️</button>
+                        </div>
                     </div>
                     <div class="form-group" style="flex: 1; margin: 0;">
-                        <label style="font-size: 11.5px; font-weight: 600;">Ulangi Password *</label>
-                        <input type="password" id="regPasswordConfirm" class="form-control" placeholder="Ketik ulang" style="height: 38px; font-size: 13px;">
+                        <label style="font-size: 11.5px; font-weight: 600; display: block; margin-bottom: 4px;">Ulangi Password *</label>
+                        <div style="position: relative; display: flex; align-items: center;">
+                            <input type="password" id="regPasswordConfirm" class="form-control" placeholder="Ketik ulang" style="height: 38px; font-size: 13px; padding-right: 36px; width: 100%;">
+                            <button type="button" onclick="togglePasswordVisibility('regPasswordConfirm', this)" style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: transparent; border: none; cursor: pointer; font-size: 16px; padding: 2px; color: var(--text-muted);" title="Lihat Password">👁️</button>
+                        </div>
                     </div>
                 </div>
 
@@ -4686,35 +4683,17 @@
     // OTENTIKASI & REGISTRASI PENGGUNA (PRO POS)
     // ========================================================
     function switchAuthTab(tab) {
-        var tabLoginBtn = document.getElementById('tabAuthLoginBtn');
-        var tabRegBtn = document.getElementById('tabAuthRegisterBtn');
         var contentLogin = document.getElementById('authLoginFormContent');
         var contentReg = document.getElementById('authRegisterFormContent');
 
-        if (!tabLoginBtn || !contentLogin) return;
+        if (!contentLogin || !contentReg) return;
 
         if (tab === 'login') {
-            tabLoginBtn.style.background = 'var(--card-bg, #fff)';
-            tabLoginBtn.style.color = 'var(--accent-color, #107c41)';
-            tabLoginBtn.style.boxShadow = '0 2px 6px rgba(0,0,0,0.1)';
-
-            tabRegBtn.style.background = 'transparent';
-            tabRegBtn.style.color = 'var(--text-muted, #666)';
-            tabRegBtn.style.boxShadow = 'none';
-
             contentLogin.style.display = 'block';
             contentReg.style.display = 'none';
             var uInp = document.getElementById('loginUsername');
             if (uInp) setTimeout(function() { uInp.focus(); }, 100);
         } else {
-            tabRegBtn.style.background = 'var(--card-bg, #fff)';
-            tabRegBtn.style.color = 'var(--accent-color, #107c41)';
-            tabRegBtn.style.boxShadow = '0 2px 6px rgba(0,0,0,0.1)';
-
-            tabLoginBtn.style.background = 'transparent';
-            tabLoginBtn.style.color = 'var(--text-muted, #666)';
-            tabLoginBtn.style.boxShadow = 'none';
-
             contentLogin.style.display = 'none';
             contentReg.style.display = 'block';
             var fInp = document.getElementById('regFullname');
@@ -4722,13 +4701,15 @@
         }
     }
 
-    function togglePasswordVisibility(inputId) {
+    function togglePasswordVisibility(inputId, btnEl) {
         var inp = document.getElementById(inputId);
         if (!inp) return;
         if (inp.type === 'password') {
             inp.type = 'text';
+            if (btnEl) btnEl.innerText = '🙈';
         } else {
             inp.type = 'password';
+            if (btnEl) btnEl.innerText = '👁️';
         }
     }
 
