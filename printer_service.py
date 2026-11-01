@@ -285,6 +285,32 @@ def format_escpos_receipt(service_dict: dict, store_profile: dict = None, paper_
         buf.extend(b"* Simpan nota ini sebagai bukti tanda terima *\n")
         buf.extend(b"* Wajib dibawa saat pengambilan unit *\n")
 
+    # QR Code Pelacakan Servisan Online (Khusus Nota Penerimaan Unit)
+    if not is_ambil and kode:
+        tracking_url = f"https://lacak.dhanzcell.my.id/lacak?nota={kode}"
+        qr_bytes = tracking_url.encode("ascii", errors="replace")
+        
+        buf.extend(ALIGN_CENTER)
+        buf.extend(b"\n[ SCAN CEK STATUS SERVIS ]\n")
+        
+        # ESC/POS QR Code Model 2, Module Size 4/5, Error Correction M
+        # 1. Set QR model 2
+        buf.extend(b"\x1D\x28\x6B\x04\x00\x31\x41\x32\x00")
+        # 2. Set module size (4 for 58mm, 5 for 80mm)
+        mod_size = b"\x05" if col_width >= 48 else b"\x04"
+        buf.extend(b"\x1D\x28\x6B\x03\x00\x31\x43" + mod_size)
+        # 3. Set error correction level M
+        buf.extend(b"\x1D\x28\x6B\x03\x00\x31\x45\x31")
+        # 4. Store QR data
+        len_qr = len(qr_bytes) + 3
+        pL = len_qr % 256
+        pH = len_qr // 256
+        buf.extend(bytes([0x1D, 0x28, 0x6B, pL, pH, 0x31, 0x50, 0x30]) + qr_bytes)
+        # 5. Print QR Code
+        buf.extend(b"\x1D\x28\x6B\x03\x00\x31\x51\x30")
+        buf.extend(b"lacak.dhanzcell.my.id\n")
+        buf.extend(div_line.encode("cp437"))
+
     buf.extend(b"\n")
     # Slot Tanda Tangan
     if col_width >= 48:

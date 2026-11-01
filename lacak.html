@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lacak Status Servisan Pelanggan</title>
+    <link rel="icon" type="image/x-icon" id="appFavicon" href="default_logo.ico">
+    <style>
+        :root {
+            --primary: #107c41;
+            --primary-hover: #0b5e2f;
+            --bg: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --border: #e5e7eb;
+            --accent-blue: #0284c7;
+            --accent-green: #16a34a;
+            --accent-amber: #d97706;
+            --accent-purple: #7c3aed;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f172a;
+                --card-bg: #1e293b;
+                --text-main: #f8fafc;
+                --text-muted: #94a3b8;
+                --border: #334155;
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 16px 12px 30px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 580px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* Header Card */
+        .header-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.05);
+        }
+
+        .store-logo-wrapper {
+            width: 64px;
+            height: 64px;
+            border-radius: 16px;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            margin-bottom: 10px;
+        }
+
+        .store-logo-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .store-name {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--primary);
+            letter-spacing: 0.3px;
+            margin-bottom: 4px;
+        }
+
+        .store-address {
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.4;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        /* Search Box */
+        .search-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 18px 20px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.05);
+        }
+
+        .search-title {
+            font-size: 13.5px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .search-input-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .search-input {
+            flex: 1;
+            height: 44px;
+            padding: 0 14px;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            background: rgba(0,0,0,0.02);
+            color: var(--text-main);
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+            background: var(--card-bg);
+            box-shadow: 0 0 0 3px rgba(16, 124, 65, 0.15);
+        }
+
+        .search-btn {
+            height: 44px;
+            padding: 0 18px;
+            background: var(--primary);
+            color: #ffffff;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .search-btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        /* Result Card */
+        .result-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 22px 20px;
+            box-shadow: 0 4px 18px rgba(0,0,0,0.06);
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        /* Banner Status */
+        .status-banner {
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .status-badge-baru {
+            background: #e0f2fe;
+            color: #0369a1;
+            border: 1px solid #bae6fd;
+        }
+
+        .status-badge-proses {
+            background: #fef3c7;
+            color: #b45309;
+            border: 1px solid #fde68a;
+        }
+
+        .status-badge-selesai {
+            background: #dcfce7;
+            color: #15803d;
+            border: 1px solid #bbf7d0;
+        }
+
+        .status-badge-diambil {
+            background: #f3f4f6;
+            color: #4b5563;
+            border: 1px solid #e5e7eb;
+        }
+
+        /* Timeline Stepper */
+        .timeline-container {
+            padding: 10px 4px 6px;
+        }
+
+        .timeline-steps {
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .timeline-steps::before {
+            content: '';
+            position: absolute;
+            top: 16px;
+            left: 20px;
+            right: 20px;
+            height: 3px;
+            background: var(--border);
+            z-index: 1;
+        }
+
+        .timeline-progress-bar {
+            position: absolute;
+            top: 16px;
+            left: 20px;
+            height: 3px;
+            background: var(--primary);
+            z-index: 2;
+            transition: width 0.4s ease;
+        }
+
+        .timeline-step {
+            position: relative;
+            z-index: 3;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            flex: 1;
+        }
+
+        .step-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: var(--card-bg);
+            border: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            color: var(--text-muted);
+            transition: all 0.3s ease;
+        }
+
+        .step-label {
+            font-size: 10.5px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .timeline-step.completed .step-icon {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #ffffff;
+        }
+
+        .timeline-step.completed .step-label {
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        .timeline-step.active .step-icon {
+            background: #ffffff;
+            border-color: var(--accent-amber);
+            color: var(--accent-amber);
+            box-shadow: 0 0 0 4px rgba(217, 119, 6, 0.2);
+            animation: pulse 1.5s infinite;
+        }
+
+        .timeline-step.active .step-label {
+            color: var(--accent-amber);
+            font-weight: 700;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+            100% { transform: scale(1); }
+        }
+
+        /* Detail Rows */
+        .detail-group {
+            background: rgba(0,0,0,0.015);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            font-size: 12.5px;
+            gap: 8px;
+        }
+
+        .detail-label {
+            color: var(--text-muted);
+            min-width: 110px;
+        }
+
+        .detail-value {
+            font-weight: 600;
+            text-align: right;
+            word-break: break-word;
+        }
+
+        .catatan-box {
+            background: #fefce8;
+            border-left: 4px solid #eab308;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #854d0e;
+            line-height: 1.4;
+        }
+
+        .price-highlight-box {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(16, 124, 65, 0.08);
+            border: 1.5px solid rgba(16, 124, 65, 0.25);
+            border-radius: 12px;
+            padding: 14px 16px;
+        }
+
+        .price-highlight-value {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        /* Action Buttons */
+        .btn-wa {
+            height: 48px;
+            background: #25d366;
+            color: #ffffff;
+            border: none;
+            border-radius: 12px;
+            font-size: 14.5px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-decoration: none;
+            box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .btn-wa:hover {
+            background: #1da851;
+            transform: translateY(-1px);
+        }
+
+        /* Loading & Error State */
+        .loading-state, .empty-state, .error-state {
+            text-align: center;
+            padding: 30px 16px;
+            color: var(--text-muted);
+        }
+
+        .spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid rgba(16, 124, 65, 0.2);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 12px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 11px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Header Identitas Toko -->
+        <div class="header-card">
+            <div class="store-logo-wrapper">
+                <img id="storeLogoImg" src="default_logo.ico" alt="Logo Toko">
+            </div>
+            <h1 class="store-name" id="storeNameText">AUTOCASH SERVIS</h1>
+            <div class="store-address" id="storeAddressText">Sistem Pelacakan Status Servis Pelanggan Online</div>
+        </div>
+
+        <!-- Search Box -->
+        <div class="search-card">
+            <div class="search-title">
+                <span>🔍 Lacak Status Servisan Anda</span>
+            </div>
+            <form onsubmit="event.preventDefault(); submitTracking();" class="search-input-group">
+                <input type="text" id="notaInput" class="search-input" placeholder="Masukkan No. Tiket (Contoh: 001)" autofocus>
+                <button type="submit" class="search-btn">
+                    <span>Lacak</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingBox" class="result-card loading-state" style="display: none;">
+            <div class="spinner"></div>
+            <div>Mencari data servis di sistem...</div>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorBox" class="result-card error-state" style="display: none;">
+            <div style="font-size: 40px; margin-bottom: 8px;">⚠️</div>
+            <div id="errorMessage" style="font-weight: 600; color: #dc2626; margin-bottom: 6px;">Nomor tiket tidak ditemukan</div>
+            <div style="font-size: 12px;">Pastikan nomor tiket sesuai dengan yang tercetak pada nota tanda terima Anda.</div>
+        </div>
+
+        <!-- Result Box (Detail Servis) -->
+        <div id="resultBox" class="result-card" style="display: none;">
+            <!-- Status Banner -->
+            <div class="status-banner" id="statusBanner">
+                <div>
+                    <div style="font-size: 11px; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; opacity: 0.85;">Status Terkini</div>
+                    <div style="font-size: 18px; font-weight: 800; margin-top: 2px;" id="bannerStatusText">Sedang Dikerjakan</div>
+                </div>
+                <div style="font-size: 28px;" id="bannerStatusEmoji">⚙️</div>
+            </div>
+
+            <!-- Timeline Stepper -->
+            <div class="timeline-container">
+                <div class="timeline-steps">
+                    <div class="timeline-progress-bar" id="timelineProgressBar" style="width: 25%;"></div>
+                    
+                    <div class="timeline-step" id="step1">
+                        <div class="step-icon">1</div>
+                        <div class="step-label">Diterima</div>
+                    </div>
+                    <div class="timeline-step" id="step2">
+                        <div class="step-icon">2</div>
+                        <div class="step-label">Pengecekan</div>
+                    </div>
+                    <div class="timeline-step" id="step3">
+                        <div class="step-icon">3</div>
+                        <div class="step-label">Dikerjakan</div>
+                    </div>
+                    <div class="timeline-step" id="step4">
+                        <div class="step-icon">4</div>
+                        <div class="step-label">Selesai</div>
+                    </div>
+                    <div class="timeline-step" id="step5">
+                        <div class="step-icon">5</div>
+                        <div class="step-label">Diambil</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detail Servis -->
+            <div class="detail-group">
+                <div class="detail-row">
+                    <span class="detail-label">No. Tiket:</span>
+                    <span class="detail-value" id="valKodeServis" style="color: var(--primary); font-family: monospace; font-size: 13.5px;">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Tanggal Masuk:</span>
+                    <span class="detail-value" id="valTanggalMasuk">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Nama Pelanggan:</span>
+                    <span class="detail-value" id="valNamaPelanggan">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Perangkat:</span>
+                    <span class="detail-value" id="valPerangkat">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Layanan:</span>
+                    <span class="detail-value" id="valLayanan">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Keluhan:</span>
+                    <span class="detail-value" id="valKeluhan" style="font-style: italic;">-</span>
+                </div>
+                <div class="detail-row" id="rowTeknisi" style="display: none;">
+                    <span class="detail-label">Teknisi Penanggung Jawab:</span>
+                    <span class="detail-value" id="valTeknisi">-</span>
+                </div>
+                <div class="detail-row" id="rowTanggalSelesai" style="display: none;">
+                    <span class="detail-label">Tanggal Selesai/Ambil:</span>
+                    <span class="detail-value" id="valTanggalSelesai">-</span>
+                </div>
+            </div>
+
+            <!-- Catatan Teknisi -->
+            <div id="boxCatatanTeknisi" class="catatan-box" style="display: none;">
+                <b>🛠️ Catatan dari Teknisi:</b>
+                <div id="valCatatanTeknisi" style="margin-top: 3px;">-</div>
+            </div>
+
+            <!-- Kotak Biaya -->
+            <div class="price-highlight-box">
+                <div>
+                    <div style="font-size: 11.5px; color: var(--text-muted); font-weight: 600;" id="labelBiaya">Total Biaya Servis:</div>
+                    <div class="price-highlight-value" id="valBiaya">Rp 0</div>
+                </div>
+                <div>
+                    <span id="valStatusBayar" style="font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 6px; background: #e0f2fe; color: #0284c7;">
+                        Belum Bayar
+                    </span>
+                </div>
+            </div>
+
+            <!-- Tombol Kontak WhatsApp -->
+            <a id="btnWhatsAppToko" href="#" target="_blank" class="btn-wa">
+                <span>💬 Tanya Teknisi via WhatsApp</span>
+            </a>
+        </div>
+
+        <footer>
+            Layanan Pelacakan Status Servis Real-Time<br>
+            Powered by <b>Autocash</b> POS & Service Tracking
+        </footer>
+    </div>
+
+    <script>
+        var currentStorePhone = '';
+
+        function getQueryParam(param) {
+            var urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param) || '';
+        }
+
+        function formatRupiah(num) {
+            return 'Rp ' + Number(num || 0).toLocaleString('id-ID');
+        }
+
+        function submitTracking() {
+            var inp = document.getElementById('notaInput').value.trim();
+            if (!inp) return;
+            fetchTrackingData(inp);
+        }
+
+        function fetchTrackingData(nota) {
+            var loadingBox = document.getElementById('loadingBox');
+            var errorBox = document.getElementById('errorBox');
+            var resultBox = document.getElementById('resultBox');
+
+            loadingBox.style.display = 'block';
+            errorBox.style.display = 'none';
+            resultBox.style.display = 'none';
+
+            fetch('/api/public/tracking?nota=' + encodeURIComponent(nota))
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    loadingBox.style.display = 'none';
+                    if (data && data.success && data.ticket) {
+                        renderTrackingResult(data);
+                    } else {
+                        document.getElementById('errorMessage').innerText = (data && data.message) || 'Nomor tiket servis tidak ditemukan.';
+                        errorBox.style.display = 'block';
+                    }
+                })
+                .catch(function(err) {
+                    loadingBox.style.display = 'none';
+                    document.getElementById('errorMessage').innerText = 'Gagal menghubungi server pelacakan: ' + err;
+                    errorBox.style.display = 'block';
+                });
+        }
+
+        function renderTrackingResult(data) {
+            var s = data.ticket;
+            var store = data.store || {};
+            var resultBox = document.getElementById('resultBox');
+
+            // Update Store Info
+            if (store.name) document.getElementById('storeNameText').innerText = store.name;
+            if (store.address) document.getElementById('storeAddressText').innerText = store.address;
+            currentStorePhone = store.phone || '';
+
+            // Update Tiket Details
+            document.getElementById('valKodeServis').innerText = s.kode_servis;
+            document.getElementById('valTanggalMasuk').innerText = s.tanggal_masuk;
+            document.getElementById('valNamaPelanggan').innerText = s.nama_pelanggan;
+            document.getElementById('valPerangkat').innerText = s.jenis_perangkat + (s.merk_model ? ' - ' + s.merk_model : '');
+            document.getElementById('valLayanan').innerText = s.menu_servis || 'Servis Reguler';
+            document.getElementById('valKeluhan').innerText = s.keluhan || '-';
+
+            // Teknisi
+            var rowTeknisi = document.getElementById('rowTeknisi');
+            if (s.teknisi_nama) {
+                document.getElementById('valTeknisi').innerText = s.teknisi_nama;
+                rowTeknisi.style.display = 'flex';
+            } else {
+                rowTeknisi.style.display = 'none';
+            }
+
+            // Tanggal Selesai
+            var rowTglSelesai = document.getElementById('rowTanggalSelesai');
+            if (s.tanggal_selesai) {
+                document.getElementById('valTanggalSelesai').innerText = s.tanggal_selesai;
+                rowTglSelesai.style.display = 'flex';
+            } else {
+                rowTglSelesai.style.display = 'none';
+            }
+
+            // Catatan Teknisi
+            var boxCatatan = document.getElementById('boxCatatanTeknisi');
+            if (s.catatan_teknisi && s.catatan_teknisi.trim() !== '' && s.catatan_teknisi !== '-') {
+                document.getElementById('valCatatanTeknisi').innerText = s.catatan_teknisi;
+                boxCatatan.style.display = 'block';
+            } else {
+                boxCatatan.style.display = 'none';
+            }
+
+            // Biaya & Bayar
+            var biaya = (s.biaya_akhir && Number(s.biaya_akhir) > 0) ? s.biaya_akhir : s.estimasi_biaya;
+            document.getElementById('valBiaya').innerText = formatRupiah(biaya);
+            document.getElementById('labelBiaya').innerText = (s.biaya_akhir && Number(s.biaya_akhir) > 0) ? 'Total Biaya Akhir:' : 'Estimasi Biaya:';
+
+            var bayarBadge = document.getElementById('valStatusBayar');
+            var bayarStatus = s.status_pembayaran || 'Belum Bayar';
+            bayarBadge.innerText = bayarStatus;
+            if (bayarStatus === 'LUNAS') {
+                bayarBadge.style.background = '#dcfce7';
+                bayarBadge.style.color = '#15803d';
+            } else if (bayarStatus.includes('DP')) {
+                bayarBadge.style.background = '#fef3c7';
+                bayarBadge.style.color = '#b45309';
+            } else {
+                bayarBadge.style.background = '#fee2e2';
+                bayarBadge.style.color = '#b91c1c';
+            }
+
+            // Update Stepper & Banner Status
+            updateTimelineStatus(s.status_servis);
+
+            // Update WhatsApp Link
+            var waClean = (currentStorePhone || '').replace(/[^0-9]/g, '');
+            if (waClean.startsWith('0')) waClean = '62' + waClean.slice(1);
+            var waMsg = encodeURIComponent(
+                "Halo " + (store.name || "Admin") + ", saya ingin menanyakan perkembangan servis unit saya:\n\n" +
+                "• No. Tiket: " + s.kode_servis + "\n" +
+                "• Perangkat: " + s.jenis_perangkat + " " + s.merk_model + "\n" +
+                "• Status Terakhir: " + s.status_servis + "\n\n" +
+                "Terima kasih!"
+            );
+            var btnWa = document.getElementById('btnWhatsAppToko');
+            if (waClean) {
+                btnWa.href = "https://wa.me/" + waClean + "?text=" + waMsg;
+                btnWa.style.display = 'flex';
+            } else {
+                btnWa.style.display = 'none';
+            }
+
+            resultBox.style.display = 'flex';
+        }
+
+        function updateTimelineStatus(status) {
+            var raw = (status || '').toLowerCase();
+            var banner = document.getElementById('statusBanner');
+            var bannerText = document.getElementById('bannerStatusText');
+            var bannerEmoji = document.getElementById('bannerStatusEmoji');
+            var progressBar = document.getElementById('timelineProgressBar');
+
+            var steps = [
+                document.getElementById('step1'),
+                document.getElementById('step2'),
+                document.getElementById('step3'),
+                document.getElementById('step4'),
+                document.getElementById('step5')
+            ];
+
+            // Reset steps
+            steps.forEach(function(st) {
+                st.className = 'timeline-step';
+            });
+
+            var activeStep = 1;
+            banner.className = 'status-banner';
+
+            if (raw.includes('baru') || raw.includes('terima') || raw.includes('antre')) {
+                activeStep = 1;
+                bannerText.innerText = 'Unit Telah Diterima (Dalam Antrean)';
+                bannerEmoji.innerText = '📥';
+                banner.classList.add('status-badge-baru');
+                progressBar.style.width = '0%';
+            } else if (raw.includes('cek') || raw.includes('analisa') || raw.includes('diagnosa') || raw.includes('konfirmasi')) {
+                activeStep = 2;
+                bannerText.innerText = 'Sedang Dalam Tahap Pengecekan / Diagnosa';
+                bannerEmoji.innerText = '🔍';
+                banner.classList.add('status-badge-proses');
+                progressBar.style.width = '25%';
+            } else if (raw.includes('kerja') || raw.includes('proses') || raw.includes('sparepart') || raw.includes('tunggu')) {
+                activeStep = 3;
+                bannerText.innerText = 'Sedang Dikerjakan oleh Teknisi';
+                bannerEmoji.innerText = '⚙️';
+                banner.classList.add('status-badge-proses');
+                progressBar.style.width = '50%';
+            } else if (raw.includes('selesai') || raw.includes('siap')) {
+                activeStep = 4;
+                bannerText.innerText = 'Servis Selesai! Unit Siap Diambil di Toko';
+                bannerEmoji.innerText = '✅';
+                banner.classList.add('status-badge-selesai');
+                progressBar.style.width = '75%';
+            } else if (raw.includes('ambil') || raw.includes('keluar') || raw.includes('tutup')) {
+                activeStep = 5;
+                bannerText.innerText = 'Unit Sudah Diambil';
+                bannerEmoji.innerText = '📦';
+                banner.classList.add('status-badge-diambil');
+                progressBar.style.width = '100%';
+            } else if (raw.includes('batal') || raw.includes('cancel')) {
+                activeStep = 1;
+                bannerText.innerText = 'Servis Dibatalkan';
+                bannerEmoji.innerText = '❌';
+                banner.style.background = '#fee2e2';
+                banner.style.color = '#991b1b';
+                progressBar.style.width = '0%';
+            }
+
+            for (var i = 0; i < steps.length; i++) {
+                if (i + 1 < activeStep) {
+                    steps[i].classList.add('completed');
+                } else if (i + 1 === activeStep) {
+                    steps[i].classList.add('active');
+                }
+            }
+        }
+
+        // Auto load logo and tracking on page load
+        window.onload = function() {
+            fetch('/api/logo')
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    if (data && data.success && data.logo_url) {
+                        document.getElementById('storeLogoImg').src = data.logo_url;
+                        document.getElementById('appFavicon').href = data.logo_url;
+                    }
+                }).catch(function() {});
+
+            var notaParam = getQueryParam('nota') || getQueryParam('kode');
+            if (notaParam) {
+                document.getElementById('notaInput').value = notaParam;
+                fetchTrackingData(notaParam);
+            }
+        };
+    </script>
+</body>
+</html>

@@ -716,6 +716,132 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_header('Content-Type', 'application/json')
                 self.end_headers()
                 self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
+
+        elif path in ("/lacak", "/lacak/", "/lacak.html"):
+            lacak_file = os.path.join(DIRECTORY, "lacak.html")
+            if os.path.exists(lacak_file):
+                with open(lacak_file, "rb") as f:
+                    content_html = f.read()
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/html; charset=utf-8')
+                self.end_headers()
+                self.wfile.write(content_html)
+                return
+            else:
+                super().do_GET()
+
+        elif path == "/api/public/tracking":
+            try:
+                nota_q = query.get('nota', [None])[0] or query.get('kode', [None])[0]
+                if not nota_q:
+                    self.send_response(400)
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"success": False, "message": "Nomor tiket/nota wajib diisi."}).encode('utf-8'))
+                    return
+
+                nota_clean = str(nota_q).strip()
+
+                conn = sqlite3.connect(DB_FILE)
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+
+                # Ambil profil toko dari tabel settings
+                cursor.execute("SELECT key, value FROM settings WHERE key IN ('store_name', 'store_address', 'store_phone')")
+                store_cfg = {r['key']: r['value'] for r in cursor.fetchall()}
+                store_data = {
+                    "name": store_cfg.get('store_name', 'AUTOCASH SERVIS'),
+                    "address": store_cfg.get('store_address', ''),
+                    "phone": store_cfg.get('store_phone', '')
+                }
+
+                # Cari tiket servis: pertama exact match
+                cursor.execute("""
+                    SELECT id, kode_servis, nama_pelanggan, no_hp, jenis_perangkat, merk_model, 
+                           keluhan, catatan_teknisi, menu_servis, status_servis, estimasi_biaya, 
+                           biaya_akhir, status_pembayaran, tanggal_masuk, tanggal_selesai, teknisi_nama
+                    FROM services 
+                    WHERE LOWER(TRIM(kode_servis)) = LOWER(?)
+                    ORDER BY id DESC LIMIT 1
+                """, (nota_clean,))
+                srv = cursor.fetchone()
+
+                if not srv:
+                    # Coba cari berakhiran / mengandung nomor yang dicari
+                    cursor.execute("""
+                        SELECT id, kode_servis, nama_pelanggan, no_hp, jenis_perangkat, merk_model, 
+                               keluhan, catatan_teknisi, menu_servis, status_servis, estimasi_biaya, 
+                               biaya_akhir, status_pembayaran, tanggal_masuk, tanggal_selesai, teknisi_nama
+                        FROM services 
+                        WHERE kode_servis LIKE ?
+                        ORDER BY id DESC LIMIT 1
+                    """, (f"%{nota_clean}%",))
+                    srv = cursor.fetchone()
+
+                conn.close()
+
+                if not srv:
+                    self.send_response(404)
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({
+                        "success": False,
+                        "message": f"Tiket servis '{nota_clean}' tidak ditemukan. Mohon periksa kembali nomor nota Anda."
+                    }).encode('utf-8'))
+                    return
+
+                # Masking nama pelanggan demi privasi
+                raw_nama = srv['nama_pelanggan'] or ""
+                nama_parts = raw_nama.strip().split()
+                masked_nama_parts = []
+                for p in nama_parts:
+                    if len(p) <= 2:
+                        masked_nama_parts.append(p[0] + "*")
+                    else:
+                        masked_nama_parts.append(p[:2] + "*" * (len(p) - 2))
+                masked_nama = " ".join(masked_nama_parts) if masked_nama_parts else "-"
+
+                # Masking nomor HP pelanggan
+                raw_hp = re.sub(r'\D', '', srv['no_hp'] or "")
+                if len(raw_hp) >= 8:
+                    masked_hp = raw_hp[:4] + "-****-" + raw_hp[-4:]
+                elif len(raw_hp) >= 4:
+                    masked_hp = raw_hp[:2] + "****" + raw_hp[-2:]
+                else:
+                    masked_hp = "****"
+
+                ticket_dict = {
+                    "id": srv["id"],
+                    "kode_servis": srv["kode_servis"],
+                    "nama_pelanggan": masked_nama,
+                    "no_hp": masked_hp,
+                    "jenis_perangkat": srv["jenis_perangkat"] or "",
+                    "merk_model": srv["merk_model"] or "",
+                    "keluhan": srv["keluhan"] or "",
+                    "catatan_teknisi": srv["catatan_teknisi"] or "",
+                    "menu_servis": srv["menu_servis"] or "",
+                    "status_servis": srv["status_servis"] or "Baru",
+                    "estimasi_biaya": float(srv["estimasi_biaya"] or 0),
+                    "biaya_akhir": float(srv["biaya_akhir"] or 0),
+                    "status_pembayaran": srv["status_pembayaran"] or "Belum Bayar",
+                    "tanggal_masuk": srv["tanggal_masuk"] or "",
+                    "tanggal_selesai": srv["tanggal_selesai"] or "",
+                    "teknisi_nama": srv["teknisi_nama"] or ""
+                }
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    "success": True,
+                    "store": store_data,
+                    "ticket": ticket_dict
+                }).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
         else:
             super().do_GET()
 

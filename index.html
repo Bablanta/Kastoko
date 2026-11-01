@@ -109,6 +109,17 @@
             box-shadow: 0 3px 8px rgba(0,0,0,0.07);
             transform: translateY(-1px);
         }
+        .receipt-tracking-box {
+            text-align: center;
+            margin: 6px 0 4px 0;
+            padding-top: 5px;
+            border-top: 1px dashed #444;
+        }
+        #rQrCodeContainer canvas, #rQrCodeContainer img {
+            display: block;
+            margin: 0 auto;
+            image-rendering: pixelated;
+        }
     </style>
     <link rel="icon" type="image/x-icon" id="appFavicon" href="default_logo.ico">
     <!-- Chart.js: Lokal dengan fallback CDN untuk keandalan 100% offline & online -->
@@ -123,6 +134,13 @@
     <script>
         if (typeof html2canvas === 'undefined') {
             document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>');
+        }
+    </script>
+    <!-- QRCode.js: Lokal dengan fallback CDN untuk cetak QR Code pelacakan servis pada nota -->
+    <script src="qrcode.min.js"></script>
+    <script>
+        if (typeof QRCode === 'undefined') {
+            document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>');
         }
     </script>
 </head>
@@ -846,6 +864,14 @@
                             * Simpan nota ini sebagai bukti tanda terima saat mengambil unit.<br>
                             * Kerusakan aksesoris tidak tercatat di luar tanggung jawab toko.
                         </div>
+
+                        <!-- Blok QR Code Pelacakan Servisan Online -->
+                        <div class="receipt-tracking-box" id="rTrackingBox">
+                            <div style="font-size: 8px; font-weight: bold; letter-spacing: 0.3px; margin-bottom: 2px;">SCAN UNTUK CEK STATUS SERVIS</div>
+                            <div id="rQrCodeContainer"></div>
+                            <div style="font-size: 7.5px; font-family: monospace; color: #222; margin-top: 2px;" id="rTrackingUrlText">lacak.dhanzcell.my.id</div>
+                        </div>
+
                         <div class="sig-row">
                             <div class="sig-col">
                                 <div>Pelanggan</div>
@@ -3110,6 +3136,44 @@
 
         if (rSigPelanggan) {
             rSigPelanggan.innerText = '( ' + (s.nama_pelanggan || '....................') + ' )';
+        }
+
+        // Update QR Code Pelacakan Servisan Online
+        var qrBox = document.getElementById('rTrackingBox');
+        var qrContainer = document.getElementById('rQrCodeContainer');
+        var qrUrlText = document.getElementById('rTrackingUrlText');
+        var kodeTiket = s.kode_servis || ('#' + s.id);
+
+        if (qrBox && qrContainer) {
+            if (isAmbil) {
+                qrBox.style.display = 'none';
+            } else {
+                qrBox.style.display = 'block';
+                var baseDomain = 'https://lacak.dhanzcell.my.id';
+                if (!window.location.hostname.includes('dhanzcell.my.id') && !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1')) {
+                    baseDomain = window.location.origin;
+                }
+                var trackingUrl = baseDomain + '/lacak?nota=' + encodeURIComponent(kodeTiket);
+
+                qrContainer.innerHTML = '';
+                if (typeof QRCode !== 'undefined') {
+                    try {
+                        new QRCode(qrContainer, {
+                            text: trackingUrl,
+                            width: 72,
+                            height: 72,
+                            colorDark: "#000000",
+                            colorLight: "#ffffff",
+                            correctLevel: QRCode.CorrectLevel.M
+                        });
+                    } catch(e) {
+                        console.warn("Gagal render QRCode nota:", e);
+                    }
+                }
+                if (qrUrlText) {
+                    qrUrlText.innerText = 'lacak.dhanzcell.my.id/lacak?nota=' + kodeTiket;
+                }
+            }
         }
     }
 
