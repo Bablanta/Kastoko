@@ -367,6 +367,7 @@
                         <select id="settingWaTarget" class="form-control" style="height: 38px; padding: 6px 10px; font-size: 12px;">
                             <option value="desktop" selected>💻 WhatsApp Desktop (Aplikasi PC)</option>
                             <option value="web">🌐 WhatsApp Web (Browser)</option>
+                            <option value="universal">📱 Universal / wa.me (HP, Tablet & Web)</option>
                         </select>
                     </div>
                     <div style="font-size: 10.5px; color: var(--text-muted); line-height: 1.4;">
@@ -1057,9 +1058,77 @@
             </div>
 
             <!-- Action Buttons -->
-            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+            <div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;">
                 <button class="btn" onclick="closeCompleteServiceModal()" style="height: 36px; padding: 0 14px; background: #888; color: #fff;">Batal</button>
-                <button class="btn btn-primary" onclick="submitCompleteService()" style="height: 36px; padding: 0 16px; font-weight: bold;">💾 Simpan Servis Selesai</button>
+                <button class="btn btn-primary" onclick="submitCompleteService(false)" style="height: 36px; padding: 0 16px; font-weight: bold;">💾 Simpan Selesai</button>
+                <button class="btn" onclick="submitCompleteService(true)" style="height: 36px; padding: 0 16px; font-weight: bold; background: #25d366; color: #fff; border: none; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;" title="Simpan status Selesai dan langsung buka WhatsApp untuk memberi tahu pelanggan bahwa unit siap diambil">📲 Simpan & Beritahu via WA</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Modal WhatsApp Notification & Preview -->
+    <div class="modal-overlay" id="waNotificationModal" style="display: none; z-index: 10006;">
+        <div class="modal-card" style="max-width: 540px; width: 95%; max-height: 90vh; display: flex; flex-direction: column; padding: 0; overflow: hidden; border-radius: 12px; box-shadow: 0 12px 36px rgba(0,0,0,0.4);">
+            <!-- Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; border-bottom: 2px solid var(--border-color); background: var(--card-bg);">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 24px;">📲</span>
+                    <div>
+                        <h3 style="margin: 0; font-size: 16px; color: #107c41;">Kirim Notifikasi WhatsApp</h3>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Pesan otomatis dengan link pelacakan online terintegrasi</div>
+                    </div>
+                </div>
+                <button class="toast-close" style="font-size: 20px; padding: 2px 8px; cursor: pointer;" onclick="closeWaNotificationModal()" title="Tutup">✕</button>
+            </div>
+
+            <!-- Body -->
+            <div style="padding: 16px 20px; overflow-y: auto; max-height: calc(90vh - 130px); display: flex; flex-direction: column; gap: 12px;">
+                <input type="hidden" id="waModalServiceId" value="">
+                
+                <!-- Target Pelanggan -->
+                <div style="background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-weight: bold; font-size: 13px;" id="waModalCustomerName">-</div>
+                        <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;" id="waModalCustomerPhone">-</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <span id="waModalTicketCode" style="font-family: monospace; font-weight: bold; color: var(--accent-color); font-size: 13px;">-</span>
+                        <div id="waModalDeviceName" style="font-size: 11px; color: var(--text-muted);">-</div>
+                    </div>
+                </div>
+
+                <!-- Pilihan Template Pesan -->
+                <div class="form-group">
+                    <label style="font-size: 11px; font-weight: 600; margin-bottom: 4px; display: block;">Pilih Format Template Pesan:</label>
+                    <select id="waModalTemplateSelect" class="form-control" style="height: 38px; font-size: 12.5px; font-weight: 600;" onchange="onWaTemplateChange(this.value)">
+                        <option value="selesai">🎉 1. Servis Selesai & Siap Diambil (Rekomendasi)</option>
+                        <option value="masuk">📄 2. Tanda Terima Penerimaan Unit Masuk</option>
+                        <option value="ambil">🧾 3. Nota Pelunasan Kasir & Kwitansi Lunas</option>
+                        <option value="proses">🔧 4. Update Status Pengerjaan (Sedang Diproses)</option>
+                    </select>
+                </div>
+
+                <!-- Textarea Pratinjau & Edit Pesan -->
+                <div class="form-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <label style="font-size: 11px; font-weight: 600;">Pratinjau & Kustomisasi Pesan (Bisa Diedit):</label>
+                        <button type="button" class="btn btn-sm" onclick="resetWaTemplateMessage()" style="font-size: 10.5px; padding: 2px 8px; background: transparent; color: var(--accent-color); border: 1px solid var(--border-color);">🔄 Reset Template</button>
+                    </div>
+                    <textarea id="waModalMessageBody" class="form-control" rows="10" style="font-size: 12px; font-family: sans-serif; line-height: 1.45; resize: vertical; padding: 10px;"></textarea>
+                </div>
+
+                <div style="font-size: 11px; color: var(--text-muted); background: rgba(16,124,65,0.06); border-left: 3px solid #107c41; padding: 8px 10px; border-radius: 4px;">
+                    💡 Link pelacakan online otomatis disematkan: <code style="color: #107c41; font-weight: bold;">https://lacak.dhanzcell.my.id/lacak?nota=...</code>. Pelanggan bisa langsung klik untuk melihat detail progres tanpa perlu login.
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="display: flex; gap: 10px; padding: 12px 20px; border-top: 1px solid var(--border-color); background: var(--card-bg);">
+                <button type="button" class="btn" onclick="closeWaNotificationModal()" style="flex: 1; height: 40px; background: #888; color: #fff; cursor: pointer;">Batal</button>
+                <button type="button" class="btn" onclick="executeSendWhatsAppFromModal()" style="flex: 2; height: 40px; font-weight: bold; font-size: 13px; background: #25d366; color: #fff; border: none; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
+                    🚀 Buka WhatsApp & Kirim Pesan
+                </button>
             </div>
         </div>
     </div>
@@ -1135,6 +1204,9 @@
                 </button>
                 <button class="btn" onclick="submitCashierPickup(true)" style="flex: 1.2; height: 40px; font-weight: bold; background: #e6f4ed; color: #107c41; border: 1px solid #107c41;">
                     🖨️ Cetak Nota Lunas
+                </button>
+                <button class="btn" onclick="submitCashierPickup('wa')" style="height: 40px; padding: 0 14px; font-weight: bold; background: #25d366; color: #fff; border: none; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;" title="Simpan pelunasan dan kirim kwitansi via WhatsApp">
+                    📲 Kirim WA
                 </button>
                 <button class="btn" onclick="closeCashierPickupModal()" style="height: 40px; padding: 0 14px; background: #888; color: #fff;">
                     Batal
@@ -2280,7 +2352,7 @@
         document.getElementById('csInputSparepartBiaya').value = '0';
     }
 
-    function submitCompleteService() {
+    function submitCompleteService(sendWa) {
         var id = parseInt(document.getElementById('csServiceId').value);
         if (!id) return;
 
@@ -2312,6 +2384,12 @@
                 closeCompleteServiceModal();
                 loadServices();
                 loadTransactions();
+
+                if (sendWa) {
+                    setTimeout(function() {
+                        openWhatsAppNotificationModal(id, 'selesai');
+                    }, 400);
+                }
             } else {
                 alert("Gagal menyelesaikan servis: " + data.message);
             }
@@ -2421,7 +2499,11 @@
                 loadServices();
                 loadTransactions();
 
-                if (shouldPrintReceipt) {
+                if (shouldPrintReceipt === 'wa') {
+                    setTimeout(function() {
+                        openWhatsAppNotificationModal(id, 'ambil');
+                    }, 400);
+                } else if (shouldPrintReceipt) {
                     setTimeout(function() {
                         openReceiptModal(id, 'ambil');
                         printReceiptOnly();
@@ -2736,7 +2818,7 @@
 
             var cleanPhone = (s.no_hp || '').replace(/[^0-9]/g, '');
             if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.slice(1);
-            var waLink = cleanPhone ? '<a href="javascript:void(0)" onclick="openWhatsAppForService(' + s.id + ')" style="font-size: 11px; text-decoration: none; margin-left: 4px; cursor: pointer;" title="Hubungi via WhatsApp (Desktop / Web)">💬</a>' : '';
+            var waLink = cleanPhone ? '<a href="javascript:void(0)" onclick="openWhatsAppNotificationModal(' + s.id + ')" style="font-size: 11px; text-decoration: none; margin-left: 4px; cursor: pointer;" title="Kirim Notifikasi WhatsApp (Selesai/Masuk/Pelunasan)">💬</a>' : '';
 
             var sppInfo = '';
             if (s.sparepart_nama || (s.sparepart_biaya || 0) > 0) {
@@ -2878,42 +2960,120 @@
     // ========================================================
     // LOGIKA PENGIRIMAN NOTA VIA WHATSAPP (GAMBAR & TEKS)
     // ========================================================
-    function buildWhatsAppReceiptMessage(s) {
+    function getPublicTrackingUrl(kodeServis) {
+        var domain = 'https://lacak.dhanzcell.my.id';
+        return domain + '/lacak?nota=' + encodeURIComponent(kodeServis || '');
+    }
+
+    function buildWhatsAppServiceMessage(s, templateType) {
         if (!s) return '';
         var storeName = currentStoreProfile.name || 'AUTOCASH SERVIS';
         var storeAddr = currentStoreProfile.address || '';
         var storePhone = currentStoreProfile.phone || '';
-        var isAmbil = (currentReceiptType === 'ambil' || s.status_servis === 'Diambil' || s.status_servis === 'Selesai');
-
+        var trackingUrl = getPublicTrackingUrl(s.kode_servis || s.id);
+        var pelanggan = s.nama_pelanggan || 'Pelanggan';
         var lines = [];
-        lines.push('Halo *' + (s.nama_pelanggan || 'Pelanggan') + '*,');
-        lines.push('Berikut adalah konfirmasi nota digital servis Anda di *' + storeName + '*:');
-        lines.push('');
-        lines.push('🧾 *' + (isAmbil ? 'NOTA PELUNASAN & KWITANSI' : 'TANDA TERIMA PENERIMAAN UNIT') + '*');
-        lines.push('----------------------------------------');
-        lines.push('📌 *No. Tiket*   : ' + (s.kode_servis || ('#' + s.id)));
-        lines.push('📅 *Tanggal*     : ' + (s.tanggal_masuk || getSystemDate()));
-        lines.push('📱 *Perangkat*   : ' + (s.merk_model || '-') + ' (' + (s.jenis_perangkat || 'Unit') + ')');
-        lines.push('🔧 *Layanan*     : ' + (s.menu_servis || 'Diagnosa'));
-        lines.push('⚠️ *Keluhan*     : ' + (s.keluhan || '-'));
 
-        if (isAmbil) {
+        if (templateType === 'selesai') {
             var biayaAkhir = (s.biaya_akhir !== undefined && s.biaya_akhir !== null && s.biaya_akhir > 0) ? s.biaya_akhir : (s.estimasi_biaya || 0);
-            lines.push('💰 *Total Biaya* : Rp ' + Number(biayaAkhir).toLocaleString('id-ID'));
-            lines.push('✅ *Status Bayar*: ' + (s.status_pembayaran || 'LUNAS'));
-            lines.push('🛡️ *Garansi*     : 7 Hari');
+            lines.push('Halo *' + pelanggan + '*,');
+            lines.push('Kabar baik dari *' + storeName + '*! 🎉');
+            lines.push('');
+            lines.push('Perangkat servis Anda telah *SELESAI DIPERBAIKI* dan sudah *SIAP UNTUK DIAMBIL*.');
+            lines.push('');
+            lines.push('📋 *RINCIAN SERVIS SELESAI:*');
+            lines.push('----------------------------------------');
+            lines.push('🏷️ *No. Tiket*    : ' + (s.kode_servis || ('#' + s.id)));
+            lines.push('📱 *Perangkat*    : ' + (s.merk_model || '-') + ' (' + (s.jenis_perangkat || 'Unit') + ')');
+            if (s.catatan_teknisi) lines.push('🔧 *Tindakan*     : ' + s.catatan_teknisi);
+            else lines.push('🔧 *Layanan*      : ' + (s.menu_servis || 'Servis'));
+            lines.push('💰 *Total Biaya*  : Rp ' + Number(biayaAkhir).toLocaleString('id-ID'));
+            lines.push('✅ *Status*       : SIAP DIAMBIL');
+            lines.push('🛡️ *Garansi Toko* : 7 Hari');
+            lines.push('----------------------------------------');
+            lines.push('🌐 *Lacak Status & Pratinjau Nota Online:*');
+            lines.push('👉 ' + trackingUrl);
+            lines.push('');
+            lines.push('Silakan datang ke toko kami pada jam operasional untuk pengambilan unit. Terima kasih atas kepercayaan Anda! 🙏');
+            if (storeAddr || storePhone) {
+                lines.push('');
+                lines.push('📍 ' + storeAddr + (storePhone ? ' | 📞 ' + storePhone : ''));
+            }
+        } else if (templateType === 'ambil') {
+            var finalBiaya = (s.biaya_akhir !== undefined && s.biaya_akhir !== null && s.biaya_akhir > 0) ? s.biaya_akhir : (s.estimasi_biaya || 0);
+            lines.push('Halo *' + pelanggan + '*,');
+            lines.push('Berikut adalah bukti tanda terima pelunasan resmi dari *' + storeName + '*:');
+            lines.push('');
+            lines.push('🧾 *BUKTI PELUNASAN & KWITANSI RESMI*');
+            lines.push('----------------------------------------');
+            lines.push('🏷️ *No. Tiket*    : ' + (s.kode_servis || ('#' + s.id)));
+            lines.push('📅 *Tanggal Ambil*: ' + (s.tanggal_selesai || getSystemDate()));
+            lines.push('📱 *Perangkat*    : ' + (s.merk_model || '-') + ' (' + (s.jenis_perangkat || 'Unit') + ')');
+            lines.push('💰 *Total Bayar*  : Rp ' + Number(finalBiaya).toLocaleString('id-ID'));
+            lines.push('💳 *Metode Bayar* : ' + (s.metode_pembayaran || 'Tunai'));
+            lines.push('✅ *Status Bayar* : ' + (s.status_pembayaran || 'LUNAS'));
+            lines.push('🛡️ *Masa Garansi* : 7 Hari');
+            lines.push('----------------------------------------');
+            lines.push('🌐 *Arsip Nota Digital & Garansi:*');
+            lines.push('👉 ' + trackingUrl);
+            lines.push('');
+            lines.push('Terima kasih banyak telah berlangganan di ' + storeName + '. Semoga perangkat Anda awet dan lancar digunakan! 🙏');
+            if (storeAddr || storePhone) {
+                lines.push('');
+                lines.push('📍 ' + storeAddr + (storePhone ? ' | 📞 ' + storePhone : ''));
+            }
+        } else if (templateType === 'proses') {
+            lines.push('Halo *' + pelanggan + '*,');
+            lines.push('Informasi perkembangan pengerjaan servis unit Anda di *' + storeName + '*:');
+            lines.push('');
+            lines.push('⚙️ *STATUS PENGERJAAN: SEDANG DIPROSES*');
+            lines.push('----------------------------------------');
+            lines.push('🏷️ *No. Tiket*    : ' + (s.kode_servis || ('#' + s.id)));
+            lines.push('📱 *Perangkat*    : ' + (s.merk_model || '-') + ' (' + (s.jenis_perangkat || 'Unit') + ')');
+            if (s.teknisi_nama) lines.push('👨‍🔧 *Teknisi*     : ' + s.teknisi_nama);
+            lines.push('🔍 *Keluhan*      : ' + (s.keluhan || '-'));
+            if (s.catatan_teknisi) lines.push('📝 *Catatan*      : ' + s.catatan_teknisi);
+            lines.push('⏳ *Status*       : Sedang Dikerjakan Teknisi');
+            lines.push('----------------------------------------');
+            lines.push('🌐 *Pantau Status Pengerjaan Real-time:*');
+            lines.push('👉 ' + trackingUrl);
+            lines.push('');
+            lines.push('Kami akan segera mengabari Anda begitu unit telah selesai diperbaiki.');
+            if (storeAddr || storePhone) {
+                lines.push('');
+                lines.push('📍 ' + storeAddr + (storePhone ? ' | 📞 ' + storePhone : ''));
+            }
         } else {
-            lines.push('💰 *Est. Biaya*  : Rp ' + Number(s.estimasi_biaya || 0).toLocaleString('id-ID'));
-            lines.push('⏳ *Status*      : ' + (s.status_servis || 'Baru'));
+            // templateType === 'masuk'
+            lines.push('Halo *' + pelanggan + '*,');
+            lines.push('Terima kasih telah mempercayakan perbaikan perangkat Anda di *' + storeName + '*.');
+            lines.push('');
+            lines.push('📄 *TANDA TERIMA PENERIMAAN SERVIS*');
+            lines.push('----------------------------------------');
+            lines.push('🏷️ *No. Tiket*    : ' + (s.kode_servis || ('#' + s.id)));
+            lines.push('📅 *Tgl Masuk*    : ' + (s.tanggal_masuk || getSystemDate()));
+            lines.push('📱 *Perangkat*    : ' + (s.merk_model || '-') + ' (' + (s.jenis_perangkat || 'Unit') + ')');
+            lines.push('🔍 *Keluhan*      : ' + (s.keluhan || '-'));
+            lines.push('🔧 *Layanan*      : ' + (s.menu_servis || 'Diagnosa'));
+            lines.push('💵 *Est. Biaya*   : Rp ' + Number(s.estimasi_biaya || 0).toLocaleString('id-ID'));
+            lines.push('⏳ *Status*       : Menunggu Antrean Pengerjaan');
+            lines.push('----------------------------------------');
+            lines.push('🌐 *Lacak Status Servis Online 24 Jam:*');
+            lines.push('👉 ' + trackingUrl);
+            lines.push('');
+            lines.push('ℹ️ Anda dapat mengecek status pengerjaan unit kapan saja melalui tautan di atas tanpa perlu repot datang ke toko.');
+            if (storeAddr || storePhone) {
+                lines.push('');
+                lines.push('📍 ' + storeAddr + (storePhone ? ' | 📞 ' + storePhone : ''));
+            }
         }
-        lines.push('----------------------------------------');
-        lines.push('📎 _(Gambar struk nota resmi terlampir di atas)_');
-        lines.push('');
-        lines.push('Terima kasih telah mempercayakan perbaikan unit Anda kepada kami.');
-        if (storeAddr || storePhone) {
-            lines.push('📍 ' + storeAddr + (storePhone ? ' | 📞 ' + storePhone : ''));
-        }
+
         return lines.join('\n');
+    }
+
+    function buildWhatsAppReceiptMessage(s) {
+        var isAmbil = (currentReceiptType === 'ambil' || s.status_servis === 'Diambil');
+        return buildWhatsAppServiceMessage(s, isAmbil ? 'ambil' : 'masuk');
     }
 
     function openWhatsAppLink(phone, message) {
@@ -2928,14 +3088,78 @@
         var encodedMsg = encodeURIComponent(message || '');
 
         if (waTarget === 'desktop') {
-            // Langsung memanggil aplikasi WhatsApp Desktop yang terinstal di Windows
             var desktopUri = 'whatsapp://send?phone=' + cleanPhone + '&text=' + encodedMsg;
             window.location.href = desktopUri;
+        } else if (waTarget === 'universal') {
+            var uniUri = 'https://wa.me/' + cleanPhone + '?text=' + encodedMsg;
+            window.open(uniUri, '_blank');
         } else {
-            // Membuka WhatsApp Web di browser
             var webUri = 'https://web.whatsapp.com/send?phone=' + cleanPhone + '&text=' + encodedMsg;
             window.open(webUri, '_blank');
         }
+    }
+
+    function openWhatsAppNotificationModal(id, defaultType) {
+        var s = services.find(function(item) { return item.id === id; });
+        if (!s) return;
+
+        var cleanPhone = (s.no_hp || '').replace(/[^0-9]/g, '');
+        if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.slice(1);
+        if (!cleanPhone) {
+            alert('Nomor WhatsApp pelanggan belum diisi pada tiket ini!');
+            return;
+        }
+
+        document.getElementById('waModalServiceId').value = s.id;
+        document.getElementById('waModalCustomerName').innerText = s.nama_pelanggan || '-';
+        document.getElementById('waModalCustomerPhone').innerText = '📱 ' + (s.no_hp || '-');
+        document.getElementById('waModalTicketCode').innerText = s.kode_servis || ('#' + s.id);
+        document.getElementById('waModalDeviceName').innerText = (s.merk_model || '-') + ' (' + (s.jenis_perangkat || 'Unit') + ')';
+
+        var type = defaultType;
+        if (!type) {
+            if (s.status_servis === 'Selesai') type = 'selesai';
+            else if (s.status_servis === 'Diambil') type = 'ambil';
+            else if (s.status_servis === 'Sedang Dikerjakan') type = 'proses';
+            else type = 'masuk';
+        }
+
+        var sel = document.getElementById('waModalTemplateSelect');
+        if (sel) sel.value = type;
+
+        var msg = buildWhatsAppServiceMessage(s, type);
+        var txtArea = document.getElementById('waModalMessageBody');
+        if (txtArea) txtArea.value = msg;
+
+        document.getElementById('waNotificationModal').style.display = 'flex';
+    }
+
+    function closeWaNotificationModal() {
+        document.getElementById('waNotificationModal').style.display = 'none';
+    }
+
+    function onWaTemplateChange(type) {
+        var id = parseInt(document.getElementById('waModalServiceId').value);
+        var s = services.find(function(item) { return item.id === id; });
+        if (!s) return;
+        var msg = buildWhatsAppServiceMessage(s, type);
+        var txtArea = document.getElementById('waModalMessageBody');
+        if (txtArea) txtArea.value = msg;
+    }
+
+    function resetWaTemplateMessage() {
+        var sel = document.getElementById('waModalTemplateSelect');
+        if (sel) onWaTemplateChange(sel.value);
+    }
+
+    function executeSendWhatsAppFromModal() {
+        var id = parseInt(document.getElementById('waModalServiceId').value);
+        var s = services.find(function(item) { return item.id === id; });
+        if (!s) return;
+        var msg = document.getElementById('waModalMessageBody').value;
+        closeWaNotificationModal();
+        openWhatsAppLink(s.no_hp, msg);
+        showToast("Membuka WhatsApp...", "info", 3000);
     }
 
     function sendReceiptViaWhatsApp() {
