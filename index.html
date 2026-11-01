@@ -559,7 +559,7 @@
                     </div>
 
                     <!-- Tombol Card: Identitas Toko & Logo (Kop Nota & Kwitansi) -->
-                    <div class="settings-section" style="border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; background: rgba(0,0,0,0.01);">
+                    <div class="settings-section" id="settingsSectionStoreIdentity" style="border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; background: rgba(0,0,0,0.01);">
                         <div style="font-size: 11px; font-weight: bold; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">🏪 Profil Usaha & Logo</div>
                         <button type="button" class="settings-nav-card" onclick="openStoreIdentityModal()" title="Buka Formulir Identitas Toko & Logo Kop">
                             <div style="font-size: 28px; line-height: 1;">🏪</div>
@@ -573,7 +573,7 @@
                     </div>
 
                     <!-- Tombol Card: Pengaturan Dual Printer Thermal -->
-                    <div class="settings-section" style="border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; background: rgba(0,0,0,0.01);">
+                    <div class="settings-section" id="settingsSectionPrinter" style="border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; background: rgba(0,0,0,0.01);">
                         <div style="font-size: 11px; font-weight: bold; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">🖨️ Hardware & Cetak Direct</div>
                         <button type="button" class="settings-nav-card" onclick="openPrinterSettingsModal()" title="Buka Pengaturan Dual Thermal Printer">
                             <div style="font-size: 28px; line-height: 1;">🖨️</div>
@@ -1543,6 +1543,12 @@
                             <label>Alamat / Catatan Lokasi (Opsional)</label>
                             <input type="text" id="srvAlamat" class="form-control" placeholder="Alamat / Kota pelanggan...">
                         </div>
+                        <div class="form-group" id="formGroupSrvMitra" style="margin-bottom: 10px;">
+                            <label>Sumber Order / Mitra Toko (Opsional)</label>
+                            <select id="srvMitraNama" class="form-control" style="height: 38px; font-size: 12px;">
+                                <option value="">-- Pelanggan Langsung (Non-Mitra) --</option>
+                            </select>
+                        </div>
                     </div>
 
                     <!-- Kolom 2: Layanan & Status Servis -->
@@ -1644,6 +1650,11 @@
                     <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                         <!-- Search Input -->
                         <input type="text" id="serviceSearchInput" class="form-control" placeholder="🔍 Cari nama, HP, unit, kode..." oninput="filterServiceList()" style="width: 220px; font-size: 12px; padding: 6px 12px;">
+                        <!-- Filter Teknisi & Servis Saya -->
+                        <select id="serviceTechFilter" onchange="renderServiceTable()" class="form-control" style="width: auto; height: 34px; font-size: 11.5px; padding: 4px 8px;">
+                            <option value="">👨‍🔧 Semua Teknisi</option>
+                        </select>
+                        <button type="button" class="tab-btn" id="btnFilterMyService" onclick="toggleMyServiceFilter()" style="display: none; font-weight: bold; background: #ede9fe; color: #7c3aed; border: 1px solid #c4b5fd;">👨‍🔧 Servis Saya</button>
                         <!-- Segmented Filter Tabs -->
                         <div class="tabs-header">
                             <button class="tab-btn active" id="tabSrvSemua" onclick="switchServiceFilter('Semua')">Semua</button>
@@ -1655,6 +1666,9 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Banner Khusus Portal Mitra -->
+                <div id="mitraPortalBanner" style="display: none; background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; font-size: 12px; color: #92400e; align-items: center; justify-content: space-between;"></div>
 
                 <!-- Table Antrean Servis -->
                 <div class="table-responsive">
@@ -1754,6 +1768,10 @@
     var currentMainDashboard = 'pembukuan';
 
     function switchMainDashboard(view) {
+        var curRole = getCurrentRole();
+        if ((curRole === 'teknisi' || curRole === 'mitra') && view === 'pembukuan') {
+            view = 'servis';
+        }
         currentMainDashboard = view;
         var btnPembukuan = document.getElementById('btnNavPembukuan');
         var btnServis = document.getElementById('btnNavServis');
@@ -1862,12 +1880,78 @@
         }
     }
 
+    var filterOnlyMyService = false;
+    function toggleMyServiceFilter() {
+        filterOnlyMyService = !filterOnlyMyService;
+        var btn = document.getElementById('btnFilterMyService');
+        if (btn) {
+            if (filterOnlyMyService) {
+                btn.style.background = '#7c3aed';
+                btn.style.color = '#fff';
+            } else {
+                btn.style.background = '#ede9fe';
+                btn.style.color = '#7c3aed';
+            }
+        }
+        renderServiceTable();
+    }
+
+    function loadMitraOptions() {
+        if (!currentUser || currentUser.role === 'mitra') return;
+        fetch('/api/users?status=active')
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data && data.success) {
+                    var mitras = (data.users || []).filter(function(u) { return u.role === 'mitra'; });
+                    var sel = document.getElementById('srvMitraNama');
+                    if (sel && !sel.disabled) {
+                        var curVal = sel.value;
+                        sel.innerHTML = '<option value="">-- Pelanggan Langsung (Non-Mitra) --</option>';
+                        mitras.forEach(function(m) {
+                            var opt = document.createElement('option');
+                            var mName = m.fullname || m.username;
+                            opt.value = mName;
+                            opt.textContent = '🤝 ' + mName + (m.phone ? ' (' + m.phone + ')' : '');
+                            sel.appendChild(opt);
+                        });
+                        if (curVal) sel.value = curVal;
+                    }
+                }
+            })
+            .catch(function(e) { console.warn("Gagal muat daftar mitra:", e); });
+    }
+
+    function updateTechFilterDropdown() {
+        var sel = document.getElementById('serviceTechFilter');
+        if (!sel) return;
+        var curVal = sel.value;
+        var techs = {};
+        services.forEach(function(s) {
+            if (s.teknisi_nama && s.teknisi_nama.trim()) {
+                techs[s.teknisi_nama.trim()] = true;
+            }
+        });
+        sel.innerHTML = '<option value="">👨‍🔧 Semua Teknisi</option>';
+        Object.keys(techs).sort().forEach(function(t) {
+            var opt = document.createElement('option');
+            opt.value = t;
+            opt.textContent = '👨‍🔧 ' + t;
+            sel.appendChild(opt);
+        });
+        if (curVal) sel.value = curVal;
+    }
+
     function loadServices(isManual, callback) {
-        return fetch('/api/services')
+        var srvUrl = '/api/services';
+        if (currentUser && currentUser.role === 'mitra') {
+            srvUrl += '?role=mitra&actor=' + encodeURIComponent(currentUser.username);
+        }
+        return fetch(srvUrl)
             .then(function(res) { return res.json(); })
             .then(function(data) {
                 if (data.success) {
                     services = data.services || [];
+                    updateTechFilterDropdown();
                     renderServiceTable();
                     updateServiceKPI();
                     if (isManual) {
@@ -1900,13 +1984,26 @@
     }
 
     function updateServiceKPI() {
-        var total = services.length;
+        var isMitra = currentUser && currentUser.role === 'mitra';
+        var myName = (currentUser ? (currentUser.fullname || currentUser.username) : '').toLowerCase();
+        var myUser = (currentUser ? currentUser.username : '').toLowerCase();
+
+        var list = services;
+        if (isMitra) {
+            list = services.filter(function(s) {
+                var sm = (s.mitra_nama || '').toLowerCase();
+                var sc = (s.created_by || '').toLowerCase();
+                return sm === myName || sm === myUser || sc === myUser;
+            });
+        }
+
+        var total = list.length;
         var baru = 0;
         var instan = 0;
         var proses = 0;
         var selesai = 0;
 
-        services.forEach(function(s) {
+        list.forEach(function(s) {
             var st = s.status_servis;
             var mn = s.menu_servis;
             if (st === 'Baru') baru++;
@@ -1976,6 +2073,11 @@
 
         var isNewService = !idVal; // Deteksi apakah input servis baru atau sedang edit
 
+        var srvMitraVal = document.getElementById('srvMitraNama') ? document.getElementById('srvMitraNama').value.trim() : '';
+        if (currentUser && currentUser.role === 'mitra') {
+            srvMitraVal = currentUser.fullname || currentUser.username;
+        }
+
         var payload = {
             id: idVal ? parseInt(idVal) : null,
             nama_pelanggan: nama,
@@ -1988,7 +2090,9 @@
             jenis_perangkat: jenisPerangkat,
             merk_model: merkModel,
             keluhan: keluhan,
-            catatan_teknisi: catatanTeknisi
+            catatan_teknisi: catatanTeknisi,
+            mitra_nama: srvMitraVal,
+            created_by: (currentUser ? currentUser.username : '')
         };
 
         fetch('/api/services', {
@@ -2052,6 +2156,10 @@
         document.getElementById('srvMerkModel').value = s.merk_model || '';
         document.getElementById('srvKeluhan').value = s.keluhan || '';
         document.getElementById('srvCatatanTeknisi').value = s.catatan_teknisi || '';
+        var selMitraEdit = document.getElementById('srvMitraNama');
+        if (selMitraEdit && !selMitraEdit.disabled) {
+            selMitraEdit.value = s.mitra_nama || '';
+        }
 
         document.getElementById('serviceFormTitle').innerText = '✏️ Edit Data Servis #' + (s.kode_servis || s.id);
         document.getElementById('btnSaveService').innerText = '💾 Perbarui Data Servis';
@@ -2075,6 +2183,10 @@
         document.getElementById('srvMerkModel').value = '';
         document.getElementById('srvKeluhan').value = '';
         document.getElementById('srvCatatanTeknisi').value = '';
+        var selMitraCancel = document.getElementById('srvMitraNama');
+        if (selMitraCancel && !selMitraCancel.disabled) {
+            selMitraCancel.value = '';
+        }
 
         document.getElementById('serviceFormTitle').innerText = '🛠️ Formulir Penerimaan Servis Baru';
         document.getElementById('btnSaveService').innerText = '💾 Simpan Servis';
@@ -2502,7 +2614,7 @@
             fetch('/api/services/delete', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: id })
+                body: JSON.stringify({ id: id, role: (currentUser ? currentUser.role : '') })
             })
             .then(function(res) { return res.json(); })
             .then(function(data) {
@@ -2553,7 +2665,32 @@
 
         var searchVal = (document.getElementById('serviceSearchInput').value || '').trim().toLowerCase();
 
+        var isMitra = currentUser && currentUser.role === 'mitra';
+        var isTeknisi = currentUser && currentUser.role === 'teknisi';
+        var myName = (currentUser ? (currentUser.fullname || currentUser.username) : '').toLowerCase();
+        var myUser = (currentUser ? currentUser.username : '').toLowerCase();
+        var techFilterVal = document.getElementById('serviceTechFilter') ? document.getElementById('serviceTechFilter').value.trim().toLowerCase() : '';
+
         var filtered = services.filter(function(s) {
+            // Mitra hanya melihat tiket servis miliknya
+            if (isMitra) {
+                var sm = (s.mitra_nama || '').toLowerCase();
+                var sc = (s.created_by || '').toLowerCase();
+                if (sm !== myName && sm !== myUser && sc !== myUser) return false;
+            }
+
+            // Filter Servis Saya (khusus Teknisi)
+            if (filterOnlyMyService) {
+                var st = (s.teknisi_nama || '').toLowerCase();
+                if (st !== myName && st !== myUser) return false;
+            }
+
+            // Filter dropdown teknisi tertentu
+            if (techFilterVal) {
+                var stVal = (s.teknisi_nama || '').toLowerCase();
+                if (stVal !== techFilterVal) return false;
+            }
+
             if (currentServiceFilter !== 'Semua') {
                 if (currentServiceFilter === 'Instan') {
                     if (s.status_servis !== 'Instan' && s.menu_servis !== 'Servis Instan') return false;
@@ -2569,7 +2706,9 @@
                     s.jenis_perangkat || '',
                     s.merk_model || '',
                     s.keluhan || '',
-                    s.catatan_teknisi || ''
+                    s.catatan_teknisi || '',
+                    s.mitra_nama || '',
+                    s.teknisi_nama || ''
                 ].join(' ').toLowerCase();
                 if (!combined.includes(searchVal)) return false;
             }
@@ -2619,6 +2758,32 @@
                 badgeOnClick = ' onclick="openCashierPickupModal(' + s.id + ')" style="cursor: pointer;" title="Klik untuk Rincian Pelunasan Kasir"';
             }
 
+            var takeBtn = '';
+            if (!s.teknisi_nama && (st === 'Baru' || st === 'Sedang Dikerjakan') && !isMitra) {
+                takeBtn = '<button class="btn btn-sm" onclick="assignServiceToSelf(' + s.id + ')" style="padding: 2px 6px; font-size: 10px; background: #ede9fe; color: #7c3aed; border: 1px solid #7c3aed; border-radius: 4px; margin-top: 2px; cursor: pointer;" title="Ambil pengerjaan tiket ini">✋ Ambil Servis</button>';
+            }
+
+            var mitraTag = s.mitra_nama ? '<div style="font-size: 10.5px; color: #d97706; font-weight: 600; margin-top: 1px;">🤝 Mitra: ' + escapeHtml(s.mitra_nama) + '</div>' : '';
+
+            var actionsHtml = '';
+            if (isMitra) {
+                actionsHtml = '<button class="btn btn-sm" onclick="openReceiptModal(' + s.id + ')" title="Cetak Nota / Kwitansi" style="padding: 3px 10px; font-size: 11px; background: #e6f4ed; color: #107c41;">🖨️ Cetak</button>';
+            } else {
+                actionsHtml = 
+                    '<button class="btn btn-sm" onclick="editServiceOrder(' + s.id + ')" title="Edit Tiket" style="padding: 3px 8px; font-size: 11px;">✏️</button>' +
+                    '<button class="btn btn-sm" onclick="openReceiptModal(' + s.id + ')" title="Cetak Nota" style="padding: 3px 8px; font-size: 11px; background: #e6f4ed; color: #107c41;">🖨️</button>' +
+                    '<select onchange="quickUpdateServiceStatus(' + s.id + ', this.value, this)" style="font-size: 11px; padding: 2px 4px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color); cursor: pointer;" title="Ganti Status Cepat">' +
+                        '<option value="" disabled selected>⚡ Status</option>' +
+                        '<option value="Baru">Baru</option>' +
+                        '<option value="Instan">Instan</option>' +
+                        '<option value="Sedang Dikerjakan">Diproses</option>' +
+                        '<option value="Selesai">Selesai</option>' +
+                        '<option value="Diambil">Diambil</option>' +
+                        '<option value="Batal">Batal</option>' +
+                    '</select>' +
+                    '<button class="btn btn-sm btn-danger col-superadmin-btn" onclick="deleteServiceOrder(' + s.id + ')" title="Hapus Tiket" style="padding: 3px 8px; font-size: 11px;">🗑️</button>';
+            }
+
             tr.innerHTML = 
                 '<td>' + (idx + 1) + '</td>' +
                 '<td><span style="font-weight: bold; font-family: monospace; color: var(--accent-color);">' + (s.kode_servis || '-') + '</span></td>' +
@@ -2626,6 +2791,7 @@
                 '<td>' +
                     '<div style="font-weight: 600;">' + escapeHtml(s.nama_pelanggan) + '</div>' +
                     '<div style="font-size: 11px; color: var(--text-muted);">' + escapeHtml(s.no_hp) + waLink + '</div>' +
+                    mitraTag +
                 '</td>' +
                 '<td>' +
                     '<div style="font-weight: 500;">' + escapeHtml(s.merk_model) + '</div>' +
@@ -2635,6 +2801,7 @@
                 '<td>' +
                     '<div><b>K:</b> ' + escapeHtml(s.keluhan) + '</div>' +
                     (s.teknisi_nama ? '<div style="font-size: 11px; color: #7c3aed; font-weight: 600; margin-top: 1px;">👨‍🔧 Teknisi: ' + escapeHtml(s.teknisi_nama) + '</div>' : '') +
+                    takeBtn +
                     (s.catatan_teknisi ? '<div style="font-size: 11px; color: #107c41;"><b>T:</b> ' + escapeHtml(s.catatan_teknisi) + '</div>' : '') +
                     sppInfo +
                 '</td>' +
@@ -2644,18 +2811,7 @@
                 '</td>' +
                 '<td class="no-print" style="text-align: center;">' +
                     '<div style="display: flex; gap: 4px; justify-content: center; flex-wrap: wrap;">' +
-                        '<button class="btn btn-sm" onclick="editServiceOrder(' + s.id + ')" title="Edit Tiket" style="padding: 3px 8px; font-size: 11px;">✏️</button>' +
-                        '<button class="btn btn-sm" onclick="openReceiptModal(' + s.id + ')" title="Cetak Nota" style="padding: 3px 8px; font-size: 11px; background: #e6f4ed; color: #107c41;">🖨️</button>' +
-                        '<select onchange="quickUpdateServiceStatus(' + s.id + ', this.value, this)" style="font-size: 11px; padding: 2px 4px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color); cursor: pointer;" title="Ganti Status Cepat">' +
-                            '<option value="" disabled selected>⚡ Status</option>' +
-                            '<option value="Baru">Baru</option>' +
-                            '<option value="Instan">Instan</option>' +
-                            '<option value="Sedang Dikerjakan">Diproses</option>' +
-                            '<option value="Selesai">Selesai</option>' +
-                            '<option value="Diambil">Diambil</option>' +
-                            '<option value="Batal">Batal</option>' +
-                        '</select>' +
-                        '<button class="btn btn-sm btn-danger col-superadmin-btn" onclick="deleteServiceOrder(' + s.id + ')" title="Hapus Tiket" style="padding: 3px 8px; font-size: 11px;">🗑️</button>' +
+                        actionsHtml +
                     '</div>' +
                 '</td>';
 
@@ -5414,6 +5570,39 @@
             } else {
                 inputForm.style.display = 'flex';
             }
+        }
+
+        // Pengaturan Modal: Identitas Toko & Dual Printer hanya untuk Superadmin & Admin
+        var secStore = document.getElementById('settingsSectionStoreIdentity');
+        var secPrint = document.getElementById('settingsSectionPrinter');
+        if (secStore) secStore.style.display = (isSuperadmin || isAdmin) ? 'block' : 'none';
+        if (secPrint) secPrint.style.display = (isSuperadmin || isAdmin) ? 'block' : 'none';
+
+        // Filter Servis Saya (khusus Teknisi)
+        var btnMySrv = document.getElementById('btnFilterMyService');
+        if (btnMySrv) {
+            btnMySrv.style.display = isTeknisi ? 'inline-block' : 'none';
+        }
+
+        // Form Mitra Selection & Banner Khusus Portal Mitra
+        var bannerMitra = document.getElementById('mitraPortalBanner');
+        var selMitra = document.getElementById('srvMitraNama');
+        if (isMitra) {
+            if (bannerMitra) {
+                bannerMitra.style.display = 'flex';
+                bannerMitra.innerHTML = '<span>🤝 <b>Portal Khusus Mitra:</b> Anda sedang masuk sebagai <b>' + escapeHtml(fullname || currentUser.username) + '</b>. Menampilkan tiket servis titipan Anda.</span>' +
+                    '<span style="font-size: 11px; background: rgba(0,0,0,0.06); padding: 3px 8px; border-radius: 4px; font-weight: bold;">Akun Rekanan Toko</span>';
+            }
+            if (selMitra) {
+                selMitra.innerHTML = '<option value="' + escapeHtml(fullname || currentUser.username) + '" selected>🤝 ' + escapeHtml(fullname || currentUser.username) + ' (Akun Mitra Anda)</option>';
+                selMitra.disabled = true;
+            }
+        } else {
+            if (bannerMitra) bannerMitra.style.display = 'none';
+            if (selMitra && selMitra.disabled) {
+                selMitra.disabled = false;
+            }
+            loadMitraOptions();
         }
 
         // Sinkronisasi view buku preferensi role
