@@ -138,7 +138,11 @@
             <!-- TAB 1: FORM LOGIN -->
             <div id="authLoginFormContent">
                 <div style="text-align: center; margin-bottom: 20px;">
-                    <h2 style="margin: 0; font-size: 21px; color: var(--accent-color, #107c41);">🔐 Autocash Login</h2>
+                    <div style="display: inline-flex; align-items: center; justify-content: center; width: 68px; height: 68px; border-radius: 16px; background: #ffffff; border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.08); padding: 8px; margin-bottom: 10px;">
+                        <img id="loginLogoImg" src="default_logo.ico" alt="Logo Toko" style="width: 100%; height: 100%; object-fit: contain;">
+                    </div>
+                    <h2 id="loginStoreTitle" style="margin: 0 0 4px 0; font-size: 20px; font-weight: 800; color: var(--accent-color, #107c41); letter-spacing: 0.5px;">AUTOCASH SERVIS</h2>
+                    <div style="font-size: 11.5px; color: var(--text-muted); font-weight: 500;">Sistem Pembukuan & Kasir Servis Toko</div>
                 </div>
 
                 <div class="form-group" style="margin-bottom: 14px;">
@@ -4071,6 +4075,8 @@
         var storePhone = (currentStoreProfile && currentStoreProfile.phone) ? currentStoreProfile.phone : '';
 
         if (titleEl) titleEl.innerText = storeName;
+        var loginTitle = document.getElementById('loginStoreTitle');
+        if (loginTitle) loginTitle.innerText = storeName;
         if (addrEl) {
             if (storeAddress) {
                 addrEl.innerText = storeAddress;
@@ -4412,6 +4418,8 @@
         if (preview) preview.src = url;
         var receiptLogo = document.getElementById('receiptLogo');
         if (receiptLogo) receiptLogo.src = url;
+        var loginLogo = document.getElementById('loginLogoImg');
+        if (loginLogo) loginLogo.src = url;
         var label = document.getElementById('logoStatusLabel');
         if (label) {
             label.innerText = isCustom ? 'Logo Kustom Aktif' : 'Logo Bawaan Autocash (KT) Aktif';
@@ -4650,6 +4658,8 @@
 
         var summaryLabel = document.getElementById('settingsStoreSummary');
         if (summaryLabel) summaryLabel.innerText = currentStoreProfile.name;
+        var loginTitle = document.getElementById('loginStoreTitle');
+        if (loginTitle) loginTitle.innerText = currentStoreProfile.name;
 
         // Simpan ke SQLite via API
         fetch('/api/settings', {
