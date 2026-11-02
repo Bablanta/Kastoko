@@ -2295,6 +2295,10 @@
 
     function saveServiceOrder() {
         var idVal = document.getElementById('serviceEditId').value;
+        if (idVal && currentUser && currentUser.role === 'teknisi') {
+            alert("Akses Ditolak! Role Teknisi tidak diizinkan mengubah/mengedit data tiket servis.");
+            return;
+        }
         var nama = document.getElementById('srvNamaPelanggan').value.trim();
         var noHp = document.getElementById('srvNoHp').value.trim();
         var alamat = document.getElementById('srvAlamat').value.trim();
@@ -2337,6 +2341,7 @@
 
         var payload = {
             id: idVal ? parseInt(idVal) : null,
+            role: (currentUser ? currentUser.role : ''),
             nama_pelanggan: nama,
             no_hp: noHp,
             alamat: alamat,
@@ -2398,6 +2403,10 @@
     }
 
     function editServiceOrder(id) {
+        if (currentUser && currentUser.role === 'teknisi') {
+            alert("Akses Ditolak! Role Teknisi tidak memiliki izin untuk mengedit tiket servis. Perubahan data tiket hanya dapat dilakukan oleh Admin Kasir atau Superadmin.");
+            return;
+        }
         var s = services.find(function(item) { return item.id === id; });
         if (!s) return;
 
@@ -3037,6 +3046,19 @@
             var actionsHtml = '';
             if (isMitra) {
                 actionsHtml = '<button class="btn btn-sm" onclick="openReceiptModal(' + s.id + ')" title="Cetak Nota / Kwitansi" style="padding: 3px 10px; font-size: 11px; background: #e6f4ed; color: #107c41;">🖨️ Cetak</button>';
+            } else if (isTeknisi) {
+                // Role Teknisi: tidak ada tombol edit tiket (✏️) dan hapus tiket (🗑️)
+                actionsHtml = 
+                    '<button class="btn btn-sm" onclick="openReceiptModal(' + s.id + ')" title="Cetak Nota" style="padding: 3px 8px; font-size: 11px; background: #e6f4ed; color: #107c41;">🖨️</button>' +
+                    '<select onchange="quickUpdateServiceStatus(' + s.id + ', this.value, this)" style="font-size: 11px; padding: 2px 4px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color); cursor: pointer;" title="Ganti Status Cepat">' +
+                        '<option value="" disabled selected>⚡ Status</option>' +
+                        '<option value="Baru">Baru</option>' +
+                        '<option value="Instan">Instan</option>' +
+                        '<option value="Sedang Dikerjakan">Diproses</option>' +
+                        '<option value="Selesai">Selesai</option>' +
+                        '<option value="Diambil">Diambil</option>' +
+                        '<option value="Batal">Batal</option>' +
+                    '</select>';
             } else {
                 actionsHtml = 
                     '<button class="btn btn-sm" onclick="editServiceOrder(' + s.id + ')" title="Edit Tiket" style="padding: 3px 8px; font-size: 11px;">✏️</button>' +

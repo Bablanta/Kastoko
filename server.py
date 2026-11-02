@@ -1087,6 +1087,15 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             try:
                 data = json.loads(post_data.decode('utf-8'))
                 srv_id = data.get('id')
+                user_role = str(data.get('role', '')).strip().lower()
+
+                # Blokir jika role teknisi mencoba mengedit/update tiket servis
+                if srv_id and user_role == 'teknisi':
+                    self.send_response(403)
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"success": False, "message": "Akses Ditolak: Role Teknisi tidak diizinkan mengedit tiket servis."}).encode('utf-8'))
+                    return
                 nama_pelanggan = str(data.get('nama_pelanggan', '')).strip()
                 no_hp = str(data.get('no_hp', '')).strip()
                 jenis_perangkat = str(data.get('jenis_perangkat', '')).strip()
