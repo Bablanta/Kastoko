@@ -1000,6 +1000,105 @@
         </div>
     </div>
 
+    <!-- Modal Detail Tiket Servis (Inspeksi Formulir & Catatan Teknisi) -->
+    <div class="modal-overlay" id="serviceDetailModal" style="display: none; z-index: 10005;">
+        <div class="modal-card" style="max-width: 660px; width: 95%; max-height: 90vh; overflow-y: auto; padding: 22px; border-radius: 12px; box-shadow: 0 12px 36px rgba(0,0,0,0.35);">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 14px;">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <h3 style="margin: 0; font-size: 16px; display: flex; align-items: center; gap: 6px;">
+                        🔍 Detail Tiket Servis
+                    </h3>
+                    <span id="dtlKodeServis" style="font-family: monospace; font-weight: bold; background: rgba(16, 124, 65, 0.12); color: var(--accent-color); padding: 3px 8px; border-radius: 5px; font-size: 13px;">-</span>
+                    <span id="dtlStatusBadge" class="badge-status badge-baru">-</span>
+                </div>
+                <button type="button" class="toast-close" onclick="closeServiceDetailModal()" title="Tutup Jendela" style="font-size: 20px; line-height: 1; cursor: pointer;">✕</button>
+            </div>
+
+            <!-- Grid Konten Detail Seperti Formulir -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-bottom: 14px;">
+                <!-- Kolom 1: Data Pelanggan -->
+                <div style="background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px;">
+                    <h4 style="margin: 0 0 10px 0; font-size: 13px; color: var(--accent-color); display: flex; align-items: center; gap: 6px;">
+                        👤 Data Pelanggan
+                    </h4>
+                    <div style="font-size: 12px; line-height: 1.7;">
+                        <div><span style="color: var(--text-muted);">Nama:</span> <b id="dtlNamaPelanggan">-</b></div>
+                        <div><span style="color: var(--text-muted);">No. HP / WA:</span> <b id="dtlNoHp">-</b> <span id="dtlWaBtnContainer"></span></div>
+                        <div><span style="color: var(--text-muted);">Alamat:</span> <span id="dtlAlamat">-</span></div>
+                        <div id="dtlMitraContainer" style="display: none; margin-top: 4px; padding-top: 4px; border-top: 1px dashed var(--border-color);"><span style="color: #d97706; font-weight: 600;">🤝 Mitra Toko:</span> <span id="dtlMitraNama">-</span></div>
+                    </div>
+                </div>
+
+                <!-- Kolom 2: Data Perangkat & Layanan -->
+                <div style="background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px;">
+                    <h4 style="margin: 0 0 10px 0; font-size: 13px; color: var(--accent-color); display: flex; align-items: center; gap: 6px;">
+                        📱 Data Perangkat & Layanan
+                    </h4>
+                    <div style="font-size: 12px; line-height: 1.7;">
+                        <div><span style="color: var(--text-muted);">Perangkat:</span> <b id="dtlJenisPerangkat">-</b></div>
+                        <div><span style="color: var(--text-muted);">Merk / Model:</span> <b id="dtlMerkModel">-</b></div>
+                        <div><span style="color: var(--text-muted);">Layanan:</span> <span id="dtlMenuServis">-</span></div>
+                        <div><span style="color: var(--text-muted);">Tgl Masuk:</span> <span id="dtlTanggalMasuk">-</span></div>
+                        <div><span style="color: var(--text-muted);">Tgl Selesai:</span> <span id="dtlTanggalSelesai">-</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Kerusakan & Catatan Teknisi -->
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px;">
+                <!-- Keluhan Pelanggan -->
+                <div style="background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px; padding: 10px 14px; font-size: 12.5px; color: #5d4037;">
+                    <div style="font-weight: bold; font-size: 11px; text-transform: uppercase; color: #b78103; margin-bottom: 3px;">
+                        ⚠️ Keluhan Pelanggan:
+                    </div>
+                    <div id="dtlKeluhan" style="line-height: 1.5; font-weight: 500;">-</div>
+                </div>
+
+                <!-- Catatan Teknisi (Khusus Temuan & Pengerjaan) -->
+                <div style="background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 8px; padding: 10px 14px; font-size: 12.5px; color: #1b5e20;">
+                    <div style="font-weight: bold; font-size: 11px; text-transform: uppercase; color: #2e7d32; margin-bottom: 3px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px;">
+                        <span>👨‍🔧 Catatan Teknisi / Tindakan Perbaikan:</span>
+                        <span id="dtlTeknisiBadge" style="font-size: 11px; background: #c8e6c9; padding: 2px 7px; border-radius: 4px; font-weight: 600;">-</span>
+                    </div>
+                    <div id="dtlCatatanTeknisi" style="line-height: 1.5; font-weight: 500;">-</div>
+                </div>
+
+                <!-- Rincian Sparepart (SPP) -->
+                <div id="dtlSppBox" style="display: none; background: #fdf2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 10px 14px; font-size: 12.5px; color: #991b1b;">
+                    <div style="font-weight: bold; font-size: 11px; text-transform: uppercase; color: #b91c1c; margin-bottom: 3px;">
+                        🔩 Sparepart yang Dipakai (SPP):
+                    </div>
+                    <div id="dtlSppInfo" style="line-height: 1.5;">-</div>
+                </div>
+            </div>
+
+            <!-- Rincian Biaya & Keuangan -->
+            <div style="background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div>
+                    <div style="font-size: 11px; color: var(--text-muted);">Estimasi Biaya Awal:</div>
+                    <div id="dtlEstimasiBiaya" style="font-size: 14px; font-weight: bold; color: var(--text-color);">-</div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 11px; color: var(--text-muted);">Total Biaya Akhir:</div>
+                    <div id="dtlBiayaAkhir" style="font-size: 16px; font-weight: 800; color: var(--accent-color);">-</div>
+                    <div id="dtlStatusBayar" style="font-size: 10.5px; font-weight: 600;">-</div>
+                </div>
+            </div>
+
+            <!-- Petunjuk Tutup & Tombol Aksi Modal -->
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 12px; flex-wrap: wrap; gap: 8px;">
+                <div style="font-size: 11.5px; color: var(--text-muted);">
+                    💡 <i>Klik di mana saja di luar kotak ini untuk menutup</i>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                    <span id="dtlTakeBtnContainer"></span>
+                    <button type="button" class="btn" id="dtlBtnPrintReceipt" style="background: #e6f4ed; color: #107c41; border: 1px solid #a3cfbb; font-size: 12px; font-weight: 600; padding: 6px 14px;">🖨️ Cetak Nota</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeServiceDetailModal()" style="font-size: 12px; padding: 6px 14px;">✕ Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Selesaikan Servis & Rincian Sparepart (SPP) -->
     <div class="modal-overlay" id="completeServiceModal" style="display: none;">
         <div class="modal-card" style="max-width: 500px; width: 95%;">
@@ -2438,6 +2537,11 @@
 
     function cancelServiceEdit() {
         document.getElementById('serviceEditId').value = '';
+        var isTeknisi = currentUser && currentUser.role === 'teknisi';
+        var srvFormCard = document.getElementById('serviceFormCard');
+        if (srvFormCard && isTeknisi) {
+            srvFormCard.style.display = 'none';
+        }
         document.getElementById('srvNamaPelanggan').value = '';
         document.getElementById('srvNoHp').value = '';
         document.getElementById('srvAlamat').value = '';
@@ -2480,10 +2584,19 @@
             return;
         }
 
+        var statusPayload = { id: id, status_servis: newStatus };
+        if (newStatus === 'Sedang Dikerjakan' && currentUser && currentUser.role === 'teknisi') {
+            var myName = (currentUser.fullname || currentUser.username || '').trim();
+            var targetSrv = services.find(function(item) { return item.id === id; });
+            if (targetSrv && (!targetSrv.teknisi_nama || targetSrv.teknisi_nama.trim() === '')) {
+                statusPayload.teknisi_nama = myName;
+            }
+        }
+
         fetch('/api/services/status', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: id, status_servis: newStatus })
+            body: JSON.stringify(statusPayload)
         })
         .then(function(res) { return res.json(); })
         .then(function(data) {
@@ -3003,6 +3116,13 @@
 
         filtered.forEach(function(s, idx) {
             var tr = document.createElement('tr');
+            tr.style.cursor = 'pointer';
+            tr.title = 'Klik baris ini untuk melihat detail lengkap & catatan teknisi';
+            tr.onclick = function(e) {
+                // Jangan buka popup jika klik berasal dari tombol, link, atau selector status
+                if (e.target.closest('button, select, a, input, label')) return;
+                openServiceDetailModal(s.id);
+            };
 
             var badgeClass = 'badge-baru';
             var st = s.status_servis;
@@ -3014,7 +3134,7 @@
 
             var cleanPhone = (s.no_hp || '').replace(/[^0-9]/g, '');
             if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.slice(1);
-            var waLink = cleanPhone ? '<a href="javascript:void(0)" onclick="openWhatsAppNotificationModal(' + s.id + ')" style="font-size: 11px; text-decoration: none; margin-left: 4px; cursor: pointer;" title="Kirim Notifikasi WhatsApp (Selesai/Masuk/Pelunasan)">💬</a>' : '';
+            var waLink = cleanPhone ? '<a href="javascript:void(0)" onclick="event.stopPropagation(); openWhatsAppNotificationModal(' + s.id + ')" style="font-size: 11px; text-decoration: none; margin-left: 4px; cursor: pointer;" title="Kirim Notifikasi WhatsApp (Selesai/Masuk/Pelunasan)">💬</a>' : '';
 
             var sppInfo = '';
             if (s.sparepart_nama || (s.sparepart_biaya || 0) > 0) {
@@ -3029,28 +3149,34 @@
 
             var badgeOnClick = '';
             if (st === 'Instan' || s.menu_servis === 'Servis Instan') {
-                badgeOnClick = ' onclick="openInstantServiceModal(' + s.id + ')" style="cursor: pointer;" title="Klik untuk Pembayaran & Sparepart Servis Instan"';
+                badgeOnClick = ' onclick="event.stopPropagation(); openInstantServiceModal(' + s.id + ')" style="cursor: pointer;" title="Klik untuk Pembayaran & Sparepart Servis Instan"';
             } else if (st === 'Selesai') {
-                badgeOnClick = ' onclick="openCompleteServiceModal(' + s.id + ')" style="cursor: pointer;" title="Klik untuk Edit Sparepart / Selesai"';
+                badgeOnClick = ' onclick="event.stopPropagation(); openCompleteServiceModal(' + s.id + ')" style="cursor: pointer;" title="Klik untuk Edit Sparepart / Selesai"';
             } else if (st === 'Diambil') {
-                badgeOnClick = ' onclick="openCashierPickupModal(' + s.id + ')" style="cursor: pointer;" title="Klik untuk Rincian Pelunasan Kasir"';
+                badgeOnClick = ' onclick="event.stopPropagation(); openCashierPickupModal(' + s.id + ')" style="cursor: pointer;" title="Klik untuk Rincian Pelunasan Kasir"';
             }
 
+            var isUnassigned = !s.teknisi_nama || s.teknisi_nama.trim() === '' || s.teknisi_nama === '-' || s.teknisi_nama.toLowerCase() === 'null';
             var takeBtn = '';
-            if (!s.teknisi_nama && (st === 'Baru' || st === 'Sedang Dikerjakan') && !isMitra) {
-                takeBtn = '<button class="btn btn-sm" onclick="assignServiceToSelf(' + s.id + ')" style="padding: 2px 6px; font-size: 10px; background: #ede9fe; color: #7c3aed; border: 1px solid #7c3aed; border-radius: 4px; margin-top: 2px; cursor: pointer;" title="Ambil pengerjaan tiket ini">✋ Ambil Servis</button>';
+            if (isUnassigned && (st === 'Baru' || st === 'Sedang Dikerjakan') && !isMitra) {
+                takeBtn = '<button class="btn btn-sm" onclick="event.stopPropagation(); assignServiceToSelf(' + s.id + ', event)" style="padding: 2px 7px; font-size: 10px; font-weight: bold; background: #ede9fe; color: #7c3aed; border: 1px solid #7c3aed; border-radius: 4px; margin-top: 3px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;" title="Ambil pengerjaan tiket ini">✋ Ambil Servis</button>';
             }
 
             var mitraTag = s.mitra_nama ? '<div style="font-size: 10.5px; color: #d97706; font-weight: 600; margin-top: 1px;">🤝 Mitra: ' + escapeHtml(s.mitra_nama) + '</div>' : '';
 
             var actionsHtml = '';
             if (isMitra) {
-                actionsHtml = '<button class="btn btn-sm" onclick="openReceiptModal(' + s.id + ')" title="Cetak Nota / Kwitansi" style="padding: 3px 10px; font-size: 11px; background: #e6f4ed; color: #107c41;">🖨️ Cetak</button>';
+                actionsHtml = '<button class="btn btn-sm" onclick="event.stopPropagation(); openReceiptModal(' + s.id + ')" title="Cetak Nota / Kwitansi" style="padding: 3px 10px; font-size: 11px; background: #e6f4ed; color: #107c41;">🖨️ Cetak</button>';
             } else if (isTeknisi) {
-                // Role Teknisi: tidak ada tombol edit tiket (✏️) dan hapus tiket (🗑️)
+                // Role Teknisi: tombol Ambil Servis jelas, tombol Cetak Nota, dan Selector Status
+                var takeActionBtn = '';
+                if (isUnassigned && (st === 'Baru' || st === 'Sedang Dikerjakan')) {
+                    takeActionBtn = '<button class="btn btn-sm" onclick="event.stopPropagation(); assignServiceToSelf(' + s.id + ', event)" style="padding: 3px 8px; font-size: 11px; font-weight: bold; background: #7c3aed; color: #ffffff; border: none; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 2px;" title="Ambil Pengerjaan Tiket Ini">✋ Ambil</button>';
+                }
                 actionsHtml = 
-                    '<button class="btn btn-sm" onclick="openReceiptModal(' + s.id + ')" title="Cetak Nota" style="padding: 3px 8px; font-size: 11px; background: #e6f4ed; color: #107c41;">🖨️</button>' +
-                    '<select onchange="quickUpdateServiceStatus(' + s.id + ', this.value, this)" style="font-size: 11px; padding: 2px 4px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color); cursor: pointer;" title="Ganti Status Cepat">' +
+                    takeActionBtn +
+                    '<button class="btn btn-sm" onclick="event.stopPropagation(); openReceiptModal(' + s.id + ')" title="Cetak Nota" style="padding: 3px 8px; font-size: 11px; background: #e6f4ed; color: #107c41;">🖨️</button>' +
+                    '<select onclick="event.stopPropagation()" onchange="quickUpdateServiceStatus(' + s.id + ', this.value, this)" style="font-size: 11px; padding: 2px 4px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color); cursor: pointer;" title="Ganti Status Cepat">' +
                         '<option value="" disabled selected>⚡ Status</option>' +
                         '<option value="Baru">Baru</option>' +
                         '<option value="Instan">Instan</option>' +
@@ -3061,9 +3187,9 @@
                     '</select>';
             } else {
                 actionsHtml = 
-                    '<button class="btn btn-sm" onclick="editServiceOrder(' + s.id + ')" title="Edit Tiket" style="padding: 3px 8px; font-size: 11px;">✏️</button>' +
-                    '<button class="btn btn-sm" onclick="openReceiptModal(' + s.id + ')" title="Cetak Nota" style="padding: 3px 8px; font-size: 11px; background: #e6f4ed; color: #107c41;">🖨️</button>' +
-                    '<select onchange="quickUpdateServiceStatus(' + s.id + ', this.value, this)" style="font-size: 11px; padding: 2px 4px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color); cursor: pointer;" title="Ganti Status Cepat">' +
+                    '<button class="btn btn-sm" onclick="event.stopPropagation(); editServiceOrder(' + s.id + ')" title="Edit Tiket" style="padding: 3px 8px; font-size: 11px;">✏️</button>' +
+                    '<button class="btn btn-sm" onclick="event.stopPropagation(); openReceiptModal(' + s.id + ')" title="Cetak Nota" style="padding: 3px 8px; font-size: 11px; background: #e6f4ed; color: #107c41;">🖨️</button>' +
+                    '<select onclick="event.stopPropagation()" onchange="quickUpdateServiceStatus(' + s.id + ', this.value, this)" style="font-size: 11px; padding: 2px 4px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color); cursor: pointer;" title="Ganti Status Cepat">' +
                         '<option value="" disabled selected>⚡ Status</option>' +
                         '<option value="Baru">Baru</option>' +
                         '<option value="Instan">Instan</option>' +
@@ -3072,7 +3198,7 @@
                         '<option value="Diambil">Diambil</option>' +
                         '<option value="Batal">Batal</option>' +
                     '</select>' +
-                    '<button class="btn btn-sm btn-danger col-superadmin-btn" onclick="deleteServiceOrder(' + s.id + ')" title="Hapus Tiket" style="padding: 3px 8px; font-size: 11px;">🗑️</button>';
+                    '<button class="btn btn-sm btn-danger col-superadmin-btn" onclick="event.stopPropagation(); deleteServiceOrder(' + s.id + ')" title="Hapus Tiket" style="padding: 3px 8px; font-size: 11px;">🗑️</button>';
             }
 
             tr.innerHTML = 
@@ -5104,6 +5230,7 @@
     // ========================================================
     function initModalOutsideClickClose() {
         var modalCloseMap = {
+            'serviceDetailModal': function() { if (typeof closeServiceDetailModal === 'function') closeServiceDetailModal(); },
             'settingsModal': function() { if (typeof closeSettingsModal === 'function') closeSettingsModal(); },
             'receiptModal': function() { if (typeof closeReceiptModal === 'function') closeReceiptModal(); },
             'completeServiceModal': function() { if (typeof closeCompleteServiceModal === 'function') closeCompleteServiceModal(); },
@@ -6447,6 +6574,12 @@
             el.style.display = isSuperadmin ? 'inline-block' : 'none';
         });
 
+        // Formulir Penerimaan Servis Baru: Sembunyikan untuk role teknisi
+        var srvFormCard = document.getElementById('serviceFormCard');
+        if (srvFormCard) {
+            srvFormCard.style.display = isTeknisi ? 'none' : 'block';
+        }
+
         // Form input pembukuan keuangan kasir
         var inputForm = document.getElementById('inputFormContent');
         if (inputForm) {
@@ -7702,30 +7835,203 @@
         .catch(function(e) { alert("Koneksi gagal: " + e); });
     }
 
-    function assignServiceToSelf(serviceId) {
-        if (!currentUser) return;
-        var myName = currentUser.fullname || currentUser.username;
-        if (!confirm("Ambil pengerjaan tiket servis ini atas nama " + myName + "?")) return;
+    var currentDetailServiceId = null;
+
+    function openServiceDetailModal(id) {
+        var s = services.find(function(item) { return item.id === id; });
+        if (!s) return;
+        currentDetailServiceId = s.id;
+
+        var dtlKode = document.getElementById('dtlKodeServis');
+        if (dtlKode) dtlKode.innerText = s.kode_servis || ('#' + s.id);
+        
+        var badgeEl = document.getElementById('dtlStatusBadge');
+        if (badgeEl) {
+            badgeEl.innerText = s.status_servis || 'Baru';
+            var st = s.status_servis;
+            var badgeClass = 'badge-baru';
+            if (st === 'Instan' || s.menu_servis === 'Servis Instan') badgeClass = 'badge-instan';
+            else if (st === 'Sedang Dikerjakan') badgeClass = 'badge-proses';
+            else if (st === 'Selesai') badgeClass = 'badge-selesai';
+            else if (st === 'Diambil') badgeClass = 'badge-diambil';
+            else if (st === 'Batal') badgeClass = 'badge-batal';
+            badgeEl.className = 'badge-status ' + badgeClass;
+        }
+
+        var namaEl = document.getElementById('dtlNamaPelanggan');
+        if (namaEl) namaEl.innerText = s.nama_pelanggan || '-';
+
+        var noHpEl = document.getElementById('dtlNoHp');
+        if (noHpEl) noHpEl.innerText = s.no_hp || '-';
+
+        var alamatEl = document.getElementById('dtlAlamat');
+        if (alamatEl) alamatEl.innerText = s.alamat || '-';
+
+        // Tombol WhatsApp di modal
+        var waContainer = document.getElementById('dtlWaBtnContainer');
+        var cleanPhone = (s.no_hp || '').replace(/[^0-9]/g, '');
+        if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.slice(1);
+        if (cleanPhone && waContainer) {
+            waContainer.innerHTML = '<a href="javascript:void(0)" onclick="openWhatsAppNotificationModal(' + s.id + ')" class="btn btn-sm" style="margin-left: 6px; padding: 2px 7px; font-size: 11px; background: #e6f4ed; color: #107c41; border: 1px solid #a3cfbb; text-decoration: none; border-radius: 4px;">💬 Hubungi WA</a>';
+        } else if (waContainer) {
+            waContainer.innerHTML = '';
+        }
+
+        // Info Mitra Toko
+        var mitraBox = document.getElementById('dtlMitraContainer');
+        var mitraNameEl = document.getElementById('dtlMitraNama');
+        if (s.mitra_nama && s.mitra_nama.trim()) {
+            if (mitraBox) mitraBox.style.display = 'block';
+            if (mitraNameEl) mitraNameEl.innerText = s.mitra_nama;
+        } else {
+            if (mitraBox) mitraBox.style.display = 'none';
+        }
+
+        // Perangkat & Layanan
+        var devEl = document.getElementById('dtlJenisPerangkat');
+        if (devEl) devEl.innerText = s.jenis_perangkat || '-';
+
+        var modelEl = document.getElementById('dtlMerkModel');
+        if (modelEl) modelEl.innerText = s.merk_model || '-';
+
+        var menuEl = document.getElementById('dtlMenuServis');
+        if (menuEl) menuEl.innerText = s.menu_servis || 'Diagnosa';
+
+        var tglMasukEl = document.getElementById('dtlTanggalMasuk');
+        if (tglMasukEl) tglMasukEl.innerText = s.tanggal_masuk || '-';
+
+        var tglSelesaiEl = document.getElementById('dtlTanggalSelesai');
+        if (tglSelesaiEl) tglSelesaiEl.innerText = s.tanggal_selesai || 'Belum Selesai';
+
+        // Keluhan Pelanggan
+        var keluhanEl = document.getElementById('dtlKeluhan');
+        if (keluhanEl) keluhanEl.innerText = s.keluhan || '-';
+
+        // Catatan Teknisi (Khusus Temuan & Pengerjaan)
+        var catatanEl = document.getElementById('dtlCatatanTeknisi');
+        var catTeknisi = (s.catatan_teknisi && s.catatan_teknisi.trim()) ? s.catatan_teknisi.trim() : 'Belum ada catatan teknisi.';
+        if (catatanEl) catatanEl.innerText = catTeknisi;
+
+        var techBadge = document.getElementById('dtlTeknisiBadge');
+        if (techBadge) {
+            techBadge.innerText = s.teknisi_nama ? ('👨‍🔧 ' + s.teknisi_nama) : '⚠️ Belum Ada Teknisi';
+            techBadge.style.background = s.teknisi_nama ? '#c8e6c9' : '#fff3cd';
+            techBadge.style.color = s.teknisi_nama ? '#1b5e20' : '#856404';
+        }
+
+        // Rincian Sparepart (SPP)
+        var sppBox = document.getElementById('dtlSppBox');
+        var sppInfoEl = document.getElementById('dtlSppInfo');
+        if (s.sparepart_nama || (s.sparepart_biaya && s.sparepart_biaya > 0)) {
+            if (sppBox) sppBox.style.display = 'block';
+            if (sppInfoEl) {
+                sppInfoEl.innerText = (s.sparepart_nama || 'Tanpa nama sparepart') + ' (Modal SPP: Rp ' + Number(s.sparepart_biaya || 0).toLocaleString('id-ID') + ')';
+            }
+        } else {
+            if (sppBox) sppBox.style.display = 'none';
+        }
+
+        // Biaya & Status Bayar
+        var estBiayaEl = document.getElementById('dtlEstimasiBiaya');
+        if (estBiayaEl) estBiayaEl.innerText = 'Rp ' + Number(s.estimasi_biaya || 0).toLocaleString('id-ID');
+
+        var finBiaya = (s.biaya_akhir || s.estimasi_biaya || 0);
+        var finBiayaEl = document.getElementById('dtlBiayaAkhir');
+        if (finBiayaEl) finBiayaEl.innerText = 'Rp ' + Number(finBiaya).toLocaleString('id-ID');
+
+        var stBayarEl = document.getElementById('dtlStatusBayar');
+        if (stBayarEl) {
+            var isLunas = (s.status_pembayaran === 'LUNAS');
+            stBayarEl.innerText = isLunas ? '✅ SUDAH LUNAS' : '⏳ BELUM BAYAR';
+            stBayarEl.style.color = isLunas ? '#107c41' : '#d9534f';
+        }
+
+        // Tombol Ambil Servis di dalam modal jika tiket belum ada teknisi
+        var takeContainer = document.getElementById('dtlTakeBtnContainer');
+        var isUnassigned = !s.teknisi_nama || s.teknisi_nama.trim() === '' || s.teknisi_nama === '-' || s.teknisi_nama.toLowerCase() === 'null';
+        if (isUnassigned && (s.status_servis === 'Baru' || s.status_servis === 'Sedang Dikerjakan')) {
+            if (takeContainer) {
+                takeContainer.innerHTML = '<button type="button" class="btn" onclick="assignServiceToSelf(' + s.id + ', event)" style="background: #7c3aed; color: #fff; font-weight: bold; font-size: 12px; padding: 6px 14px; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">✋ Ambil Servis Ini</button>';
+            }
+        } else {
+            if (takeContainer) takeContainer.innerHTML = '';
+        }
+
+        // Tombol cetak nota dari modal
+        var btnPrint = document.getElementById('dtlBtnPrintReceipt');
+        if (btnPrint) {
+            btnPrint.onclick = function() {
+                openReceiptModal(s.id);
+            };
+        }
+
+        var modal = document.getElementById('serviceDetailModal');
+        if (modal) modal.style.display = 'flex';
+    }
+
+    function closeServiceDetailModal() {
+        var modal = document.getElementById('serviceDetailModal');
+        if (modal) modal.style.display = 'none';
+        currentDetailServiceId = null;
+    }
+
+    function assignServiceToSelf(serviceId, ev) {
+        if (ev) {
+            if (ev.stopPropagation) ev.stopPropagation();
+            if (ev.preventDefault) ev.preventDefault();
+        }
+
+        // Dapatkan identitas user aktif dengan aman (memory atau storage)
+        var user = currentUser;
+        if (!user) {
+            var savedUserJson = sessionStorage.getItem('autocash_current_user') || localStorage.getItem('autocash_current_user');
+            if (savedUserJson) {
+                try { user = JSON.parse(savedUserJson); } catch(e){}
+            }
+            if (!user) {
+                var savedRole = sessionStorage.getItem('autocash_current_role') || localStorage.getItem('autocash_current_role');
+                if (savedRole) {
+                    user = { role: savedRole, username: savedRole };
+                }
+            }
+        }
+
+        var myName = (user && (user.fullname || user.username)) ? (user.fullname || user.username).trim() : '';
+        if (!myName) {
+            myName = prompt("Masukkan nama Anda (Teknisi) untuk mengambil tiket ini:");
+            if (!myName || !myName.trim()) return;
+            myName = myName.trim();
+        } else {
+            if (!confirm("Ambil pengerjaan tiket servis ini atas nama " + myName + "?")) return;
+        }
 
         fetch('/api/services/status', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                id: serviceId,
+                id: parseInt(serviceId),
                 status_servis: 'Sedang Dikerjakan',
                 teknisi_nama: myName
             })
         })
-        .then(function(res) { return res.json(); })
-        .then(function(data) {
-            if (data && data.success) {
+        .then(function(res) {
+            return res.json().then(function(data) {
+                return { ok: res.ok, status: res.status, data: data };
+            });
+        })
+        .then(function(resObj) {
+            var data = resObj.data;
+            if (resObj.ok && data && data.success) {
                 showToast("Tiket berhasil diambil oleh " + myName + "!", "success");
+                closeServiceDetailModal();
                 loadServices(true);
             } else {
-                alert("Gagal mengambil tiket: " + ((data && data.message) || "Error"));
+                alert("Gagal mengambil tiket: " + ((data && data.message) || ("Status HTTP " + resObj.status)));
             }
         })
-        .catch(function(e) { alert("Koneksi gagal: " + e); });
+        .catch(function(e) {
+            alert("Koneksi gagal: " + e);
+        });
     }
 
     window.onload = function() {
