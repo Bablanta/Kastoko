@@ -1331,6 +1331,155 @@
         </div>
     </div>
 
+    
+    <!-- Modal Rekapitulasi Teknisi & Laporan Sparepart (SPP) -->
+    <div class="modal-overlay" id="rekapTeknisiModal" style="display: none; z-index: 10005;">
+        <div class="modal-card" style="max-width: 960px; width: 95%; max-height: 90vh; display: flex; flex-direction: column; padding: 0; overflow: hidden; border-radius: 12px; box-shadow: 0 12px 36px rgba(0,0,0,0.4);">
+            <!-- Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; border-bottom: 2px solid var(--border-color); background: var(--card-bg);">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 24px;">📊</span>
+                    <div>
+                        <h3 style="margin: 0; font-size: 16px; color: var(--accent-color);">Rekapitulasi Performa Teknisi & Laporan Sparepart (SPP)</h3>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Pantau produktivitas teknisi, omset jasa, dan audit pemakaian komponen toko</div>
+                    </div>
+                </div>
+                <button class="toast-close" style="font-size: 20px; padding: 2px 8px; cursor: pointer;" onclick="closeRekapTeknisiModal()" title="Tutup">✕</button>
+            </div>
+
+            <!-- Filter Controls Bar -->
+            <div style="padding: 12px 20px; background: var(--input-bg); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <label style="font-size: 11.5px; font-weight: 600;">📅 Periode:</label>
+                        <select id="rekapPeriodeSelect" class="form-control" style="height: 34px; font-size: 12px; width: auto; padding: 4px 8px;" onchange="renderRekapTeknisiData()">
+                            <option value="this_month" selected>🗓️ Bulan Ini</option>
+                            <option value="last_month">⏪ Bulan Lalu</option>
+                            <option value="this_week">📅 Minggu Ini</option>
+                            <option value="today">⚡ Hari Ini</option>
+                            <option value="all">🌐 Semua Waktu</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <label style="font-size: 11.5px; font-weight: 600;">👨‍🔧 Teknisi:</label>
+                        <select id="rekapTeknisiSelect" class="form-control" style="height: 34px; font-size: 12px; width: auto; padding: 4px 8px;" onchange="renderRekapTeknisiData()">
+                            <option value="">👨‍🔧 Semua Teknisi</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" class="btn" onclick="exportRekapTeknisiToExcel()" style="height: 34px; font-size: 11.5px; font-weight: bold; background: #e6f4ed; color: #107c41; border: 1px solid #a3cfbb; display: inline-flex; align-items: center; gap: 5px; cursor: pointer;" title="Download rekap ini ke file Excel">
+                        📥 Download Rekap Excel (.xls)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab Navigation di dalam Modal -->
+            <div style="display: flex; border-bottom: 1px solid var(--border-color); background: var(--card-bg); padding: 0 20px;">
+                <button type="button" id="tabRekapPerformaBtn" onclick="switchRekapTab('performa')" style="padding: 10px 16px; font-size: 12.5px; font-weight: bold; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid var(--accent-color); color: var(--accent-color);">
+                    👨‍🔧 Ringkasan Performa & Omset
+                </button>
+                <button type="button" id="tabRekapSppBtn" onclick="switchRekapTab('spp')" style="padding: 10px 16px; font-size: 12.5px; font-weight: bold; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid transparent; color: var(--text-muted);">
+                    🔩 Rincian Sparepart (SPP)
+                </button>
+            </div>
+
+            <!-- Modal Body (Scrollable) -->
+            <div style="padding: 16px 20px; overflow-y: auto; max-height: calc(90vh - 180px); display: flex; flex-direction: column; gap: 14px;">
+                <!-- TAB 1: PERFORMA TEKNISI -->
+                <div id="rekapPerformaContent">
+                    <!-- KPI Cards Summary -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 14px;">
+                        <div style="background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 12px; text-align: center;">
+                            <div style="font-size: 11px; color: var(--text-muted); font-weight: 600;">Total Tiket Servis</div>
+                            <div id="rekapSumTotalTiket" style="font-size: 18px; font-weight: bold; margin-top: 4px; color: var(--text-color);">0</div>
+                        </div>
+                        <div style="background: #e6f4ed; border: 1px solid #a3cfbb; border-radius: 8px; padding: 10px 12px; text-align: center;">
+                            <div style="font-size: 11px; color: #107c41; font-weight: 600;">Tiket Selesai / Ambil</div>
+                            <div id="rekapSumSelesaiTiket" style="font-size: 18px; font-weight: bold; margin-top: 4px; color: #107c41;">0</div>
+                        </div>
+                        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 10px 12px; text-align: center;">
+                            <div style="font-size: 11px; color: #dc2626; font-weight: 600;">Total Modal SPP</div>
+                            <div id="rekapSumTotalSpp" style="font-size: 18px; font-weight: bold; margin-top: 4px; color: #dc2626;">Rp 0</div>
+                        </div>
+                        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 12px; text-align: center;">
+                            <div style="font-size: 11px; color: #16a34a; font-weight: 600;">Total Jasa Teknisi</div>
+                            <div id="rekapSumTotalJasa" style="font-size: 18px; font-weight: bold; margin-top: 4px; color: #16a34a;">Rp 0</div>
+                        </div>
+                        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px 12px; text-align: center;">
+                            <div style="font-size: 11px; color: #2563eb; font-weight: 600;">Total Omset Servis</div>
+                            <div id="rekapSumTotalOmset" style="font-size: 18px; font-weight: bold; margin-top: 4px; color: #2563eb;">Rp 0</div>
+                        </div>
+                    </div>
+
+                    <!-- Table Performa Teknisi -->
+                    <div class="table-responsive" style="border: 1px solid var(--border-color); border-radius: 8px;">
+                        <table style="margin: 0;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px; text-align: center;">No</th>
+                                    <th>Teknisi</th>
+                                    <th style="text-align: center;">Ditangani</th>
+                                    <th style="text-align: center;">Selesai</th>
+                                    <th style="text-align: center;">Proses</th>
+                                    <th style="text-align: right;">Total SPP (Rp)</th>
+                                    <th style="text-align: right;">Total Jasa (Rp)</th>
+                                    <th style="text-align: right;">Total Omset (Rp)</th>
+                                    <th style="text-align: center;">% Sukses</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rekapTeknisiTableBody">
+                                <!-- Terisi dinamis -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB 2: RINCIAN PENGGUNAAN SPP -->
+                <div id="rekapSppContent" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background: rgba(220, 38, 38, 0.05); padding: 8px 12px; border-radius: 6px; border-left: 3px solid #dc2626; flex-wrap: wrap; gap: 8px;">
+                        <div style="font-size: 12px; color: var(--text-color);">
+                            Komponen sparepart yang tercatat di bawah otomatis terintegrasi ke <b>Total SPP</b> di Dashboard Pembukuan Toko.
+                        </div>
+                        <div style="font-size: 13px; font-weight: bold; color: #dc2626;" id="rekapSppAkumulasiHeader">
+                            Total SPP: Rp 0
+                        </div>
+                    </div>
+
+                    <div class="table-responsive" style="border: 1px solid var(--border-color); border-radius: 8px;">
+                        <table style="margin: 0;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px; text-align: center;">No</th>
+                                    <th>No. Nota</th>
+                                    <th>Tanggal</th>
+                                    <th>Unit & Pelanggan</th>
+                                    <th>Teknisi</th>
+                                    <th>Nama Komponen (SPP)</th>
+                                    <th style="text-align: right;">Biaya SPP (Rp)</th>
+                                    <th style="text-align: center;">Status Servis</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rekapSppTableBody">
+                                <!-- Terisi dinamis -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; border-top: 1px solid var(--border-color); background: var(--card-bg);">
+                <div style="font-size: 11px; color: var(--text-muted);" id="rekapFooterStatus">
+                    Menampilkan ringkasan servis berdasarkan periode yang dipilih.
+                </div>
+                <button type="button" class="btn" onclick="closeRekapTeknisiModal()" style="padding: 0 16px; height: 36px; background: #888; color: #fff; cursor: pointer;">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div class="container" id="appContainer" style="opacity: 0; pointer-events: none;">
         <!-- Header -->
         <header>
@@ -1718,6 +1867,12 @@
                         <button class="btn col-superadmin-btn" id="btnClearServiceData" onclick="confirmClearServiceData()" style="height: 30px; padding: 0 10px; font-size: 11px; font-weight: bold; display: none; align-items: center; gap: 5px; background: #dc3545; color: #fff; border: none; border-radius: 6px; box-shadow: 0 2px 6px rgba(220, 53, 69, 0.25); cursor: pointer;" title="Reset seluruh data antrean servis, data pelanggan, dan nomor nota kembali ke 001 (Khusus Superadmin)">
                             🗑️ Clear Data Servis
                         </button>
+                        <button type="button" class="btn" id="btnOpenRekapTeknisi" onclick="openRekapTeknisiModal()" style="height: 30px; padding: 0 10px; font-size: 11px; font-weight: bold; background: #ede9fe; color: #7c3aed; border: 1px solid #c4b5fd; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;" title="Buka ringkasan performa teknisi dan rekapitulasi penggunaan sparepart (SPP)">
+                            📊 Rekap Teknisi & SPP
+                        </button>
+                        <button type="button" class="btn" id="btnExportServiceExcel" onclick="exportServicesToExcel()" style="height: 30px; padding: 0 10px; font-size: 11px; font-weight: bold; background: #e6f4ed; color: #107c41; border: 1px solid #a3cfbb; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;" title="Ekspor daftar servis ke format Excel (.xls)">
+                            📥 Ekspor (.xls)
+                        </button>
                     </div>
                     <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                         <!-- Search Input -->
@@ -1995,22 +2150,52 @@
 
     function updateTechFilterDropdown() {
         var sel = document.getElementById('serviceTechFilter');
-        if (!sel) return;
-        var curVal = sel.value;
+        var selModal = document.getElementById('rekapTeknisiSelect');
+        var curVal = sel ? sel.value : '';
+        var curValModal = selModal ? selModal.value : '';
         var techs = {};
+
+        // 1. Ambil dari akun pengguna dengan role teknisi yang aktif
+        if (typeof allUsersCache !== 'undefined' && Array.isArray(allUsersCache)) {
+            allUsersCache.forEach(function(u) {
+                if (u.role === 'teknisi' && u.status === 'active') {
+                    var n = (u.fullname || u.username || '').trim();
+                    if (n) techs[n] = true;
+                }
+            });
+        }
+
+        // 2. Ambil dari riwayat nama teknisi di tiket servis
         services.forEach(function(s) {
             if (s.teknisi_nama && s.teknisi_nama.trim()) {
                 techs[s.teknisi_nama.trim()] = true;
             }
         });
-        sel.innerHTML = '<option value="">👨‍🔧 Semua Teknisi</option>';
-        Object.keys(techs).sort().forEach(function(t) {
-            var opt = document.createElement('option');
-            opt.value = t;
-            opt.textContent = '👨‍🔧 ' + t;
-            sel.appendChild(opt);
-        });
-        if (curVal) sel.value = curVal;
+
+        var sortedTechs = Object.keys(techs).sort();
+
+        if (sel) {
+            sel.innerHTML = '<option value="">👨‍🔧 Semua Teknisi</option>' +
+                            '<option value="__unassigned__">⚠️ Belum Ada Teknisi</option>';
+            sortedTechs.forEach(function(t) {
+                var opt = document.createElement('option');
+                opt.value = t;
+                opt.textContent = '👨‍🔧 ' + t;
+                sel.appendChild(opt);
+            });
+            if (curVal) sel.value = curVal;
+        }
+
+        if (selModal) {
+            selModal.innerHTML = '<option value="">👨‍🔧 Semua Teknisi</option>';
+            sortedTechs.forEach(function(t) {
+                var opt = document.createElement('option');
+                opt.value = t;
+                opt.textContent = '👨‍🔧 ' + t;
+                selModal.appendChild(opt);
+            });
+            if (curValModal) selModal.value = curValModal;
+        }
     }
 
     function loadServices(isManual, callback) {
@@ -2768,7 +2953,9 @@
             }
 
             // Filter dropdown teknisi tertentu
-            if (techFilterVal) {
+            if (techFilterVal === '__unassigned__') {
+                if (s.teknisi_nama && s.teknisi_nama.trim() !== '') return false;
+            } else if (techFilterVal) {
                 var stVal = (s.teknisi_nama || '').toLowerCase();
                 if (stVal !== techFilterVal) return false;
             }
@@ -2955,6 +3142,460 @@
             if (modal) modal.style.display = 'none';
             alert('Terjadi kesalahan jaringan: ' + err);
         });
+    }
+
+    
+    // ========================================================
+    // LOGIKA REKAPITULASI PERFORMA TEKNISI, SPP & EKSPOR EXCEL
+    // ========================================================
+    var currentRekapTab = 'performa';
+
+    function openRekapTeknisiModal() {
+        updateTechFilterDropdown();
+        document.getElementById('rekapTeknisiModal').style.display = 'flex';
+        renderRekapTeknisiData();
+    }
+
+    function closeRekapTeknisiModal() {
+        document.getElementById('rekapTeknisiModal').style.display = 'none';
+    }
+
+    function switchRekapTab(tab) {
+        currentRekapTab = tab;
+        var btnPerforma = document.getElementById('tabRekapPerformaBtn');
+        var btnSpp = document.getElementById('tabRekapSppBtn');
+        var contentPerforma = document.getElementById('rekapPerformaContent');
+        var contentSpp = document.getElementById('rekapSppContent');
+
+        if (tab === 'performa') {
+            btnPerforma.style.borderBottomColor = 'var(--accent-color)';
+            btnPerforma.style.color = 'var(--accent-color)';
+            btnSpp.style.borderBottomColor = 'transparent';
+            btnSpp.style.color = 'var(--text-muted)';
+            contentPerforma.style.display = 'block';
+            contentSpp.style.display = 'none';
+        } else {
+            btnSpp.style.borderBottomColor = 'var(--accent-color)';
+            btnSpp.style.color = 'var(--accent-color)';
+            btnPerforma.style.borderBottomColor = 'transparent';
+            btnPerforma.style.color = 'var(--text-muted)';
+            contentSpp.style.display = 'block';
+            contentPerforma.style.display = 'none';
+        }
+    }
+
+    function filterServicesByPeriod(list, period) {
+        if (!period || period === 'all') return list;
+
+        var now = new Date();
+        var yyyy = now.getFullYear();
+        var mm = now.getMonth() + 1;
+        var dd = now.getDate();
+        var strToday = yyyy + '-' + (mm < 10 ? '0' + mm : mm) + '-' + (dd < 10 ? '0' + dd : dd);
+        var strThisMonth = yyyy + '-' + (mm < 10 ? '0' + mm : mm);
+
+        // Hitung Bulan Lalu
+        var lastMonthDate = new Date(yyyy, now.getMonth() - 1, 1);
+        var ly = lastMonthDate.getFullYear();
+        var lm = lastMonthDate.getMonth() + 1;
+        var strLastMonth = ly + '-' + (lm < 10 ? '0' + lm : lm);
+
+        // Hitung batas Minggu Ini (Senin - Minggu)
+        var dayOfWeek = now.getDay() || 7; // 1 (Mon) - 7 (Sun)
+        var monday = new Date(now);
+        monday.setDate(now.getDate() - dayOfWeek + 1);
+        monday.setHours(0, 0, 0, 0);
+
+        return list.filter(function(s) {
+            var sDate = (s.tanggal_selesai || s.tanggal_masuk || '').slice(0, 10);
+            if (!sDate) return false;
+
+            if (period === 'today') {
+                return sDate === strToday;
+            } else if (period === 'this_month') {
+                return sDate.startsWith(strThisMonth);
+            } else if (period === 'last_month') {
+                return sDate.startsWith(strLastMonth);
+            } else if (period === 'this_week') {
+                var dParts = sDate.split('-');
+                if (dParts.length === 3) {
+                    var sTime = new Date(parseInt(dParts[0]), parseInt(dParts[1]) - 1, parseInt(dParts[2])).getTime();
+                    return sTime >= monday.getTime();
+                }
+                return false;
+            }
+            return true;
+        });
+    }
+
+    function renderRekapTeknisiData() {
+        var period = document.getElementById('rekapPeriodeSelect') ? document.getElementById('rekapPeriodeSelect').value : 'this_month';
+        var selectedTech = document.getElementById('rekapTeknisiSelect') ? document.getElementById('rekapTeknisiSelect').value.trim().toLowerCase() : '';
+
+        var list = filterServicesByPeriod(services, period);
+
+        // Mitra hanya melihat miliknya
+        if (currentUser && currentUser.role === 'mitra') {
+            var myName = (currentUser.fullname || currentUser.username).toLowerCase();
+            var myUser = currentUser.username.toLowerCase();
+            list = list.filter(function(s) {
+                var sm = (s.mitra_nama || '').toLowerCase();
+                var sc = (s.created_by || '').toLowerCase();
+                return sm === myName || sm === myUser || sc === myUser;
+            });
+        }
+
+        // Filter teknisi jika dipilih di modal
+        if (selectedTech) {
+            list = list.filter(function(s) {
+                return (s.teknisi_nama || '').toLowerCase() === selectedTech;
+            });
+        }
+
+        // ==========================================
+        // 1. HITUNG STATISTIK PERFORMA TEKNISI
+        // ==========================================
+        var techStats = {};
+        var grandTotal = list.length;
+        var grandSelesai = 0;
+        var grandSpp = 0;
+        var grandJasa = 0;
+        var grandOmset = 0;
+
+        list.forEach(function(s) {
+            var tName = (s.teknisi_nama || '').trim() || '⚠️ Tanpa Teknisi';
+            if (!techStats[tName]) {
+                techStats[tName] = {
+                    total: 0,
+                    selesai: 0,
+                    proses: 0,
+                    baru: 0,
+                    spp: 0,
+                    jasa: 0,
+                    omset: 0
+                };
+            }
+
+            var st = s.status_servis;
+            var isSelesai = (st === 'Selesai' || st === 'Diambil');
+            var isProses = (st === 'Sedang Dikerjakan' || st === 'Instan');
+            var isBaru = (st === 'Baru');
+
+            var finalBiaya = (s.biaya_akhir !== undefined && s.biaya_akhir !== null && s.biaya_akhir > 0) ? s.biaya_akhir : (s.estimasi_biaya || 0);
+            var sppBiaya = Number(s.sparepart_biaya || 0);
+            var jasaBiaya = isSelesai ? Math.max(0, finalBiaya - sppBiaya) : 0;
+            var omsetBiaya = isSelesai ? finalBiaya : 0;
+
+            techStats[tName].total++;
+            if (isSelesai) {
+                techStats[tName].selesai++;
+                grandSelesai++;
+            }
+            if (isProses) techStats[tName].proses++;
+            if (isBaru) techStats[tName].baru++;
+
+            techStats[tName].spp += sppBiaya;
+            techStats[tName].jasa += jasaBiaya;
+            techStats[tName].omset += omsetBiaya;
+
+            grandSpp += sppBiaya;
+            grandJasa += jasaBiaya;
+            grandOmset += omsetBiaya;
+        });
+
+        // Update KPI Cards
+        document.getElementById('rekapSumTotalTiket').innerText = grandTotal;
+        document.getElementById('rekapSumSelesaiTiket').innerText = grandSelesai;
+        document.getElementById('rekapSumTotalSpp').innerText = 'Rp ' + grandSpp.toLocaleString('id-ID');
+        document.getElementById('rekapSumTotalJasa').innerText = 'Rp ' + grandJasa.toLocaleString('id-ID');
+        document.getElementById('rekapSumTotalOmset').innerText = 'Rp ' + grandOmset.toLocaleString('id-ID');
+
+        // Render Tabel Performa
+        var tbodyPerforma = document.getElementById('rekapTeknisiTableBody');
+        if (tbodyPerforma) {
+            var htmlPerf = '';
+            var techNames = Object.keys(techStats).sort();
+            if (techNames.length === 0) {
+                htmlPerf = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 24px;">Tidak ada data servis pada periode ini.</td></tr>';
+            } else {
+                var no = 1;
+                techNames.forEach(function(tName) {
+                    var st = techStats[tName];
+                    var pct = st.total > 0 ? Math.round((st.selesai / st.total) * 100) : 0;
+                    var badgeColor = (tName === '⚠️ Tanpa Teknisi') ? '#ef4444' : '#7c3aed';
+
+                    htmlPerf += '<tr>' +
+                        '<td style="text-align: center;">' + (no++) + '</td>' +
+                        '<td><span style="font-weight: bold; color: ' + badgeColor + ';">' + escapeHtml(tName) + '</span></td>' +
+                        '<td style="text-align: center; font-weight: bold;">' + st.total + '</td>' +
+                        '<td style="text-align: center; color: #107c41; font-weight: bold;">' + st.selesai + '</td>' +
+                        '<td style="text-align: center; color: #6f42c1;">' + (st.proses + st.baru) + '</td>' +
+                        '<td style="text-align: right; color: #dc2626; font-weight: 500;">Rp ' + st.spp.toLocaleString('id-ID') + '</td>' +
+                        '<td style="text-align: right; color: #16a34a; font-weight: bold;">Rp ' + st.jasa.toLocaleString('id-ID') + '</td>' +
+                        '<td style="text-align: right; color: #2563eb; font-weight: bold;">Rp ' + st.omset.toLocaleString('id-ID') + '</td>' +
+                        '<td style="text-align: center;"><span style="background: #e6f4ed; color: #107c41; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: bold;">' + pct + '%</span></td>' +
+                    '</tr>';
+                });
+
+                // Row Total
+                var grandPct = grandTotal > 0 ? Math.round((grandSelesai / grandTotal) * 100) : 0;
+                htmlPerf += '<tr style="background: var(--input-bg); font-weight: bold; border-top: 2px solid var(--border-color);">' +
+                    '<td colspan="2" style="text-align: right;">TOTAL:</td>' +
+                    '<td style="text-align: center;">' + grandTotal + '</td>' +
+                    '<td style="text-align: center; color: #107c41;">' + grandSelesai + '</td>' +
+                    '<td style="text-align: center; color: #6f42c1;">' + (grandTotal - grandSelesai) + '</td>' +
+                    '<td style="text-align: right; color: #dc2626;">Rp ' + grandSpp.toLocaleString('id-ID') + '</td>' +
+                    '<td style="text-align: right; color: #16a34a;">Rp ' + grandJasa.toLocaleString('id-ID') + '</td>' +
+                    '<td style="text-align: right; color: #2563eb;">Rp ' + grandOmset.toLocaleString('id-ID') + '</td>' +
+                    '<td style="text-align: center;"><span style="background: #107c41; color: #fff; padding: 2px 8px; border-radius: 10px; font-size: 11px;">' + grandPct + '%</span></td>' +
+                '</tr>';
+            }
+            tbodyPerforma.innerHTML = htmlPerf;
+        }
+
+        // ==========================================
+        // 2. HITUNG & RENDER RINCIAN SPAREPART (SPP)
+        // ==========================================
+        var sppList = list.filter(function(s) {
+            return (s.sparepart_biaya && s.sparepart_biaya > 0) || (s.sparepart_nama && s.sparepart_nama.trim() !== '');
+        });
+
+        var tbodySpp = document.getElementById('rekapSppTableBody');
+        var elSppHeader = document.getElementById('rekapSppAkumulasiHeader');
+        if (elSppHeader) elSppHeader.innerText = 'Total SPP: Rp ' + grandSpp.toLocaleString('id-ID');
+
+        if (tbodySpp) {
+            var htmlSpp = '';
+            if (sppList.length === 0) {
+                htmlSpp = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 24px;">Tidak ada riwayat pemakaian sparepart (SPP) pada periode ini.</td></tr>';
+            } else {
+                var noSpp = 1;
+                sppList.forEach(function(s) {
+                    var sppVal = Number(s.sparepart_biaya || 0);
+                    htmlSpp += '<tr>' +
+                        '<td style="text-align: center;">' + (noSpp++) + '</td>' +
+                        '<td><span style="font-family: monospace; font-weight: bold; color: var(--accent-color);">' + escapeHtml(s.kode_servis || ('#' + s.id)) + '</span></td>' +
+                        '<td style="font-size: 11px; white-space: nowrap;">' + escapeHtml(s.tanggal_selesai || s.tanggal_masuk || '-') + '</td>' +
+                        '<td><b>' + escapeHtml(s.nama_pelanggan) + '</b><br><small style="color: var(--text-muted);">' + escapeHtml(s.merk_model || '-') + '</small></td>' +
+                        '<td><span style="color: #7c3aed; font-weight: 500;">' + escapeHtml(s.teknisi_nama || '-') + '</span></td>' +
+                        '<td><span style="font-weight: 600; color: #b91c1c;">🔧 ' + escapeHtml(s.sparepart_nama || 'Komponen Part') + '</span></td>' +
+                        '<td style="text-align: right; font-weight: bold; color: #dc2626;">Rp ' + sppVal.toLocaleString('id-ID') + '</td>' +
+                        '<td style="text-align: center;"><span class="badge-status badge-' + (s.status_servis || 'baru').toLowerCase() + '">' + escapeHtml(s.status_servis) + '</span></td>' +
+                    '</tr>';
+                });
+
+                htmlSpp += '<tr style="background: var(--input-bg); font-weight: bold; border-top: 2px solid var(--border-color);">' +
+                    '<td colspan="6" style="text-align: right;">TOTAL MODAL SPP:</td>' +
+                    '<td style="text-align: right; color: #dc2626; font-size: 13px;">Rp ' + grandSpp.toLocaleString('id-ID') + '</td>' +
+                    '<td></td>' +
+                '</tr>';
+            }
+            tbodySpp.innerHTML = htmlSpp;
+        }
+
+        var statusEl = document.getElementById('rekapFooterStatus');
+        if (statusEl) {
+            statusEl.innerText = 'Menampilkan ' + list.length + ' tiket (' + sppList.length + ' unit menggunakan sparepart).';
+        }
+    }
+
+    // ==========================================
+    // EKSPOR REKAP TEKNISI & SPP KE EXCEL (.XLS)
+    // ==========================================
+    function exportRekapTeknisiToExcel() {
+        var period = document.getElementById('rekapPeriodeSelect') ? document.getElementById('rekapPeriodeSelect').value : 'this_month';
+        var list = filterServicesByPeriod(services, period);
+
+        var html = '<html><head><meta charset="UTF-8"><title>Rekapitulasi Teknisi & SPP</title>';
+        html += '<style>table{border-collapse:collapse;width:100%;margin-bottom:20px;} th,td{border:1px solid #ddd;padding:8px;font-family:Arial,sans-serif;} th{background:#7c3aed;color:#fff;text-align:left;} .text-right{text-align:right;} .text-center{text-align:center;} .tot{font-weight:bold;background:#f5f3ff;}</style>';
+        html += '</head><body>';
+        html += '<h2>Laporan Rekapitulasi Performa Teknisi & Sparepart (SPP)</h2>';
+        html += '<p><b>Periode:</b> ' + period.toUpperCase() + ' | <b>Tanggal Unduh:</b> ' + new Date().toLocaleString('id-ID') + '</p>';
+
+        // 1. Tabel Performa Teknisi
+        html += '<h3>1. Ringkasan Performa & Omset per Teknisi</h3>';
+        html += '<table><thead><tr>';
+        html += '<th class="text-center">No</th><th>Nama Teknisi</th><th class="text-center">Tiket Ditangani</th><th class="text-center">Selesai/Ambil</th><th class="text-center">Dalam Proses</th><th class="text-right">Total SPP (Rp)</th><th class="text-right">Total Jasa (Rp)</th><th class="text-right">Total Omset (Rp)</th>';
+        html += '</tr></thead><tbody>';
+
+        var techStats = {};
+        var grandTotal = list.length, grandSelesai = 0, grandSpp = 0, grandJasa = 0, grandOmset = 0;
+        list.forEach(function(s) {
+            var t = (s.teknisi_nama || '').trim() || 'Tanpa Teknisi';
+            if (!techStats[t]) techStats[t] = { total: 0, selesai: 0, proses: 0, spp: 0, jasa: 0, omset: 0 };
+            var isS = (s.status_servis === 'Selesai' || s.status_servis === 'Diambil');
+            var fin = (s.biaya_akhir !== undefined && s.biaya_akhir !== null && s.biaya_akhir > 0) ? s.biaya_akhir : (s.estimasi_biaya || 0);
+            var sppB = Number(s.sparepart_biaya || 0);
+            var jasB = isS ? Math.max(0, fin - sppB) : 0;
+            var omsB = isS ? fin : 0;
+
+            techStats[t].total++;
+            if (isS) { techStats[t].selesai++; grandSelesai++; }
+            else { techStats[t].proses++; }
+            techStats[t].spp += sppB;
+            techStats[t].jasa += jasB;
+            techStats[t].omset += omsB;
+            grandSpp += sppB;
+            grandJasa += jasB;
+            grandOmset += omsB;
+        });
+
+        var no = 1;
+        Object.keys(techStats).sort().forEach(function(t) {
+            var st = techStats[t];
+            html += '<tr>';
+            html += '<td class="text-center">' + (no++) + '</td>';
+            html += '<td><b>' + escapeHtml(t) + '</b></td>';
+            html += '<td class="text-center">' + st.total + '</td>';
+            html += '<td class="text-center">' + st.selesai + '</td>';
+            html += '<td class="text-center">' + st.proses + '</td>';
+            html += '<td class="text-right">' + st.spp + '</td>';
+            html += '<td class="text-right">' + st.jasa + '</td>';
+            html += '<td class="text-right">' + st.omset + '</td>';
+            html += '</tr>';
+        });
+
+        html += '<tr class="tot">';
+        html += '<td colspan="2" class="text-right">TOTAL:</td>';
+        html += '<td class="text-center">' + grandTotal + '</td>';
+        html += '<td class="text-center">' + grandSelesai + '</td>';
+        html += '<td class="text-center">' + (grandTotal - grandSelesai) + '</td>';
+        html += '<td class="text-right">' + grandSpp + '</td>';
+        html += '<td class="text-right">' + grandJasa + '</td>';
+        html += '<td class="text-right">' + grandOmset + '</td>';
+        html += '</tr></tbody></table>';
+
+        // 2. Tabel Rincian SPP
+        var sppList = list.filter(function(s) { return (s.sparepart_biaya && s.sparepart_biaya > 0) || (s.sparepart_nama && s.sparepart_nama.trim()); });
+        html += '<h3>2. Rincian Penggunaan Komponen Sparepart (SPP)</h3>';
+        html += '<table><thead><tr>';
+        html += '<th class="text-center">No</th><th>No. Nota</th><th>Tanggal</th><th>Pelanggan</th><th>Perangkat</th><th>Teknisi</th><th>Nama Sparepart</th><th class="text-right">Biaya SPP (Rp)</th><th class="text-center">Status</th>';
+        html += '</tr></thead><tbody>';
+
+        var noSpp = 1;
+        sppList.forEach(function(s) {
+            html += '<tr>';
+            html += '<td class="text-center">' + (noSpp++) + '</td>';
+            html += '<td>' + escapeHtml(s.kode_servis || ('#' + s.id)) + '</td>';
+            html += '<td>' + escapeHtml(s.tanggal_selesai || s.tanggal_masuk || '-') + '</td>';
+            html += '<td>' + escapeHtml(s.nama_pelanggan || '') + '</td>';
+            html += '<td>' + escapeHtml(s.merk_model || '') + '</td>';
+            html += '<td>' + escapeHtml(s.teknisi_nama || '-') + '</td>';
+            html += '<td>' + escapeHtml(s.sparepart_nama || '') + '</td>';
+            html += '<td class="text-right">' + Number(s.sparepart_biaya || 0) + '</td>';
+            html += '<td class="text-center">' + escapeHtml(s.status_servis || '') + '</td>';
+            html += '</tr>';
+        });
+
+        html += '<tr class="tot">';
+        html += '<td colspan="7" class="text-right">TOTAL BIAYA SPP:</td>';
+        html += '<td class="text-right">' + grandSpp + '</td>';
+        html += '<td></td>';
+        html += '</tr></tbody></table>';
+
+        html += '</body></html>';
+
+        var filename = 'Rekap_Teknisi_SPP_' + period + '_' + getSystemDate() + '.xls';
+        var blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+        var downloadUrl = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(downloadUrl);
+
+        fetch('/api/export', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filename: filename, html: html })
+        }).catch(function(e) { console.warn(e); });
+    }
+
+    // ==========================================
+    // EKSPOR DAFTAR DATA SERVIS KE EXCEL (.XLS)
+    // ==========================================
+    function exportServicesToExcel() {
+        var list = services;
+        // Mitra hanya export tiket miliknya
+        if (currentUser && currentUser.role === 'mitra') {
+            var myName = (currentUser.fullname || currentUser.username).toLowerCase();
+            var myUser = currentUser.username.toLowerCase();
+            list = list.filter(function(s) {
+                var sm = (s.mitra_nama || '').toLowerCase();
+                var sc = (s.created_by || '').toLowerCase();
+                return sm === myName || sm === myUser || sc === myUser;
+            });
+        }
+
+        var html = '<html><head><meta charset="UTF-8"><title>Laporan Data Servis Toko</title>';
+        html += '<style>table{border-collapse:collapse;width:100%;} th,td{border:1px solid #ddd;padding:7px;font-family:Arial,sans-serif;font-size:12px;} th{background:#107c41;color:#fff;text-align:left;} .text-right{text-align:right;} .text-center{text-align:center;} .tot{font-weight:bold;background:#e6f4ed;}</style>';
+        html += '</head><body>';
+        html += '<h2>Laporan Data Servis & Reparasi Toko</h2>';
+        html += '<p>Tanggal Cetak: ' + new Date().toLocaleString('id-ID') + ' | Total: ' + list.length + ' Tiket</p>';
+        html += '<table><thead><tr>';
+        html += '<th class="text-center">No</th><th>No. Nota</th><th>Tgl Masuk</th><th>Tgl Selesai</th><th>Pelanggan</th><th>No. WhatsApp</th><th>Perangkat</th><th>Merk/Model</th><th>Layanan</th><th>Keluhan</th><th>Teknisi</th><th>Mitra</th><th>Status Servis</th><th>Sparepart (SPP)</th><th class="text-right">Biaya SPP</th><th class="text-right">Biaya Jasa</th><th class="text-right">Total Biaya</th><th>Status Bayar</th><th>Metode Bayar</th><th>Catatan Teknisi</th>';
+        html += '</tr></thead><tbody>';
+
+        var totSpp = 0, totJasa = 0, totBiaya = 0;
+        list.forEach(function(s, idx) {
+            var finalBiaya = (s.biaya_akhir !== undefined && s.biaya_akhir !== null && s.biaya_akhir > 0) ? s.biaya_akhir : (s.estimasi_biaya || 0);
+            var sppBiaya = Number(s.sparepart_biaya || 0);
+            var jasaBiaya = Math.max(0, finalBiaya - sppBiaya);
+
+            totSpp += sppBiaya;
+            totJasa += jasaBiaya;
+            totBiaya += finalBiaya;
+
+            html += '<tr>';
+            html += '<td class="text-center">' + (idx + 1) + '</td>';
+            html += '<td><b>' + escapeHtml(s.kode_servis || ('#' + s.id)) + '</b></td>';
+            html += '<td>' + escapeHtml(s.tanggal_masuk || '') + '</td>';
+            html += '<td>' + escapeHtml(s.tanggal_selesai || '-') + '</td>';
+            html += '<td>' + escapeHtml(s.nama_pelanggan || '') + '</td>';
+            html += '<td>' + escapeHtml(s.no_hp || '') + '</td>';
+            html += '<td>' + escapeHtml(s.jenis_perangkat || '') + '</td>';
+            html += '<td>' + escapeHtml(s.merk_model || '') + '</td>';
+            html += '<td>' + escapeHtml(s.menu_servis || '') + '</td>';
+            html += '<td>' + escapeHtml(s.keluhan || '') + '</td>';
+            html += '<td>' + escapeHtml(s.teknisi_nama || '-') + '</td>';
+            html += '<td>' + escapeHtml(s.mitra_nama || '-') + '</td>';
+            html += '<td>' + escapeHtml(s.status_servis || '') + '</td>';
+            html += '<td>' + escapeHtml(s.sparepart_nama || '-') + '</td>';
+            html += '<td class="text-right">' + sppBiaya + '</td>';
+            html += '<td class="text-right">' + jasaBiaya + '</td>';
+            html += '<td class="text-right">' + finalBiaya + '</td>';
+            html += '<td>' + escapeHtml(s.status_pembayaran || '') + '</td>';
+            html += '<td>' + escapeHtml(s.metode_pembayaran || '') + '</td>';
+            html += '<td>' + escapeHtml(s.catatan_teknisi || '') + '</td>';
+            html += '</tr>';
+        });
+
+        html += '<tr class="tot">';
+        html += '<td colspan="14" class="text-right">TOTAL:</td>';
+        html += '<td class="text-right">' + totSpp + '</td>';
+        html += '<td class="text-right">' + totJasa + '</td>';
+        html += '<td class="text-right">' + totBiaya + '</td>';
+        html += '<td colspan="3"></td>';
+        html += '</tr></tbody></table></body></html>';
+
+        var filename = 'Laporan_Data_Servis_' + getSystemDate() + '.xls';
+        var blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+        var downloadUrl = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(downloadUrl);
+
+        fetch('/api/export', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filename: filename, html: html })
+        }).catch(function(e) { console.warn(e); });
     }
 
     // ========================================================
@@ -4446,6 +5087,7 @@
             'completeServiceModal': function() { if (typeof closeCompleteServiceModal === 'function') closeCompleteServiceModal(); },
             'cashierPickupModal': function() { if (typeof closeCashierPickupModal === 'function') closeCashierPickupModal(); },
             'instantServiceModal': function() { if (typeof closeInstantServiceModal === 'function') closeInstantServiceModal(); },
+            'rekapTeknisiModal': function() { if (typeof closeRekapTeknisiModal === 'function') closeRekapTeknisiModal(); },
             'forgotPassModal': function() { if (typeof closeForgotModal === 'function') closeForgotModal(); },
             'changePassModal': function() { if (typeof closeChangePassModal === 'function') closeChangePassModal(); },
             'confirmModal': function() { if (typeof executeReset === 'function') executeReset(false); }
@@ -5806,6 +6448,12 @@
         var btnMySrv = document.getElementById('btnFilterMyService');
         if (btnMySrv) {
             btnMySrv.style.display = isTeknisi ? 'inline-block' : 'none';
+        }
+
+        // Tombol Rekap Teknisi & SPP (Sembunyikan untuk Mitra, tampilkan untuk Teknisi, Admin, Superadmin)
+        var btnRekap = document.getElementById('btnOpenRekapTeknisi');
+        if (btnRekap) {
+            btnRekap.style.display = isMitra ? 'none' : 'inline-flex';
         }
 
         // Form Mitra Selection & Banner Khusus Portal Mitra
