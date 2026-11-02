@@ -85,8 +85,17 @@ def sync_database_to_server(client, sftp):
         print("  [!] File pembukuan.db lokal tidak ditemukan!")
         return False
 
-    # Buat backup pembukuan.db di server sebelum ditimpa
     ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    os.makedirs(os.path.join(LOCAL_DIR, "backup"), exist_ok=True)
+
+    # 1. Buat backup database server ke lokal sebelum ditimpa
+    try:
+        sftp.get(remote_db, os.path.join(LOCAL_DIR, "backup", f"pembukuan_server_pre_push_{ts}.db"))
+        print(f"  [INFO] Backup data server diunduh ke PC lokal: backup/pembukuan_server_pre_push_{ts}.db")
+    except Exception as e:
+        print(f"  [!] Catatan backup remote ke lokal: {e}")
+
+    # 2. Buat backup pembukuan.db di server sebelum ditimpa
     backup_remote = f"{REMOTE_DIR}/backup/pembukuan_backup_{ts}.db"
     client.exec_command(f"cp {remote_db} {backup_remote} 2>/dev/null || true")
 
@@ -125,7 +134,7 @@ def restart_pm2(client):
         return False
 
 def main():
-    mode = sys.argv[1] if len(sys.argv) > 1 else "full"
+    mode = sys.argv[1] if len(sys.argv) > 1 else "code"
 
     print("=" * 65)
     print("      KASTOKO - DEPLOY & SINKRONISASI SERVER UBUNTU")
@@ -156,10 +165,10 @@ def main():
 
     # 2. Sync database jika mode full
     if mode == "full":
-        print("\n[2/3] Menyinkronkan Database Pembukuan (pembukuan.db)...")
+        print("\n[2/3] Menyinkronkan Database Pembukuan (pembukuan.db) dari PC Lokal ke Server...")
         sync_database_to_server(client, sftp)
     else:
-        print("\n[2/3] Database pembukuan server dipertahankan (tidak ditimpa).")
+        print("\n[2/3] Mode CODE: Database pembukuan server AMAN (transaksi kasir di server tidak ditimpa).")
 
     sftp.close()
 
