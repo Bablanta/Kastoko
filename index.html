@@ -2098,6 +2098,9 @@
         if ((curRole === 'teknisi' || curRole === 'mitra') && view === 'pembukuan') {
             view = 'servis';
         }
+        if (currentMainDashboard === view) {
+            return;
+        }
         currentMainDashboard = view;
         var btnPembukuan = document.getElementById('btnNavPembukuan');
         var btnServis = document.getElementById('btnNavServis');
@@ -3157,10 +3160,6 @@
             }
 
             var isUnassigned = !s.teknisi_nama || s.teknisi_nama.trim() === '' || s.teknisi_nama === '-' || s.teknisi_nama.toLowerCase() === 'null';
-            var takeBtn = '';
-            if (isUnassigned && (st === 'Baru' || st === 'Sedang Dikerjakan') && !isMitra) {
-                takeBtn = '<button class="btn btn-sm" onclick="event.stopPropagation(); assignServiceToSelf(' + s.id + ', event)" style="padding: 2px 7px; font-size: 10px; font-weight: bold; background: #ede9fe; color: #7c3aed; border: 1px solid #7c3aed; border-radius: 4px; margin-top: 3px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;" title="Ambil pengerjaan tiket ini">✋ Ambil Servis</button>';
-            }
 
             var mitraTag = s.mitra_nama ? '<div style="font-size: 10.5px; color: #d97706; font-weight: 600; margin-top: 1px;">🤝 Mitra: ' + escapeHtml(s.mitra_nama) + '</div>' : '';
 
@@ -3168,13 +3167,14 @@
             if (isMitra) {
                 actionsHtml = '<button class="btn btn-sm" onclick="event.stopPropagation(); openReceiptModal(' + s.id + ')" title="Cetak Nota / Kwitansi" style="padding: 3px 10px; font-size: 11px; background: #e6f4ed; color: #107c41;">🖨️ Cetak</button>';
             } else if (isTeknisi) {
-                // Role Teknisi: tombol Ambil Servis jelas, tombol Cetak Nota, dan Selector Status
+                // Role Teknisi: tombol Ambil Servis di kolom Aksi, tombol Detail Catatan, tombol Cetak Nota, dan Selector Status
                 var takeActionBtn = '';
                 if (isUnassigned && (st === 'Baru' || st === 'Sedang Dikerjakan')) {
-                    takeActionBtn = '<button class="btn btn-sm" onclick="event.stopPropagation(); assignServiceToSelf(' + s.id + ', event)" style="padding: 3px 8px; font-size: 11px; font-weight: bold; background: #7c3aed; color: #ffffff; border: none; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 2px;" title="Ambil Pengerjaan Tiket Ini">✋ Ambil</button>';
+                    takeActionBtn = '<button class="btn btn-sm" onclick="event.stopPropagation(); assignServiceToSelf(' + s.id + ', event)" style="padding: 3px 8px; font-size: 11px; font-weight: bold; background: #7c3aed; color: #ffffff; border: none; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 2px;" title="Ambil Pengerjaan Tiket Ini">✋ Ambil Servis</button>';
                 }
                 actionsHtml = 
                     takeActionBtn +
+                    '<button class="btn btn-sm" onclick="event.stopPropagation(); openServiceDetailModal(' + s.id + ')" title="Lihat Detail Lengkap & Catatan Teknisi" style="padding: 3px 8px; font-size: 11px; background: #ede9fe; color: #7c3aed; border: 1px solid #c4b5fd;">🔍 Detail</button>' +
                     '<button class="btn btn-sm" onclick="event.stopPropagation(); openReceiptModal(' + s.id + ')" title="Cetak Nota" style="padding: 3px 8px; font-size: 11px; background: #e6f4ed; color: #107c41;">🖨️</button>' +
                     '<select onclick="event.stopPropagation()" onchange="quickUpdateServiceStatus(' + s.id + ', this.value, this)" style="font-size: 11px; padding: 2px 4px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color); cursor: pointer;" title="Ganti Status Cepat">' +
                         '<option value="" disabled selected>⚡ Status</option>' +
@@ -3218,8 +3218,7 @@
                 '<td>' +
                     '<div><b>K:</b> ' + escapeHtml(s.keluhan) + '</div>' +
                     (s.teknisi_nama ? '<div style="font-size: 11px; color: #7c3aed; font-weight: 600; margin-top: 1px;">👨‍🔧 Teknisi: ' + escapeHtml(s.teknisi_nama) + '</div>' : '') +
-                    takeBtn +
-                    (s.catatan_teknisi ? '<div style="font-size: 11px; color: #107c41;"><b>T:</b> ' + escapeHtml(s.catatan_teknisi) + '</div>' : '') +
+                    (s.catatan_teknisi ? '<div style="font-size: 11px; color: #166534; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; padding: 2px 6px; margin-top: 3px;"><b>📝 Catatan:</b> ' + escapeHtml(s.catatan_teknisi) + '</div>' : '') +
                     sppInfo +
                 '</td>' +
                 '<td class="text-right" style="font-weight: bold;">' + biayaStr + '</td>' +
@@ -3235,7 +3234,11 @@
             tbody.appendChild(tr);
         });
 
-        applyRolePermissions();
+        var isSuperadmin = currentUser && currentUser.role === 'superadmin';
+        var saBtns = tbody.querySelectorAll('.col-superadmin-btn');
+        saBtns.forEach(function(el) {
+            el.style.display = isSuperadmin ? 'inline-block' : 'none';
+        });
     }
 
     
@@ -6557,8 +6560,8 @@
         }
 
         if (isTeknisi || isMitra) {
-            // Otomatis arahkan ke Dashboard Servis
-            if (typeof switchMainDashboard === 'function') {
+            // Otomatis arahkan ke Dashboard Servis hanya jika belum di view servis
+            if (typeof switchMainDashboard === 'function' && currentMainDashboard !== 'servis') {
                 switchMainDashboard('servis');
             }
         }
@@ -7949,7 +7952,8 @@
         // Tombol Ambil Servis di dalam modal jika tiket belum ada teknisi
         var takeContainer = document.getElementById('dtlTakeBtnContainer');
         var isUnassigned = !s.teknisi_nama || s.teknisi_nama.trim() === '' || s.teknisi_nama === '-' || s.teknisi_nama.toLowerCase() === 'null';
-        if (isUnassigned && (s.status_servis === 'Baru' || s.status_servis === 'Sedang Dikerjakan')) {
+        var isTeknisi = currentUser && currentUser.role === 'teknisi';
+        if (isUnassigned && (s.status_servis === 'Baru' || s.status_servis === 'Sedang Dikerjakan') && isTeknisi) {
             if (takeContainer) {
                 takeContainer.innerHTML = '<button type="button" class="btn" onclick="assignServiceToSelf(' + s.id + ', event)" style="background: #7c3aed; color: #fff; font-weight: bold; font-size: 12px; padding: 6px 14px; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">✋ Ambil Servis Ini</button>';
             }
@@ -7994,6 +7998,11 @@
                     user = { role: savedRole, username: savedRole };
                 }
             }
+        }
+
+        if (!user || user.role !== 'teknisi') {
+            alert("Akses Ditolak! Tombol 'Ambil Servis' hanya dapat digunakan oleh akun ber-role Teknisi.");
+            return;
         }
 
         var myName = (user && (user.fullname || user.username)) ? (user.fullname || user.username).trim() : '';
