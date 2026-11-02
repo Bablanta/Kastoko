@@ -773,7 +773,7 @@
                     <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
                         <div style="flex: 1; min-width: 130px;">
                             <label style="font-size: 10px; color: var(--text-muted); display: block;">Total Biaya Akhir (Rp)</label>
-                            <input type="text" id="rInputBiayaAkhir" class="form-control" placeholder="0" onkeyup="formatCurrency(this); updateReceiptPricePreview();" style="height: 32px; font-size: 12px; font-weight: bold; color: #107c41;">
+                            <input type="text" id="rInputBiayaAkhir" class="form-control" placeholder="0" oninput="formatCurrency(this); updateReceiptPricePreview();" onkeyup="formatCurrency(this); updateReceiptPricePreview();" style="height: 32px; font-size: 12px; font-weight: bold; color: #107c41;">
                         </div>
                         <div style="flex: 1; min-width: 120px;">
                             <label style="font-size: 10px; color: var(--text-muted); display: block;">Status Pembayaran</label>
@@ -1039,7 +1039,7 @@
             <!-- Input Biaya Sparepart (SPP) -->
             <div class="form-group" style="margin-bottom: 8px;">
                 <label style="font-size: 11px; font-weight: 600;">Biaya / Harga Sparepart (SPP Toko) Rp:</label>
-                <input type="text" id="csInputSparepartBiaya" class="form-control" placeholder="0" onkeyup="formatCurrency(this)" style="height: 34px; font-size: 13px; font-weight: bold; color: #d9534f;">
+                <input type="text" id="csInputSparepartBiaya" class="form-control" placeholder="0" oninput="formatCurrency(this)" onkeyup="formatCurrency(this)" style="height: 34px; font-size: 13px; font-weight: bold; color: #d9534f;">
                 <div style="font-size: 10.5px; color: #0b5e2f; margin-top: 3px;">
                     💡 Biaya sparepart ini <b>otomatis menambah & mengakumulasi Total SPP</b> di Dashboard Pembukuan Toko.
                 </div>
@@ -1048,7 +1048,7 @@
             <!-- Biaya Akhir Servis untuk Pelanggan -->
             <div class="form-group" style="margin-bottom: 8px;">
                 <label style="font-size: 11px; font-weight: 600;">Total Biaya Servis Pelanggan (Rp):</label>
-                <input type="text" id="csInputBiayaAkhir" class="form-control" placeholder="0" onkeyup="formatCurrency(this)" style="height: 34px; font-size: 13px; font-weight: bold; color: #107c41;">
+                <input type="text" id="csInputBiayaAkhir" class="form-control" placeholder="0" oninput="formatCurrency(this)" onkeyup="formatCurrency(this)" style="height: 34px; font-size: 13px; font-weight: bold; color: #107c41;">
             </div>
 
             <!-- Catatan Teknisi -->
@@ -1159,7 +1159,7 @@
             <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
                 <div style="flex: 1; min-width: 140px;">
                     <label style="font-size: 11px; font-weight: 600;">Total Biaya Tagihan (Rp):</label>
-                    <input type="text" id="cpInputTotalBiaya" class="form-control" placeholder="0" onkeyup="formatCurrency(this); calculateCashierChange();" style="height: 36px; font-size: 14px; font-weight: bold; color: #107c41;">
+                    <input type="text" id="cpInputTotalBiaya" class="form-control" placeholder="0" oninput="formatCurrency(this); calculateCashierChange();" onkeyup="formatCurrency(this); calculateCashierChange();" style="height: 36px; font-size: 14px; font-weight: bold; color: #107c41;">
                 </div>
                 <div style="flex: 1; min-width: 130px;">
                     <label style="font-size: 11px; font-weight: 600;">Status Pembayaran:</label>
@@ -1182,7 +1182,7 @@
                 </div>
                 <div style="flex: 1; min-width: 130px;">
                     <label style="font-size: 11px; font-weight: 600;">Uang Diterima (Rp):</label>
-                    <input type="text" id="cpInputUangBayar" class="form-control" placeholder="0" onkeyup="formatCurrency(this); calculateCashierChange();" style="height: 34px; font-size: 13px;">
+                    <input type="text" id="cpInputUangBayar" class="form-control" placeholder="0" oninput="formatCurrency(this); calculateCashierChange();" onkeyup="formatCurrency(this); calculateCashierChange();" style="height: 34px; font-size: 13px;">
                 </div>
             </div>
 
@@ -1257,7 +1257,7 @@
                     </div>
                     <div style="flex: 1; min-width: 120px;">
                         <label style="font-size: 10.5px; font-weight: 600;">Modal Sparepart (SPP) Rp:</label>
-                        <input type="text" id="instInputSparepartBiaya" class="form-control" placeholder="0" onkeyup="formatCurrency(this)" style="height: 32px; font-size: 13px; font-weight: bold; color: #d9534f;">
+                        <input type="text" id="instInputSparepartBiaya" class="form-control" placeholder="0" oninput="formatCurrency(this)" onkeyup="formatCurrency(this)" style="height: 32px; font-size: 13px; font-weight: bold; color: #d9534f;">
                     </div>
                 </div>
                 <div style="font-size: 10px; color: #0b5e2f; margin-top: 3px;">
@@ -1274,7 +1274,7 @@
                 <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 6px;">
                     <div style="flex: 1; min-width: 140px;">
                         <label style="font-size: 10.5px; font-weight: 600;">Total Biaya Servis (Rp):</label>
-                        <input type="text" id="instInputTotalBiaya" class="form-control" placeholder="0" onkeyup="formatCurrency(this); calculateInstantChange();" style="height: 34px; font-size: 14px; font-weight: bold; color: #107c41;">
+                        <input type="text" id="instInputTotalBiaya" class="form-control" placeholder="0" oninput="formatCurrency(this); calculateInstantChange();" onkeyup="formatCurrency(this); calculateInstantChange();" style="height: 34px; font-size: 14px; font-weight: bold; color: #107c41;">
                     </div>
                     <div style="flex: 1; min-width: 120px;">
                         <label style="font-size: 10.5px; font-weight: 600;">Status Pembayaran:</label>
@@ -1297,7 +1297,7 @@
                     </div>
                     <div style="flex: 1; min-width: 120px;">
                         <label style="font-size: 10.5px; font-weight: 600;">Uang Diterima (Rp):</label>
-                        <input type="text" id="instInputUangBayar" class="form-control" placeholder="0" onkeyup="formatCurrency(this); calculateInstantChange();" style="height: 32px; font-size: 13px;">
+                        <input type="text" id="instInputUangBayar" class="form-control" placeholder="0" oninput="formatCurrency(this); calculateInstantChange();" onkeyup="formatCurrency(this); calculateInstantChange();" style="height: 32px; font-size: 13px;">
                     </div>
                 </div>
 
@@ -1801,7 +1801,7 @@
                         <div style="display: flex; gap: 10px;">
                             <div class="form-group" style="flex: 1; margin-bottom: 10px;">
                                 <label>Estimasi Biaya (Rp)</label>
-                                <input type="text" id="srvEstimasiBiaya" class="form-control" placeholder="0" onkeyup="formatCurrency(this)">
+                                <input type="text" id="srvEstimasiBiaya" class="form-control" placeholder="0" oninput="formatCurrency(this)" onkeyup="formatCurrency(this)">
                             </div>
                             <div class="form-group" style="flex: 1; margin-bottom: 10px;">
                                 <label>Tanggal Masuk</label>
@@ -6662,13 +6662,37 @@
         });
     }
 
-    function formatCurrencyInput(input) {
-        var val = input.value.replace(/[^0-9]/g, '');
-        if (val !== '') {
-            input.value = parseInt(val, 10).toLocaleString('id-ID');
+    function formatCurrency(input) {
+        if (!input) return;
+        var cursor = input.selectionStart;
+        var raw = input.value || '';
+        var digitsBefore = (raw.slice(0, cursor).match(/\d/g) || []).length;
+
+        var clean = raw.replace(/[^0-9]/g, '');
+        if (clean !== '') {
+            var formatted = parseInt(clean, 10).toLocaleString('id-ID');
+            input.value = formatted;
+
+            // Pertahankan posisi kursor secara presisi saat mengetik
+            var newCursor = 0;
+            var digitCount = 0;
+            for (var i = 0; i < formatted.length; i++) {
+                if (/\d/.test(formatted[i])) {
+                    digitCount++;
+                }
+                newCursor = i + 1;
+                if (digitCount >= digitsBefore) break;
+            }
+            try {
+                input.setSelectionRange(newCursor, newCursor);
+            } catch(e) {}
         } else {
             input.value = '';
         }
+    }
+
+    function formatCurrencyInput(input) {
+        formatCurrency(input);
     }
 
     function parseNumber(val) {
