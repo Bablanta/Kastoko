@@ -623,6 +623,26 @@
                             <button class="btn btn-primary" onclick="executeRestoreBackup()" style="flex: 1; font-size: 11px; height: 34px; background: #d9534f; cursor: pointer;">⚠️ Restore</button>
                         </div>
                     </div>
+
+                    <!-- Section: Sinkronisasi Database Dua Arah (PC Lokal <-> Server Ubuntu) -->
+                    <div class="settings-section" style="border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px; background: rgba(34, 197, 94, 0.05);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <h3 style="margin: 0; font-size: 13px; color: #15803d; font-weight: bold;">🔄 Sinkronisasi Database LAN</h3>
+                            <span id="syncPeerStatusBadge" style="font-size: 10px; font-weight: bold; padding: 2px 7px; border-radius: 4px; background: #dcfce7; color: #166534;">Dua Arah</span>
+                        </div>
+                        <p style="font-size: 10.5px; color: var(--text-muted); margin: 0 0 8px 0;">Menyinkronkan data servis, pembukuan, dan pelanggan dengan data paling mutakhir (up to date).</p>
+                        
+                        <div style="margin-bottom: 8px;">
+                            <label style="font-size: 10.5px; font-weight: 600; display: block; margin-bottom: 3px; color: var(--text-color);">URL Server Target (Peer):</label>
+                            <input type="text" id="syncPeerUrlInput" class="form-control" style="font-size: 11px; padding: 4px 8px; height: 32px;" placeholder="http://192.168.1.8:8080">
+                        </div>
+
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn" type="button" onclick="testPeerConnection()" style="flex: 1; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--border-color); font-size: 11px; height: 34px; cursor: pointer;">🔍 Tes Koneksi</button>
+                            <button class="btn btn-primary" type="button" id="btnSyncSettings" onclick="syncDatabases()" style="flex: 1.5; font-size: 11px; height: 34px; background: #16a34a; font-weight: bold; cursor: pointer;">🔄 Sinkronkan Sekarang</button>
+                        </div>
+                        <div id="syncResultHint" style="font-size: 10px; color: var(--text-muted); margin-top: 6px; line-height: 1.3;"></div>
+                    </div>
                 </div>
             </div>
 
@@ -1592,7 +1612,7 @@
             </div>
             <div class="header-actions">
                 <button class="btn-icon" onclick="openSettingsModal()" title="Pengaturan">⚙️</button>
-                <button class="btn" onclick="loadTransactions(true); loadServices(true);" style="background: #e6f4ed; color: #107c41;">🔄 Sinkronkan</button>
+                <button class="btn" id="btnSyncHeader" onclick="syncDatabases()" style="background: #e6f4ed; color: #107c41; font-weight: 600;" title="Sinkronkan database dua arah antara PC Lokal dan Server Ubuntu">🔄 Sinkronkan</button>
                 <button class="btn btn-primary" id="exportBtnHeader" style="background: #fff; color: #107c41;" onclick="exportToExcel()">📊 Export (.xls)</button>
                 <button class="btn btn-danger" id="resetBtn" onclick="resetData()">🗑️ Reset</button>
                 <button class="btn" onclick="logout()" style="background: #333; color: #fff;">🚪 Keluar</button>
@@ -5566,7 +5586,24 @@
                     if (s.wa_target) {
                         localStorage.setItem('autocash_wa_target', s.wa_target);
                     }
-                    var setWa = document.getElementById('settingWaTarget');
+                    var setPeer = document.getElementById('syncPeerUrlInput');
+        if (setPeer) {
+            fetch('/api/settings')
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                    if (d.success && d.settings && d.settings.sync_peer_url) {
+                        setPeer.value = d.settings.sync_peer_url;
+                    } else if (!setPeer.value) {
+                        setPeer.value = (window.location.hostname === '192.168.1.8') ? 'http://192.168.1.50:8080' : 'http://192.168.1.8:8080';
+                    }
+                })
+                .catch(function() {
+                    if (!setPeer.value) {
+                        setPeer.value = (window.location.hostname === '192.168.1.8') ? 'http://192.168.1.50:8080' : 'http://192.168.1.8:8080';
+                    }
+                });
+        }
+        var setWa = document.getElementById('settingWaTarget');
                     if (setWa) setWa.value = localStorage.getItem('autocash_wa_target') || 'desktop';
 
                     if (s.theme_superadmin) localStorage.setItem('autocash_theme_superadmin', s.theme_superadmin);
@@ -6157,6 +6194,129 @@
         document.getElementById('settingsModal').style.display = 'none';
         pendingLogoBase64 = null;
         loadAppLogo();
+    }
+
+    function syncDatabases() {
+        var btnHeader = document.getElementById('btnSyncHeader');
+        var btnSettings = document.getElementById('btnSyncSettings');
+        var origHeader = btnHeader ? btnHeader.innerHTML : '🔄 Sinkronkan';
+        var origSettings = btnSettings ? btnSettings.innerHTML : '🔄 Sinkronkan Sekarang';
+
+        if (btnHeader) {
+            btnHeader.disabled = true;
+            btnHeader.innerHTML = '⏳ Sinkron...';
+        }
+        if (btnSettings) {
+            btnSettings.disabled = true;
+            btnSettings.innerHTML = '⏳ Sinkron...';
+        }
+
+        var syncStatusEl = document.getElementById('syncStatus');
+        if (syncStatusEl) syncStatusEl.innerText = '🟡 Menyinkronkan...';
+
+        var peerInput = document.getElementById('syncPeerUrlInput');
+        var customPeer = (peerInput && peerInput.value) ? peerInput.value.trim() : '';
+
+        if (customPeer) {
+            fetch('/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key: 'sync_peer_url', value: customPeer })
+            }).catch(function() {});
+        }
+
+        showToast("🔄 Sedang menyinkronkan database dengan Server Ubuntu...", "info", 5000);
+
+        fetch('/api/sync/bidirectional', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ peer_url: customPeer })
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(res) {
+            if (btnHeader) { btnHeader.disabled = false; btnHeader.innerHTML = origHeader; }
+            if (btnSettings) { btnSettings.disabled = false; btnSettings.innerHTML = origSettings; }
+
+            if (res.success) {
+                var pIn = res.pulled || {};
+                var pOut = res.pushed || {};
+                var inCount = (pIn.services_inserted || 0) + (pIn.services_updated || 0) + 
+                              (pIn.transactions_inserted || 0) + (pIn.transactions_updated || 0) +
+                              (pIn.customers_inserted || 0) + (pIn.customers_updated || 0);
+                var outCount = (pOut.services_inserted || 0) + (pOut.services_updated || 0) + 
+                               (pOut.transactions_inserted || 0) + (pOut.transactions_updated || 0) +
+                               (pOut.customers_inserted || 0) + (pOut.customers_updated || 0);
+
+                var parts = [];
+                if (inCount > 0) parts.push("📥 Diterima: " + inCount);
+                if (outCount > 0) parts.push("📤 Terkirim: " + outCount);
+                if (parts.length === 0) parts.push("Semua data lokal & server sudah yang paling up-to-date");
+
+                var summaryMsg = "✅ Sinkronisasi Berhasil! " + parts.join(" | ");
+                showToast(summaryMsg, "success", 6000);
+
+                var hintEl = document.getElementById('syncResultHint');
+                if (hintEl) {
+                    hintEl.innerHTML = '<span style="color:#16a34a; font-weight:bold;">' + summaryMsg + ' (' + (res.timestamp || '') + ')</span>';
+                }
+
+                if (syncStatusEl) {
+                    syncStatusEl.innerText = '🟢 Sinkron: ' + (res.peer_url || 'Server');
+                }
+
+                // Muat ulang data terbaru ke tampilan UI
+                loadTransactions(false);
+                loadServices(false);
+            } else {
+                if (syncStatusEl) syncStatusEl.innerText = '🔴 Offline / Local Only';
+                var errTxt = res.message || "Gagal menyinkronkan database dengan server target.";
+                showToast("⚠️ " + errTxt, "warning", 6000);
+                var hintEl = document.getElementById('syncResultHint');
+                if (hintEl) {
+                    hintEl.innerHTML = '<span style="color:#dc2626;">⚠️ ' + errTxt + '</span>';
+                }
+                loadTransactions(false);
+                loadServices(false);
+            }
+        })
+        .catch(function(err) {
+            if (btnHeader) { btnHeader.disabled = false; btnHeader.innerHTML = origHeader; }
+            if (btnSettings) { btnSettings.disabled = false; btnSettings.innerHTML = origSettings; }
+            if (syncStatusEl) syncStatusEl.innerText = '🔴 Mode Offline';
+            console.error("Sinkronisasi error:", err);
+            showToast("⚠️ Server target tidak terjangkau (Offline). Mode lokal tetap aktif.", "warning", 5000);
+            loadTransactions(false);
+            loadServices(false);
+        });
+    }
+
+    function testPeerConnection() {
+        var peerInput = document.getElementById('syncPeerUrlInput');
+        var peerUrl = (peerInput && peerInput.value) ? peerInput.value.trim().replace(/\/$/, '') : 'http://192.168.1.8:8080';
+        var hintEl = document.getElementById('syncResultHint');
+        if (hintEl) hintEl.innerHTML = '<span>⏳ Menghubungi ' + peerUrl + '...</span>';
+
+        fetch('/api/sync/bidirectional', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ peer_url: peerUrl })
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(res) {
+            if (res.success) {
+                if (hintEl) hintEl.innerHTML = '<span style="color:#16a34a; font-weight:bold;">🟢 Terhubung & Sinkron Sukses! (' + (res.peer_url || '') + ')</span>';
+                showToast("🟢 Server Peer terjangkau dan sinkron!", "success");
+                loadTransactions(false);
+                loadServices(false);
+            } else {
+                if (hintEl) hintEl.innerHTML = '<span style="color:#dc2626;">🔴 Tidak terhubung: ' + res.message + '</span>';
+                showToast("🔴 Gagal: " + res.message, "warning");
+            }
+        })
+        .catch(function(e) {
+            if (hintEl) hintEl.innerHTML = '<span style="color:#dc2626;">🔴 Server tidak terjangkau di ' + peerUrl + '</span>';
+            showToast("🔴 Server target tidak terjangkau di jaringan LAN.", "error");
+        });
     }
 
     function loadTransactions(isManualSync) {

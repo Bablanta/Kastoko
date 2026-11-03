@@ -3,10 +3,14 @@ import hashlib
 import re
 import socketserver
 import os
+import sys
 import json
 import sqlite3
 import datetime
 import urllib.parse
+import urllib.request
+import socket
+import shutil
 import threading
 import signal
 import time
@@ -218,6 +222,48 @@ def init_db():
         except Exception as e:
             print(f"[WARNING] Gagal migrasi created_by: {e}")
 
+    # Migrasi kolom updated_at pada services
+    if "updated_at" not in s_cols:
+        try:
+            cursor.execute("ALTER TABLE services ADD COLUMN updated_at TEXT DEFAULT ''")
+            cursor.execute("UPDATE services SET updated_at = COALESCE(NULLIF(created_at, ''), CURRENT_TIMESTAMP)")
+            conn.commit()
+            print("[INFO] Kolom 'updated_at' berhasil ditambahkan ke tabel services.")
+        except Exception as e:
+            print(f"[WARNING] Gagal migrasi updated_at pada services: {e}")
+
+    # Migrasi kolom updated_at & created_at pada transactions
+    cursor.execute("PRAGMA table_info(transactions)")
+    tx_cols = [col[1] for col in cursor.fetchall()]
+    if "updated_at" not in tx_cols:
+        try:
+            cursor.execute("ALTER TABLE transactions ADD COLUMN updated_at TEXT DEFAULT ''")
+            cursor.execute("UPDATE transactions SET updated_at = tanggal || ' 12:00:00'")
+            conn.commit()
+            print("[INFO] Kolom 'updated_at' berhasil ditambahkan ke tabel transactions.")
+        except Exception as e:
+            print(f"[WARNING] Gagal migrasi updated_at pada transactions: {e}")
+    if "created_at" not in tx_cols:
+        try:
+            cursor.execute("ALTER TABLE transactions ADD COLUMN created_at TEXT DEFAULT ''")
+            cursor.execute("UPDATE transactions SET created_at = tanggal || ' 12:00:00'")
+            conn.commit()
+            print("[INFO] Kolom 'created_at' berhasil ditambahkan ke tabel transactions.")
+        except Exception as e:
+            print(f"[WARNING] Gagal migrasi created_at pada transactions: {e}")
+
+    # Migrasi kolom updated_at pada users
+    cursor.execute("PRAGMA table_info(users)")
+    usr_cols = [col[1] for col in cursor.fetchall()]
+    if "updated_at" not in usr_cols:
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN updated_at TEXT DEFAULT ''")
+            cursor.execute("UPDATE users SET updated_at = COALESCE(NULLIF(created_at, ''), CURRENT_TIMESTAMP)")
+            conn.commit()
+            print("[INFO] Kolom 'updated_at' berhasil ditambahkan ke tabel users.")
+        except Exception as e:
+            print(f"[WARNING] Gagal migrasi updated_at pada users: {e}")
+
     # Migrasi otomatis dari transactions.json lama jika database masih kosong
     cursor.execute("SELECT COUNT(*) FROM transactions")
     count = cursor.fetchone()[0]
@@ -279,6 +325,472 @@ def auto_save_customer(cursor, nama, no_hp, alamat=""):
         cursor.execute("INSERT INTO customers (nama, no_hp, alamat, total_servis) VALUES (?, ?, ?, 1)", (nama, no_hp, alamat))
         return cursor.lastrowid
 
+def make_db_backup(prefix="pembukuan_pre_sync"):
+    """Buat salinan backup pembukuan.db secara aman menggunakan SQLite backup API"""
+    try:
+        if not os.path.exists(BACKUP_DIR):
+            os.makedirs(BACKUP_DIR, exist_ok=True)
+        ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_filename = f"{prefix}_{ts}.db"
+        backup_path = os.path.join(BACKUP_DIR, backup_filename)
+
+        src_conn = sqlite3.connect(DB_FILE)
+        dst_conn = sqlite3.connect(backup_path)
+        src_conn.backup(dst_conn)
+        dst_conn.close()
+        src_conn.close()
+
+        # Bersihkan backup lama jika melebihi batas simpan (maksimal 40 snapshot)
+        try:
+            all_backups = sorted([f for f in os.listdir(BACKUP_DIR) if f.startswith("pembukuan_") and f.endswith(".db")])
+            if len(all_backups) > 40:
+                for old_f in all_backups[:-40]:
+                    try:
+                        os.remove(os.path.join(BACKUP_DIR, old_f))
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
+        return backup_filename
+    except Exception as e:
+        print(f"[WARNING] Gagal membuat backup database otomatis: {e}")
+        return None
+
+def get_peer_url(cursor=None):
+    """Mendapatkan URL server peer (Ubuntu 192.168.1.8 atau PC Lokal 192.168.1.50)"""
+    if cursor:
+        try:
+            cursor.execute("SELECT value FROM settings WHERE key = 'sync_peer_url'")
+            row = cursor.fetchone()
+            if row and row[0] and row[0].strip():
+                return row[0].strip().rstrip('/')
+        except Exception:
+            pass
+
+    env_peer = os.environ.get("SYNC_PEER_URL", "").strip()
+    if env_peer:
+        return env_peer.rstrip('/')
+
+    # Auto-detect berdasarkan OS & platform
+    if os.name == 'nt' or 'win' in sys.platform.lower():
+        return "http://192.168.1.8:8080"
+    else:
+        return "http://192.168.1.50:8080"
+
+def get_sync_export_data():
+    """Mengambil seluruh data pembukuan, servis, pelanggan, users, dan settings dalam format JSON standar"""
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    # 1. Services
+    cursor.execute("SELECT * FROM services ORDER BY id ASC")
+    services = [dict(r) for r in cursor.fetchall()]
+
+    # 2. Transactions (dilengkapi kode_servis jika terkait dengan tiket servis)
+    cursor.execute('''
+        SELECT t.*, s.kode_servis as service_kode
+        FROM transactions t
+        LEFT JOIN services s ON t.service_id = s.id
+        ORDER BY t.id ASC
+    ''')
+    transactions = [dict(r) for r in cursor.fetchall()]
+
+    # 3. Customers
+    cursor.execute("SELECT * FROM customers ORDER BY id ASC")
+    customers = [dict(r) for r in cursor.fetchall()]
+
+    # 4. Users (kecuali password plaintext, password_hash aman disertakan)
+    cursor.execute("SELECT id, username, fullname, password_hash, role, phone, status, created_at, approved_by, approved_at, notes, updated_at FROM users ORDER BY id ASC")
+    users = [dict(r) for r in cursor.fetchall()]
+
+    # 5. Settings (kecuali sync_peer_url agar masing-masing node punya peer target sendiri)
+    cursor.execute("SELECT key, value FROM settings")
+    settings = {r["key"]: r["value"] for r in cursor.fetchall() if r["key"] != "sync_peer_url"}
+
+    conn.close()
+    return {
+        "services": services,
+        "transactions": transactions,
+        "customers": customers,
+        "users": users,
+        "settings": settings,
+        "exported_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+
+def execute_smart_merge(remote_data):
+    """
+    Melakukan smart merge data dari remote ke database lokal.
+    Aturan konflik: Data dengan inputan / updated_at terakhir (paling baru) yang menang.
+    Data yang belum ada di lokal otomatis ditambahkan (INSERT).
+    """
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    stats = {
+        "services_inserted": 0,
+        "services_updated": 0,
+        "transactions_inserted": 0,
+        "transactions_updated": 0,
+        "customers_inserted": 0,
+        "customers_updated": 0,
+        "users_inserted": 0,
+        "users_updated": 0,
+        "settings_updated": 0
+    }
+
+    now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # 1. MERGE CUSTOMERS
+    remote_customers = remote_data.get("customers", [])
+    for rc in remote_customers:
+        nama = str(rc.get("nama") or "").strip()
+        no_hp = str(rc.get("no_hp") or "").strip()
+        alamat = str(rc.get("alamat") or "").strip()
+        r_total = int(rc.get("total_servis") or 1)
+        r_updated = str(rc.get("updated_at") or rc.get("created_at") or "")
+
+        if not nama:
+            continue
+
+        if no_hp:
+            cursor.execute("SELECT * FROM customers WHERE no_hp = ?", (no_hp,))
+        else:
+            cursor.execute("SELECT * FROM customers WHERE nama = ?", (nama,))
+        lc = cursor.fetchone()
+
+        if not lc:
+            cursor.execute('''
+                INSERT INTO customers (nama, no_hp, alamat, total_servis, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (nama, no_hp, alamat, r_total, rc.get("created_at") or now_str, r_updated or now_str))
+            stats["customers_inserted"] += 1
+        else:
+            l_updated = str(lc["updated_at"] or lc["created_at"] or "")
+            l_total = int(lc["total_servis"] or 0)
+            max_total = max(l_total, r_total)
+            if r_updated > l_updated:
+                cursor.execute('''
+                    UPDATE customers SET
+                        nama = ?,
+                        no_hp = ?,
+                        alamat = CASE WHEN ? != '' THEN ? ELSE alamat END,
+                        total_servis = ?,
+                        updated_at = ?
+                    WHERE id = ?
+                ''', (nama, no_hp, alamat, alamat, max_total, r_updated, lc["id"]))
+                stats["customers_updated"] += 1
+            elif max_total > l_total:
+                cursor.execute("UPDATE customers SET total_servis = ? WHERE id = ?", (max_total, lc["id"]))
+
+    # 2. MERGE SERVICES
+    remote_services = remote_data.get("services", [])
+    for rs in remote_services:
+        kode_servis = str(rs.get("kode_servis") or "").strip()
+        if not kode_servis:
+            continue
+
+        r_updated = str(rs.get("updated_at") or rs.get("created_at") or "")
+        r_created = str(rs.get("created_at") or rs.get("tanggal_masuk") or now_str)
+
+        cust_id = None
+        c_nama = str(rs.get("nama_pelanggan") or "").strip()
+        c_hp = str(rs.get("no_hp") or "").strip()
+        if c_hp:
+            cursor.execute("SELECT id FROM customers WHERE no_hp = ?", (c_hp,))
+        elif c_nama:
+            cursor.execute("SELECT id FROM customers WHERE nama = ?", (c_nama,))
+        crow = cursor.fetchone()
+        if crow:
+            cust_id = crow[0]
+
+        cursor.execute("SELECT * FROM services WHERE kode_servis = ?", (kode_servis,))
+        ls = cursor.fetchone()
+
+        if not ls:
+            cursor.execute('''
+                INSERT INTO services (
+                    kode_servis, customer_id, nama_pelanggan, no_hp,
+                    jenis_perangkat, merk_model, keluhan, catatan_teknisi,
+                    menu_servis, status_servis, estimasi_biaya, biaya_akhir,
+                    status_pembayaran, sparepart_nama, sparepart_biaya,
+                    metode_pembayaran, teknisi_nama, mitra_nama, created_by,
+                    tanggal_masuk, tanggal_selesai, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                kode_servis, cust_id, rs.get("nama_pelanggan", ""), rs.get("no_hp", ""),
+                rs.get("jenis_perangkat", ""), rs.get("merk_model", ""), rs.get("keluhan", ""),
+                rs.get("catatan_teknisi", ""), rs.get("menu_servis", ""), rs.get("status_servis", "Baru"),
+                float(rs.get("estimasi_biaya") or 0), float(rs.get("biaya_akhir") or 0),
+                rs.get("status_pembayaran", "Belum Bayar"), rs.get("sparepart_nama", ""),
+                float(rs.get("sparepart_biaya") or 0), rs.get("metode_pembayaran", "Tunai"),
+                rs.get("teknisi_nama", ""), rs.get("mitra_nama", ""), rs.get("created_by", ""),
+                rs.get("tanggal_masuk", ""), rs.get("tanggal_selesai", ""),
+                r_created, r_updated or now_str
+            ))
+            stats["services_inserted"] += 1
+        else:
+            l_updated = str(ls["updated_at"] or ls["created_at"] or "")
+            status_order = {'Diambil': 4, 'Selesai': 3, 'Instan': 3, 'Proses': 2, 'Pending': 1, 'Baru': 1, 'Batal': 0}
+            r_status_val = status_order.get(rs.get("status_servis"), 0)
+            l_status_val = status_order.get(ls["status_servis"], 0)
+
+            if r_updated > l_updated or (r_updated == l_updated and r_status_val > l_status_val):
+                cursor.execute('''
+                    UPDATE services SET
+                        customer_id = COALESCE(?, customer_id),
+                        nama_pelanggan = ?,
+                        no_hp = ?,
+                        jenis_perangkat = ?,
+                        merk_model = ?,
+                        keluhan = ?,
+                        catatan_teknisi = ?,
+                        menu_servis = ?,
+                        status_servis = ?,
+                        estimasi_biaya = ?,
+                        biaya_akhir = ?,
+                        status_pembayaran = ?,
+                        sparepart_nama = ?,
+                        sparepart_biaya = ?,
+                        metode_pembayaran = ?,
+                        teknisi_nama = CASE WHEN ? != '' THEN ? ELSE teknisi_nama END,
+                        mitra_nama = CASE WHEN ? != '' THEN ? ELSE mitra_nama END,
+                        created_by = CASE WHEN ? != '' THEN ? ELSE created_by END,
+                        tanggal_masuk = ?,
+                        tanggal_selesai = ?,
+                        updated_at = ?
+                    WHERE id = ?
+                ''', (
+                    cust_id, rs.get("nama_pelanggan", ""), rs.get("no_hp", ""),
+                    rs.get("jenis_perangkat", ""), rs.get("merk_model", ""), rs.get("keluhan", ""),
+                    rs.get("catatan_teknisi", ""), rs.get("menu_servis", ""), rs.get("status_servis", "Baru"),
+                    float(rs.get("estimasi_biaya") or 0), float(rs.get("biaya_akhir") or 0),
+                    rs.get("status_pembayaran", "Belum Bayar"), rs.get("sparepart_nama", ""),
+                    float(rs.get("sparepart_biaya") or 0), rs.get("metode_pembayaran", "Tunai"),
+                    rs.get("teknisi_nama", ""), rs.get("teknisi_nama", ""),
+                    rs.get("mitra_nama", ""), rs.get("mitra_nama", ""),
+                    rs.get("created_by", ""), rs.get("created_by", ""),
+                    rs.get("tanggal_masuk", ""), rs.get("tanggal_selesai", ""),
+                    r_updated, ls["id"]
+                ))
+                stats["services_updated"] += 1
+
+    # 3. MERGE TRANSACTIONS
+    remote_transactions = remote_data.get("transactions", [])
+    for rt in remote_transactions:
+        t_tanggal = str(rt.get("tanggal") or "").strip()
+        t_omset = float(rt.get("omset") or 0)
+        t_spp = float(rt.get("spp") or 0)
+        t_opp = float(rt.get("opp") or 0)
+        t_jasa = float(rt.get("jasa") or 0)
+        t_hasil = float(rt.get("hasil") or 0)
+        t_catatan = str(rt.get("catatan") or "").strip()
+        t_srv_kode = str(rt.get("service_kode") or "").strip()
+        r_updated = str(rt.get("updated_at") or rt.get("created_at") or f"{t_tanggal} 12:00:00")
+        r_created = str(rt.get("created_at") or f"{t_tanggal} 12:00:00")
+
+        if not t_tanggal:
+            continue
+
+        local_service_id = None
+        if t_srv_kode:
+            cursor.execute("SELECT id FROM services WHERE kode_servis = ?", (t_srv_kode,))
+            srow = cursor.fetchone()
+            if srow:
+                local_service_id = srow[0]
+
+        lt = None
+        if local_service_id:
+            cursor.execute("SELECT * FROM transactions WHERE service_id = ?", (local_service_id,))
+            lt = cursor.fetchone()
+        else:
+            cursor.execute("SELECT * FROM transactions WHERE service_id IS NULL AND tanggal = ? AND catatan = ?", (t_tanggal, t_catatan))
+            lt = cursor.fetchone()
+            if not lt and not t_catatan:
+                cursor.execute("SELECT * FROM transactions WHERE service_id IS NULL AND tanggal = ?", (t_tanggal,))
+                lt = cursor.fetchone()
+
+        if not lt:
+            cursor.execute('''
+                INSERT INTO transactions (tanggal, omset, spp, opp, jasa, hasil, catatan, service_id, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (t_tanggal, t_omset, t_spp, t_opp, t_jasa, t_hasil, t_catatan, local_service_id, r_created, r_updated))
+            stats["transactions_inserted"] += 1
+        else:
+            l_updated = str(lt["updated_at"] or lt["created_at"] or f"{lt['tanggal']} 12:00:00")
+            if r_updated > l_updated:
+                cursor.execute('''
+                    UPDATE transactions SET
+                        tanggal = ?,
+                        omset = ?,
+                        spp = ?,
+                        opp = ?,
+                        jasa = ?,
+                        hasil = ?,
+                        catatan = ?,
+                        service_id = COALESCE(?, service_id),
+                        updated_at = ?
+                    WHERE id = ?
+                ''', (t_tanggal, t_omset, t_spp, t_opp, t_jasa, t_hasil, t_catatan, local_service_id, r_updated, lt["id"]))
+                stats["transactions_updated"] += 1
+
+    # 4. MERGE USERS
+    remote_users = remote_data.get("users", [])
+    for ru in remote_users:
+        u_name = str(ru.get("username") or "").strip()
+        if not u_name:
+            continue
+        cursor.execute("SELECT * FROM users WHERE username = ?", (u_name,))
+        lu = cursor.fetchone()
+        r_updated = str(ru.get("updated_at") or ru.get("created_at") or "")
+        r_created = str(ru.get("created_at") or now_str)
+
+        if not lu:
+            cursor.execute('''
+                INSERT INTO users (username, fullname, password_hash, role, phone, status, created_at, approved_by, approved_at, notes, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                u_name, ru.get("fullname", ""), ru.get("password_hash", ""), ru.get("role", "admin"),
+                ru.get("phone", ""), ru.get("status", "pending"), r_created,
+                ru.get("approved_by", ""), ru.get("approved_at", ""), ru.get("notes", ""), r_updated or now_str
+            ))
+            stats["users_inserted"] += 1
+        else:
+            l_updated = str(lu["updated_at"] or lu["created_at"] or "")
+            if r_updated > l_updated:
+                new_role = ru.get("role", lu["role"])
+                if lu["role"] == "superadmin":
+                    new_role = "superadmin"
+                cursor.execute('''
+                    UPDATE users SET
+                        fullname = ?,
+                        password_hash = CASE WHEN ? != '' THEN ? ELSE password_hash END,
+                        role = ?,
+                        phone = ?,
+                        status = ?,
+                        approved_by = ?,
+                        approved_at = ?,
+                        notes = ?,
+                        updated_at = ?
+                    WHERE username = ?
+                ''', (
+                    ru.get("fullname", lu["fullname"]),
+                    ru.get("password_hash", ""), ru.get("password_hash", ""),
+                    new_role, ru.get("phone", lu["phone"]),
+                    ru.get("status", lu["status"]),
+                    ru.get("approved_by", lu["approved_by"]),
+                    ru.get("approved_at", lu["approved_at"]),
+                    ru.get("notes", lu["notes"]),
+                    r_updated, u_name
+                ))
+                stats["users_updated"] += 1
+
+    # 5. MERGE SETTINGS
+    remote_settings = remote_data.get("settings", {})
+    if isinstance(remote_settings, dict):
+        for sk, sv in remote_settings.items():
+            if sk in ("sync_peer_url",):
+                continue
+            cursor.execute("SELECT value FROM settings WHERE key = ?", (sk,))
+            l_set = cursor.fetchone()
+            if not l_set:
+                cursor.execute("INSERT INTO settings (key, value) VALUES (?, ?)", (sk, str(sv)))
+                stats["settings_updated"] += 1
+            elif (not l_set[0] or l_set[0] == '') and sv:
+                cursor.execute("UPDATE settings SET value = ? WHERE key = ?", (str(sv), sk))
+                stats["settings_updated"] += 1
+
+    conn.commit()
+    conn.close()
+    return stats
+
+def handle_bidirectional_sync(custom_peer_url=None):
+    """
+    Eksekusi sinkronisasi dua arah otomatis antara PC Lokal dan Server Ubuntu.
+    1. Backup lokal
+    2. Pull data dari peer -> Smart merge lokal
+    3. Push data gabungan lokal ke peer -> Smart merge peer
+    """
+    backup_file = make_db_backup(prefix="pembukuan_pre_sync")
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    peer_url = custom_peer_url or get_peer_url(cursor)
+    conn.close()
+
+    peer_url = peer_url.rstrip('/')
+
+    # 3. Ping peer untuk verifikasi koneksi jaringan LAN
+    ping_url = f"{peer_url}/api/sync/ping"
+    try:
+        req = urllib.request.Request(ping_url, headers={'User-Agent': 'KasTokoSync/1.0'})
+        with urllib.request.urlopen(req, timeout=4) as resp:
+            ping_data = json.loads(resp.read().decode('utf-8'))
+            if not ping_data.get("success"):
+                raise Exception("Respon ping server peer tidak valid.")
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Tidak dapat terhubung ke server target ({peer_url}). Pastikan server Ubuntu menyala dan berada dalam 1 jaringan Wi-Fi/LAN.",
+            "error_detail": str(e),
+            "peer_url": peer_url
+        }
+
+    # 4. PULL DATA DARI PEER
+    export_url = f"{peer_url}/api/sync/export"
+    try:
+        req = urllib.request.Request(export_url, headers={'User-Agent': 'KasTokoSync/1.0'})
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            remote_export = json.loads(resp.read().decode('utf-8'))
+            if not remote_export.get("success"):
+                raise Exception(remote_export.get("message", "Gagal export data dari peer."))
+            remote_data = remote_export.get("data", {})
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Gagal mengunduh (pull) data dari server {peer_url}: {e}",
+            "peer_url": peer_url
+        }
+
+    # 5. LOCAL SMART MERGE
+    pulled_stats = execute_smart_merge(remote_data)
+
+    # 6. PUSH DATA GABUNGAN KE PEER
+    merged_local_export = get_sync_export_data()
+    import_url = f"{peer_url}/api/sync/import"
+    try:
+        payload = json.dumps({"data": merged_local_export}).encode('utf-8')
+        req = urllib.request.Request(
+            import_url,
+            data=payload,
+            headers={'Content-Type': 'application/json', 'User-Agent': 'KasTokoSync/1.0'},
+            method='POST'
+        )
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            peer_import_resp = json.loads(resp.read().decode('utf-8'))
+            if not peer_import_resp.get("success"):
+                raise Exception(peer_import_resp.get("message", "Gagal import data di server peer."))
+            pushed_stats = peer_import_resp.get("stats", {})
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Data berhasil diperbarui di lokal, namun gagal mengirim (push) ke server {peer_url}: {e}",
+            "pulled": pulled_stats,
+            "peer_url": peer_url
+        }
+
+    return {
+        "success": True,
+        "message": f"Sinkronisasi database dua arah berhasil dengan server {peer_url}!",
+        "peer_url": peer_url,
+        "backup_created": backup_file,
+        "pulled": pulled_stats,
+        "pushed": pushed_stats,
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+
 init_db()
 
 class CustomHandler(http.server.SimpleHTTPRequestHandler):
@@ -296,7 +808,35 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         path = parsed.path
         query = urllib.parse.parse_qs(parsed.query)
 
-        if path == "/api/transactions":
+        if path == "/api/sync/ping":
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            import socket
+            res = {
+                "success": True,
+                "server": "KasToko",
+                "hostname": socket.gethostname(),
+                "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+            self.wfile.write(json.dumps(res).encode('utf-8'))
+            return
+
+        elif path == "/api/sync/export":
+            try:
+                data = get_sync_export_data()
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True, "data": data}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
+            return
+
+        elif path == "/api/transactions":
             try:
                 role_req = str(query.get('role', [None])[0] or '').strip().lower()
                 if role_req in ('teknisi', 'mitra'):
@@ -309,7 +849,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 conn = sqlite3.connect(DB_FILE)
                 conn.row_factory = sqlite3.Row
                 cursor = conn.cursor()
-                cursor.execute("SELECT id, tanggal, omset, spp, opp, jasa, hasil, catatan, service_id FROM transactions ORDER BY id ASC")
+                cursor.execute("SELECT id, tanggal, omset, spp, opp, jasa, hasil, catatan, service_id, created_at, updated_at FROM transactions ORDER BY id ASC")
                 rows = cursor.fetchall()
                 
                 transactions = []
@@ -323,7 +863,9 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                         "jasa": float(row["jasa"] or 0),
                         "hasil": float(row["hasil"] or 0),
                         "catatan": row["catatan"] or "",
-                        "service_id": row["service_id"] if "service_id" in row.keys() else None
+                        "service_id": row["service_id"] if "service_id" in row.keys() else None,
+                        "created_at": row["created_at"] if "created_at" in row.keys() else "",
+                        "updated_at": row["updated_at"] if "updated_at" in row.keys() else ""
                     })
                 conn.close()
 
@@ -663,7 +1205,50 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
 
-        if path == "/api/transactions":
+        if path == "/api/sync/import":
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                req_json = json.loads(post_data.decode('utf-8'))
+                remote_data = req_json.get("data", {})
+                
+                # Buat safety backup otomatis sebelum import data
+                make_db_backup(prefix="pembukuan_pre_import")
+                
+                stats = execute_smart_merge(remote_data)
+                
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True, "stats": stats, "message": "Import smart merge berhasil."}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
+            return
+
+        elif path == "/api/sync/bidirectional":
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length) if content_length > 0 else b'{}'
+            try:
+                req_json = json.loads(post_data.decode('utf-8')) if post_data else {}
+                custom_peer_url = req_json.get("peer_url")
+                
+                result = handle_bidirectional_sync(custom_peer_url)
+                
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps(result).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
+            return
+
+        elif path == "/api/transactions":
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length)
             
@@ -673,22 +1258,26 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
 
                 conn = sqlite3.connect(DB_FILE)
                 cursor = conn.cursor()
+                now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 
                 # Replace all transactions
                 cursor.execute("DELETE FROM transactions")
                 for t in transactions:
+                    t_tanggal = str(t.get('tanggal', '')).strip()
                     cursor.execute('''
-                        INSERT INTO transactions (tanggal, omset, spp, opp, jasa, hasil, catatan, service_id)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        INSERT INTO transactions (tanggal, omset, spp, opp, jasa, hasil, catatan, service_id, created_at, updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ''', (
-                        t.get('tanggal', ''),
+                        t_tanggal,
                         float(t.get('omset', 0) or 0),
                         float(t.get('spp', 0) or 0),
                         float(t.get('opp', 0) or 0),
                         float(t.get('jasa', 0) or 0),
                         float(t.get('hasil', 0) or 0),
                         str(t.get('catatan', '') or ''),
-                        t.get('service_id')
+                        t.get('service_id'),
+                        t.get('created_at') or f"{t_tanggal} 12:00:00",
+                        t.get('updated_at') or now_str
                     ))
                 conn.commit()
                 conn.close()
@@ -1127,6 +1716,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 # Simpan otomatis data pelanggan ke tabel customers
                 cust_id = auto_save_customer(cursor, nama_pelanggan, no_hp)
 
+                now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 if srv_id:
                     cursor.execute('''
                         UPDATE services SET
@@ -1148,7 +1738,8 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                             teknisi_nama = CASE WHEN ? != '' THEN ? ELSE teknisi_nama END,
                             mitra_nama = CASE WHEN ? != '' THEN ? ELSE mitra_nama END,
                             tanggal_masuk = ?,
-                            tanggal_selesai = ?
+                            tanggal_selesai = ?,
+                            updated_at = ?
                         WHERE id = ?
                     ''', (
                         cust_id, nama_pelanggan, no_hp, jenis_perangkat, merk_model,
@@ -1156,7 +1747,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                         estimasi_biaya, biaya_akhir, status_pembayaran,
                         sparepart_nama, sparepart_biaya, metode_pembayaran,
                         teknisi_nama, teknisi_nama, mitra_nama, mitra_nama,
-                        tanggal_masuk, tanggal_selesai, srv_id
+                        tanggal_masuk, tanggal_selesai, now_str, srv_id
                     ))
                     saved_id = srv_id
                     msg = "Data servis berhasil diperbarui."
@@ -1169,15 +1760,15 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                             menu_servis, status_servis, estimasi_biaya, biaya_akhir,
                             status_pembayaran, sparepart_nama, sparepart_biaya,
                             metode_pembayaran, teknisi_nama, mitra_nama, created_by,
-                            tanggal_masuk, tanggal_selesai
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            tanggal_masuk, tanggal_selesai, created_at, updated_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ''', (
                         kode_servis, cust_id, nama_pelanggan, no_hp,
                         jenis_perangkat, merk_model, keluhan, catatan_teknisi,
                         menu_servis, status_servis, estimasi_biaya, biaya_akhir,
                         status_pembayaran, sparepart_nama, sparepart_biaya,
                         metode_pembayaran, teknisi_nama, mitra_nama, created_by,
-                        tanggal_masuk, tanggal_selesai
+                        tanggal_masuk, tanggal_selesai, now_str, now_str
                     ))
                     saved_id = cursor.lastrowid
                     msg = f"Tiket servis baru #{kode_servis} berhasil disimpan."
@@ -1254,6 +1845,10 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     updates.append("teknisi_nama = ?")
                     params.append(str(data.get('teknisi_nama', '')).strip())
 
+                now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                updates.append("updated_at = ?")
+                params.append(now_str)
+
                 params.append(srv_id)
                 cursor.execute(f"UPDATE services SET {', '.join(updates)} WHERE id = ?", params)
 
@@ -1304,14 +1899,15 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                                     spp = ?,
                                     jasa = ?,
                                     hasil = ?,
-                                    catatan = ?
+                                    catatan = ?,
+                                    updated_at = ?
                                 WHERE service_id = ?
-                            ''', (today_str, omset_val, spp_val, jasa_val, hasil_val, desc, srv_id))
+                            ''', (today_str, omset_val, spp_val, jasa_val, hasil_val, desc, now_str, srv_id))
                         else:
                             cursor.execute('''
-                                INSERT INTO transactions (tanggal, omset, spp, opp, jasa, hasil, catatan, service_id)
-                                VALUES (?, ?, ?, 0, ?, ?, ?, ?)
-                            ''', (today_str, omset_val, spp_val, jasa_val, hasil_val, desc, srv_id))
+                                INSERT INTO transactions (tanggal, omset, spp, opp, jasa, hasil, catatan, service_id, created_at, updated_at)
+                                VALUES (?, ?, ?, 0, ?, ?, ?, ?, ?, ?)
+                            ''', (today_str, omset_val, spp_val, jasa_val, hasil_val, desc, srv_id, now_str, now_str))
                     else:
                         # Jika belum lunas, catat modal sparepart (SPP) jika ada
                         desc_prefix = "Servis Instan" if new_status == 'Instan' else ("Servis Diambil" if new_status == 'Diambil' else "SPP Servis")
@@ -1330,14 +1926,15 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                                         spp = ?,
                                         jasa = 0,
                                         hasil = -?,
-                                        catatan = ?
+                                        catatan = ?,
+                                        updated_at = ?
                                     WHERE service_id = ?
-                                ''', (today_str, s_spp_biaya, s_spp_biaya, desc, srv_id))
+                                ''', (today_str, s_spp_biaya, s_spp_biaya, desc, now_str, srv_id))
                             else:
                                 cursor.execute('''
-                                    INSERT INTO transactions (tanggal, omset, spp, opp, jasa, hasil, catatan, service_id)
-                                    VALUES (?, 0, ?, 0, 0, ?, ?, ?)
-                                ''', (today_str, s_spp_biaya, -s_spp_biaya, desc, srv_id))
+                                    INSERT INTO transactions (tanggal, omset, spp, opp, jasa, hasil, catatan, service_id, created_at, updated_at)
+                                    VALUES (?, 0, ?, 0, 0, ?, ?, ?, ?, ?)
+                                ''', (today_str, s_spp_biaya, -s_spp_biaya, desc, srv_id, now_str, now_str))
                         elif trans_row:
                             cursor.execute("DELETE FROM transactions WHERE service_id = ?", (srv_id,))
 
