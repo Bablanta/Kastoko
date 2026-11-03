@@ -274,6 +274,22 @@ def init_db():
         except Exception as e:
             print(f"[WARNING] Gagal migrasi updated_at pada users: {e}")
 
+    # Migrasi kolom persen_jasa pada users (default 20.0%)
+    if "persen_jasa" not in usr_cols:
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN persen_jasa REAL DEFAULT 20.0")
+            cursor.execute("UPDATE users SET persen_jasa = 20.0 WHERE persen_jasa IS NULL")
+            conn.commit()
+            print("[INFO] Kolom 'persen_jasa' berhasil ditambahkan ke tabel users.")
+        except Exception as e:
+            print(f"[WARNING] Gagal migrasi persen_jasa pada users: {e}")
+
+    # Seed default persentase jasa teknisi pada tabel settings
+    cursor.execute("SELECT COUNT(*) FROM settings WHERE key = 'persen_jasa_default'")
+    if cursor.fetchone()[0] == 0:
+        cursor.execute("INSERT INTO settings (key, value) VALUES ('persen_jasa_default', '20')")
+        conn.commit()
+
     # Migrasi otomatis dari transactions.json lama jika database masih kosong
     cursor.execute("SELECT COUNT(*) FROM transactions")
     count = cursor.fetchone()[0]
@@ -412,7 +428,7 @@ def get_sync_export_data():
     customers = [dict(r) for r in cursor.fetchall()]
 
     # 4. Users (kecuali password plaintext, password_hash aman disertakan)
-    cursor.execute("SELECT id, username, fullname, password_hash, role, phone, status, created_at, approved_by, approved_at, notes, updated_at FROM users ORDER BY id ASC")
+    cursor.execute("SELECT id, username, fullname, password_hash, role, phone, status, created_at, approved_by, approved_at, notes, updated_at, COALESCE(persen_jasa, 20.0) as persen_jasa FROM users ORDER BY id ASC")
     users = [dict(r) for r in cursor.fetchall()]
 
     # 5. Settings (kecuali sync_peer_url agar masing-masing node punya peer target sendiri)
@@ -662,12 +678,13 @@ def execute_smart_merge(remote_data):
 
         if not lu:
             cursor.execute('''
-                INSERT INTO users (username, fullname, password_hash, role, phone, status, created_at, approved_by, approved_at, notes, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO users (username, fullname, password_hash, role, phone, status, created_at, approved_by, approved_at, notes, updated_at, persen_jasa)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 u_name, ru.get("fullname", ""), ru.get("password_hash", ""), ru.get("role", "admin"),
                 ru.get("phone", ""), ru.get("status", "pending"), r_created,
-                ru.get("approved_by", ""), ru.get("approved_at", ""), ru.get("notes", ""), r_updated or now_str
+                ru.get("approved_by", ""), ru.get("approved_at", ""), ru.get("notes", ""), r_updated or now_str,
+                float(ru.get("persen_jasa", 20.0) or 20.0)
             ))
             stats["users_inserted"] += 1
         else:
@@ -686,6 +703,7 @@ def execute_smart_merge(remote_data):
                         approved_by = ?,
                         approved_at = ?,
                         notes = ?,
+                        persen_jasa = COALESCE(?, persen_jasa),
                         updated_at = ?
                     WHERE username = ?
                 ''', (
@@ -696,6 +714,7 @@ def execute_smart_merge(remote_data):
                     ru.get("approved_by", lu["approved_by"]),
                     ru.get("approved_at", lu["approved_at"]),
                     ru.get("notes", lu["notes"]),
+                    ru.get("persen_jasa"),
                     r_updated, u_name
                 ))
                 stats["users_updated"] += 1
@@ -1023,21 +1042,65 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         elif path == "/api/users":
             try:
                 status_filter = query.get("status", [None])[0]
+                role_req = str(query.get("role", [None])[0] or '').strip().lower()
+                actor_req = str(query.get("actor", [None])[0] or '').strip().lower()
+
                 conn = sqlite3.connect(DB_FILE)
                 conn.row_factory = sqlite3.Row
                 cursor = conn.cursor()
                 if status_filter and status_filter != "all":
-                    cursor.execute("SELECT id, username, fullname, role, phone, status, created_at, approved_by, approved_at, notes FROM users WHERE status = ? ORDER BY id DESC", (status_filter,))
+                    cursor.execute("SELECT id, username, fullname, role, phone, status, created_at, approved_by, approved_at, notes, COALESCE(persen_jasa, 20.0) as persen_jasa FROM users WHERE status = ? ORDER BY id DESC", (status_filter,))
                 else:
-                    cursor.execute("SELECT id, username, fullname, role, phone, status, created_at, approved_by, approved_at, notes FROM users ORDER BY id DESC")
+                    cursor.execute("SELECT id, username, fullname, role, phone, status, created_at, approved_by, approved_at, notes, COALESCE(persen_jasa, 20.0) as persen_jasa FROM users ORDER BY id DESC")
                 rows = cursor.fetchall()
-                users_list = [dict(row) for row in rows]
+                users_list = []
+                for row in rows:
+                    u_dict = dict(row)
+                    # Privasi: Jika requester adalah role teknisi, sembunyikan persen_jasa akun teknisi rekan lainnya
+                    if role_req == 'teknisi' and actor_req and u_dict['username'].lower() != actor_req:
+                        u_dict['persen_jasa'] = None
+                    users_list.append(u_dict)
                 conn.close()
 
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.end_headers()
                 self.wfile.write(json.dumps({"success": True, "users": users_list}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
+
+        elif path == "/api/users/me":
+            try:
+                user_id = query.get("id", [None])[0]
+                username = query.get("username", [None])[0]
+                conn = sqlite3.connect(DB_FILE)
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                if user_id:
+                    cursor.execute("SELECT id, username, fullname, role, phone, status, COALESCE(persen_jasa, 20.0) as persen_jasa FROM users WHERE id = ?", (user_id,))
+                elif username:
+                    cursor.execute("SELECT id, username, fullname, role, phone, status, COALESCE(persen_jasa, 20.0) as persen_jasa FROM users WHERE LOWER(username) = ?", (username.strip().lower(),))
+                else:
+                    conn.close()
+                    raise Exception("Parameter id atau username diperlukan.")
+                row = cursor.fetchone()
+                conn.close()
+                if not row:
+                    self.send_response(404)
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"success": False, "message": "User tidak ditemukan"}).encode('utf-8'))
+                    return
+
+                u_dict = dict(row)
+                u_dict["persen_jasa"] = float(u_dict["persen_jasa"] if u_dict["persen_jasa"] is not None else 20.0)
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True, "user": u_dict}).encode('utf-8'))
             except Exception as e:
                 self.send_response(500)
                 self.send_header('Content-Type', 'application/json')
@@ -1384,7 +1447,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 conn = sqlite3.connect(DB_FILE)
                 conn.row_factory = sqlite3.Row
                 cursor = conn.cursor()
-                cursor.execute("SELECT id, username, fullname, password_hash, role, phone, status FROM users WHERE LOWER(username) = ?", (username,))
+                cursor.execute("SELECT id, username, fullname, password_hash, role, phone, status, COALESCE(persen_jasa, 20.0) as persen_jasa FROM users WHERE LOWER(username) = ?", (username,))
                 user_row = cursor.fetchone()
                 conn.close()
 
@@ -1426,7 +1489,8 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     "username": user_row["username"],
                     "fullname": user_row["fullname"],
                     "role": user_row["role"],
-                    "phone": user_row["phone"]
+                    "phone": user_row["phone"],
+                    "persen_jasa": float(user_row["persen_jasa"]) if user_row["persen_jasa"] is not None else 20.0
                 }
 
                 self.send_response(200)
@@ -1520,6 +1584,16 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     new_hash = hash_password(new_pass)
                     cursor.execute("UPDATE users SET password_hash = ? WHERE id = ?", (new_hash, user_id))
                     msg = f"Password akun '{target_user['username']}' berhasil diperbarui."
+
+                elif action == "update_commission":
+                    try:
+                        persen_val = float(data.get('persen_jasa', 20.0))
+                    except (ValueError, TypeError):
+                        raise Exception("Format persentase jasa tidak valid.")
+                    if persen_val < 0 or persen_val > 100:
+                        raise Exception("Persentase jasa harus berada di antara 0% hingga 100%.")
+                    cursor.execute("UPDATE users SET persen_jasa = ?, updated_at = ? WHERE id = ?", (persen_val, now_str, user_id))
+                    msg = f"Persentase bagi hasil jasa untuk '{target_user['fullname']}' berhasil diperbarui menjadi {persen_val:.1f}%."
 
                 else:
                     conn.close()
@@ -2053,47 +2127,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(json.dumps(response).encode('utf-8'))
 
 
-        elif path == "/api/users":
-            try:
-                status_filter = query.get("status", [None])[0]
-                conn = sqlite3.connect(DB_FILE)
-                conn.row_factory = sqlite3.Row
-                cursor = conn.cursor()
-                if status_filter and status_filter != "all":
-                    cursor.execute("SELECT id, username, fullname, role, phone, status, created_at, approved_by, approved_at, notes FROM users WHERE status = ? ORDER BY id DESC", (status_filter,))
-                else:
-                    cursor.execute("SELECT id, username, fullname, role, phone, status, created_at, approved_by, approved_at, notes FROM users ORDER BY id DESC")
-                rows = cursor.fetchall()
-                users_list = [dict(row) for row in rows]
-                conn.close()
 
-                self.send_response(200)
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
-                self.wfile.write(json.dumps({"success": True, "users": users_list}).encode('utf-8'))
-            except Exception as e:
-                self.send_response(500)
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
-                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
-
-        elif path == "/api/users/pending_count":
-            try:
-                conn = sqlite3.connect(DB_FILE)
-                cursor = conn.cursor()
-                cursor.execute("SELECT COUNT(*) FROM users WHERE status = 'pending'")
-                count = cursor.fetchone()[0]
-                conn.close()
-
-                self.send_response(200)
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
-                self.wfile.write(json.dumps({"success": True, "pending_count": count}).encode('utf-8'))
-            except Exception as e:
-                self.send_response(500)
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
-                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
 
         elif path == "/api/customers":
             content_length = int(self.headers.get('Content-Length', 0))
