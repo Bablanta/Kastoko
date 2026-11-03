@@ -280,7 +280,12 @@ def format_escpos_receipt(service_dict: dict, store_profile: dict = None, paper_
     buf.extend(ALIGN_CENTER)
     if is_ambil:
         buf.extend(b"* Terima kasih atas kepercayaan Anda *\n")
-        buf.extend(b"* Garansi servis 7 hari kerusakan sama *\n")
+        garansi_text = str(s.get("garansi") or "7 Hari").strip()
+        if garansi_text.lower() in ("non-garansi", "tanpa garansi", "tidak ada"):
+            buf.extend(b"* Servis ini Non-Garansi *\n")
+        else:
+            g_line = f"* Garansi servis {garansi_text} kerusakan sama *\n"
+            buf.extend(g_line.encode("cp437", errors="replace"))
     else:
         buf.extend(b"* Simpan nota ini sebagai bukti tanda terima *\n")
         buf.extend(b"* Wajib dibawa saat pengambilan unit *\n")

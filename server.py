@@ -232,6 +232,16 @@ def init_db():
         except Exception as e:
             print(f"[WARNING] Gagal migrasi updated_at pada services: {e}")
 
+    # Migrasi kolom garansi pada services
+    if "garansi" not in s_cols:
+        try:
+            cursor.execute("ALTER TABLE services ADD COLUMN garansi TEXT DEFAULT '7 Hari'")
+            cursor.execute("UPDATE services SET garansi = '7 Hari' WHERE garansi IS NULL OR garansi = ''")
+            conn.commit()
+            print("[INFO] Kolom 'garansi' berhasil ditambahkan ke tabel services.")
+        except Exception as e:
+            print(f"[WARNING] Gagal migrasi garansi pada services: {e}")
+
     # Migrasi kolom updated_at & created_at pada transactions
     cursor.execute("PRAGMA table_info(transactions)")
     tx_cols = [col[1] for col in cursor.fetchall()]
@@ -517,8 +527,8 @@ def execute_smart_merge(remote_data):
                     menu_servis, status_servis, estimasi_biaya, biaya_akhir,
                     status_pembayaran, sparepart_nama, sparepart_biaya,
                     metode_pembayaran, teknisi_nama, mitra_nama, created_by,
-                    tanggal_masuk, tanggal_selesai, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    tanggal_masuk, tanggal_selesai, garansi, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 kode_servis, cust_id, rs.get("nama_pelanggan", ""), rs.get("no_hp", ""),
                 rs.get("jenis_perangkat", ""), rs.get("merk_model", ""), rs.get("keluhan", ""),
@@ -528,6 +538,7 @@ def execute_smart_merge(remote_data):
                 float(rs.get("sparepart_biaya") or 0), rs.get("metode_pembayaran", "Tunai"),
                 rs.get("teknisi_nama", ""), rs.get("mitra_nama", ""), rs.get("created_by", ""),
                 rs.get("tanggal_masuk", ""), rs.get("tanggal_selesai", ""),
+                rs.get("garansi", "7 Hari") or "7 Hari",
                 r_created, r_updated or now_str
             ))
             stats["services_inserted"] += 1
@@ -560,6 +571,7 @@ def execute_smart_merge(remote_data):
                         created_by = CASE WHEN ? != '' THEN ? ELSE created_by END,
                         tanggal_masuk = ?,
                         tanggal_selesai = ?,
+                        garansi = COALESCE(NULLIF(?, ''), garansi),
                         updated_at = ?
                     WHERE id = ?
                 ''', (
@@ -573,6 +585,7 @@ def execute_smart_merge(remote_data):
                     rs.get("mitra_nama", ""), rs.get("mitra_nama", ""),
                     rs.get("created_by", ""), rs.get("created_by", ""),
                     rs.get("tanggal_masuk", ""), rs.get("tanggal_selesai", ""),
+                    rs.get("garansi", "7 Hari") or "7 Hari",
                     r_updated, ls["id"]
                 ))
                 stats["services_updated"] += 1
@@ -1115,7 +1128,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 cursor.execute("""
                     SELECT id, kode_servis, nama_pelanggan, no_hp, jenis_perangkat, merk_model, 
                            keluhan, catatan_teknisi, menu_servis, status_servis, estimasi_biaya, 
-                           biaya_akhir, status_pembayaran, tanggal_masuk, tanggal_selesai, teknisi_nama
+                           biaya_akhir, status_pembayaran, tanggal_masuk, tanggal_selesai, teknisi_nama, garansi
                     FROM services 
                     WHERE LOWER(TRIM(kode_servis)) = LOWER(?)
                     ORDER BY id DESC LIMIT 1
@@ -1127,7 +1140,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     cursor.execute("""
                         SELECT id, kode_servis, nama_pelanggan, no_hp, jenis_perangkat, merk_model, 
                                keluhan, catatan_teknisi, menu_servis, status_servis, estimasi_biaya, 
-                               biaya_akhir, status_pembayaran, tanggal_masuk, tanggal_selesai, teknisi_nama
+                               biaya_akhir, status_pembayaran, tanggal_masuk, tanggal_selesai, teknisi_nama, garansi
                         FROM services 
                         WHERE kode_servis LIKE ?
                         ORDER BY id DESC LIMIT 1
@@ -1182,6 +1195,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     "status_pembayaran": srv["status_pembayaran"] or "Belum Bayar",
                     "tanggal_masuk": srv["tanggal_masuk"] or "",
                     "tanggal_selesai": srv["tanggal_selesai"] or "",
+                    "garansi": srv["garansi"] if "garansi" in srv.keys() and srv["garansi"] else "7 Hari",
                     "teknisi_nama": srv["teknisi_nama"] or ""
                 }
 
@@ -1704,6 +1718,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 created_by = str(data.get('created_by', '')).strip()
                 tanggal_masuk = str(data.get('tanggal_masuk', datetime.date.today().strftime('%Y-%m-%d'))).strip()
                 tanggal_selesai = str(data.get('tanggal_selesai', '')).strip()
+                garansi = str(data.get('garansi', '7 Hari')).strip() or '7 Hari'
 
                 if not nama_pelanggan:
                     raise Exception("Nama pelanggan wajib diisi.")
@@ -1739,6 +1754,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                             mitra_nama = CASE WHEN ? != '' THEN ? ELSE mitra_nama END,
                             tanggal_masuk = ?,
                             tanggal_selesai = ?,
+                            garansi = ?,
                             updated_at = ?
                         WHERE id = ?
                     ''', (
@@ -1747,7 +1763,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                         estimasi_biaya, biaya_akhir, status_pembayaran,
                         sparepart_nama, sparepart_biaya, metode_pembayaran,
                         teknisi_nama, teknisi_nama, mitra_nama, mitra_nama,
-                        tanggal_masuk, tanggal_selesai, now_str, srv_id
+                        tanggal_masuk, tanggal_selesai, garansi, now_str, srv_id
                     ))
                     saved_id = srv_id
                     msg = "Data servis berhasil diperbarui."
@@ -1760,15 +1776,15 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                             menu_servis, status_servis, estimasi_biaya, biaya_akhir,
                             status_pembayaran, sparepart_nama, sparepart_biaya,
                             metode_pembayaran, teknisi_nama, mitra_nama, created_by,
-                            tanggal_masuk, tanggal_selesai, created_at, updated_at
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            tanggal_masuk, tanggal_selesai, garansi, created_at, updated_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ''', (
                         kode_servis, cust_id, nama_pelanggan, no_hp,
                         jenis_perangkat, merk_model, keluhan, catatan_teknisi,
                         menu_servis, status_servis, estimasi_biaya, biaya_akhir,
                         status_pembayaran, sparepart_nama, sparepart_biaya,
                         metode_pembayaran, teknisi_nama, mitra_nama, created_by,
-                        tanggal_masuk, tanggal_selesai, now_str, now_str
+                        tanggal_masuk, tanggal_selesai, garansi, now_str, now_str
                     ))
                     saved_id = cursor.lastrowid
                     msg = f"Tiket servis baru #{kode_servis} berhasil disimpan."
@@ -1844,6 +1860,9 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 if data.get('teknisi_nama') is not None:
                     updates.append("teknisi_nama = ?")
                     params.append(str(data.get('teknisi_nama', '')).strip())
+                if data.get('garansi') is not None:
+                    updates.append("garansi = ?")
+                    params.append(str(data.get('garansi', '7 Hari')).strip() or '7 Hari')
 
                 now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 updates.append("updated_at = ?")

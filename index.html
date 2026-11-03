@@ -795,7 +795,7 @@
                             <label style="font-size: 10px; color: var(--text-muted); display: block;">Total Biaya Akhir (Rp)</label>
                             <input type="text" id="rInputBiayaAkhir" class="form-control" placeholder="0" oninput="formatCurrency(this); updateReceiptPricePreview();" onkeyup="formatCurrency(this); updateReceiptPricePreview();" style="height: 32px; font-size: 12px; font-weight: bold; color: #107c41;">
                         </div>
-                        <div style="flex: 1; min-width: 120px;">
+                        <div style="flex: 1; min-width: 110px;">
                             <label style="font-size: 10px; color: var(--text-muted); display: block;">Status Pembayaran</label>
                             <select id="rInputStatusBayar" class="form-control" onchange="updateReceiptPricePreview()" style="height: 32px; font-size: 12px;">
                                 <option value="LUNAS">✅ LUNAS</option>
@@ -803,7 +803,19 @@
                                 <option value="DP (Uang Muka)">💵 DP (Uang Muka)</option>
                             </select>
                         </div>
-                        <div style="min-width: 140px; margin-top: 14px;">
+                        <div style="flex: 1; min-width: 120px;">
+                            <label style="font-size: 10px; color: var(--text-muted); display: block;">🛡️ Masa Garansi</label>
+                            <select id="rSelectGaransi" class="form-control" onchange="updateReceiptPricePreview()" style="height: 32px; font-size: 11px;">
+                                <option value="7 Hari" selected>7 Hari (Standar)</option>
+                                <option value="3 Hari">3 Hari</option>
+                                <option value="14 Hari">14 Hari (2 Minggu)</option>
+                                <option value="30 Hari">30 Hari (1 Bulan)</option>
+                                <option value="60 Hari">60 Hari (2 Bulan)</option>
+                                <option value="90 Hari">90 Hari (3 Bulan)</option>
+                                <option value="Non-Garansi">Non-Garansi</option>
+                            </select>
+                        </div>
+                        <div style="min-width: 130px; margin-top: 14px;">
                             <button class="btn btn-primary" onclick="savePickupPayment()" style="height: 32px; font-size: 11px; padding: 0 10px; width: 100%;">
                                 💾 Simpan Pelunasan
                             </button>
@@ -1098,6 +1110,10 @@
                     <div style="font-size: 11px; color: var(--text-muted);">Estimasi Biaya Awal:</div>
                     <div id="dtlEstimasiBiaya" style="font-size: 14px; font-weight: bold; color: var(--text-color);">-</div>
                 </div>
+                <div id="dtlGaransiContainer" style="display: none; text-align: center;">
+                    <div style="font-size: 11px; color: var(--text-muted);">Masa Garansi:</div>
+                    <div id="dtlGaransiText" style="font-size: 13px; font-weight: bold; color: #107c41;">-</div>
+                </div>
                 <div style="text-align: right;">
                     <div style="font-size: 11px; color: var(--text-muted);">Total Biaya Akhir:</div>
                     <div id="dtlBiayaAkhir" style="font-size: 16px; font-weight: 800; color: var(--accent-color);">-</div>
@@ -1171,9 +1187,23 @@
             </div>
 
             <!-- Catatan Teknisi -->
-            <div class="form-group" style="margin-bottom: 12px;">
+            <div class="form-group" style="margin-bottom: 8px;">
                 <label style="font-size: 11px; font-weight: 600;">Catatan Teknisi:</label>
                 <input type="text" id="csInputCatatanTeknisi" class="form-control" placeholder="Catatan hasil servis..." style="height: 32px; font-size: 11px;">
+            </div>
+
+            <!-- Masa Garansi Servis -->
+            <div class="form-group" style="margin-bottom: 12px;">
+                <label style="font-size: 11px; font-weight: 600;">🛡️ Masa Garansi Toko:</label>
+                <select id="csSelectGaransi" class="form-control" style="height: 34px; font-size: 12px;">
+                    <option value="7 Hari" selected>🛡️ 7 Hari (1 Minggu - Standar)</option>
+                    <option value="3 Hari">🛡️ 3 Hari (Tes Fungsi)</option>
+                    <option value="14 Hari">🛡️ 14 Hari (2 Minggu)</option>
+                    <option value="30 Hari">🛡️ 30 Hari (1 Bulan)</option>
+                    <option value="60 Hari">🛡️ 60 Hari (2 Bulan)</option>
+                    <option value="90 Hari">🛡️ 90 Hari (3 Bulan)</option>
+                    <option value="Non-Garansi">❌ Non-Garansi (Tanpa Garansi)</option>
+                </select>
             </div>
 
             <!-- Action Buttons -->
@@ -1305,6 +1335,27 @@
                 </div>
             </div>
 
+            <!-- Opsi Lama Garansi Servis -->
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
+                <div style="flex: 1; min-width: 140px;">
+                    <label style="font-size: 11px; font-weight: 600;">🛡️ Masa Garansi Servis:</label>
+                    <select id="cpSelectGaransi" class="form-control" style="height: 34px; font-size: 12px;" onchange="onGaransiChange('cp')">
+                        <option value="7 Hari" selected>🛡️ 7 Hari (1 Minggu - Standar)</option>
+                        <option value="3 Hari">🛡️ 3 Hari (Tes Fungsi)</option>
+                        <option value="14 Hari">🛡️ 14 Hari (2 Minggu)</option>
+                        <option value="30 Hari">🛡️ 30 Hari (1 Bulan)</option>
+                        <option value="60 Hari">🛡️ 60 Hari (2 Bulan)</option>
+                        <option value="90 Hari">🛡️ 90 Hari (3 Bulan)</option>
+                        <option value="Non-Garansi">❌ Non-Garansi (Tanpa Garansi)</option>
+                        <option value="custom">✏️ Kustom (Ketik Sendiri)...</option>
+                    </select>
+                </div>
+                <div id="cpCustomGaransiBox" style="flex: 1; min-width: 130px; display: none;">
+                    <label style="font-size: 11px; font-weight: 600;">Tulis Garansi Kustom:</label>
+                    <input type="text" id="cpInputGaransiCustom" class="form-control" placeholder="Contoh: 45 Hari / 6 Bulan" style="height: 34px; font-size: 12px;">
+                </div>
+            </div>
+
             <!-- Kotak Kembalian & Notifikasi Omset -->
             <div style="background: #e6f4ed; border: 1px solid #c3e6cb; border-radius: 6px; padding: 8px 12px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;">
                 <div>
@@ -1427,12 +1478,24 @@
                 </div>
             </div>
 
-            <!-- BAGIAN 3: STATUS AKHIR TIKET -->
-            <div style="display: flex; align-items: center; justify-content: space-between; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 12px; margin-bottom: 12px;">
+            <!-- BAGIAN 3: STATUS AKHIR TIKET & GARANSI -->
+            <div style="background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 12px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px;">
                 <label style="font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; margin: 0;">
                     <input type="checkbox" id="instCheckLangsungDiambil" checked style="width: 16px; height: 16px; cursor: pointer;">
                     <span>Unit langsung selesai & diambil pelanggan (Status: Diambil)</span>
                 </label>
+                <div>
+                    <label style="font-size: 10.5px; font-weight: 600; color: var(--text-color);">🛡️ Masa Garansi Servis:</label>
+                    <select id="instSelectGaransi" class="form-control" style="height: 32px; font-size: 12px; margin-top: 2px;">
+                        <option value="7 Hari" selected>🛡️ 7 Hari (1 Minggu - Standar)</option>
+                        <option value="3 Hari">🛡️ 3 Hari (Tes Fungsi)</option>
+                        <option value="14 Hari">🛡️ 14 Hari (2 Minggu)</option>
+                        <option value="30 Hari">🛡️ 30 Hari (1 Bulan)</option>
+                        <option value="60 Hari">🛡️ 60 Hari (2 Bulan)</option>
+                        <option value="90 Hari">🛡️ 90 Hari (3 Bulan)</option>
+                        <option value="Non-Garansi">❌ Non-Garansi (Tanpa Garansi)</option>
+                    </select>
+                </div>
             </div>
 
             <!-- Action Buttons -->
@@ -2656,6 +2719,8 @@
         var biayaAkhir = (s.biaya_akhir || 0) > 0 ? s.biaya_akhir : (s.estimasi_biaya || 0);
         document.getElementById('csInputBiayaAkhir').value = biayaAkhir > 0 ? biayaAkhir.toLocaleString('id-ID') : '';
         document.getElementById('csInputCatatanTeknisi').value = s.catatan_teknisi || '';
+        var csSelG = document.getElementById('csSelectGaransi');
+        if (csSelG) csSelG.value = s.garansi || '7 Hari';
 
         document.getElementById('completeServiceModal').style.display = 'flex';
     }
@@ -2690,6 +2755,13 @@
         var spBiaya = parseNumber(document.getElementById('csInputSparepartBiaya').value);
         var biayaAkhir = parseNumber(document.getElementById('csInputBiayaAkhir').value);
         var catatanTek = (document.getElementById('csInputCatatanTeknisi').value || '').trim();
+        var csSelG = document.getElementById('csSelectGaransi');
+        var garansiVal = csSelG ? csSelG.value : '7 Hari';
+
+        var localS = services.find(function(item) { return item.id === id; });
+        if (localS) {
+            localS.garansi = garansiVal;
+        }
 
         fetch('/api/services/status', {
             method: 'POST',
@@ -2700,7 +2772,8 @@
                 sparepart_nama: spNama,
                 sparepart_biaya: spBiaya,
                 biaya_akhir: biayaAkhir,
-                catatan_teknisi: catatanTek
+                catatan_teknisi: catatanTek,
+                garansi: garansiVal
             })
         })
         .then(function(res) { return res.json(); })
@@ -2732,6 +2805,19 @@
     // ========================================================
     // MODAL KASIR & PENGAMBILAN UNIT
     // ========================================================
+    function onGaransiChange(prefix) {
+        var sel = document.getElementById(prefix + 'SelectGaransi');
+        var box = document.getElementById(prefix + 'CustomGaransiBox');
+        var inp = document.getElementById(prefix + 'InputGaransiCustom');
+        if (!sel) return;
+        if (sel.value === 'custom') {
+            if (box) box.style.display = 'block';
+            if (inp) { inp.focus(); }
+        } else {
+            if (box) box.style.display = 'none';
+        }
+    }
+
     function openCashierPickupModal(id) {
         var s = services.find(function(item) { return item.id === id; });
         if (!s) return;
@@ -2757,6 +2843,22 @@
         document.getElementById('cpSelectStatusBayar').value = s.status_pembayaran || 'LUNAS';
         document.getElementById('cpSelectMetode').value = s.metode_pembayaran || 'Tunai';
         document.getElementById('cpInputUangBayar').value = tagihan > 0 ? tagihan.toLocaleString('id-ID') : '';
+
+        // Inisialisasi Opsi Garansi
+        var selG = document.getElementById('cpSelectGaransi');
+        var customGBox = document.getElementById('cpCustomGaransiBox');
+        var customGInp = document.getElementById('cpInputGaransiCustom');
+        var currentG = (s.garansi || '7 Hari').trim();
+        var stdList = ['7 Hari', '3 Hari', '14 Hari', '30 Hari', '60 Hari', '90 Hari', 'Non-Garansi'];
+        if (stdList.indexOf(currentG) !== -1) {
+            if (selG) selG.value = currentG;
+            if (customGBox) customGBox.style.display = 'none';
+            if (customGInp) customGInp.value = '';
+        } else {
+            if (selG) selG.value = 'custom';
+            if (customGBox) customGBox.style.display = 'block';
+            if (customGInp) customGInp.value = currentG;
+        }
 
         calculateCashierChange();
         document.getElementById('cashierPickupModal').style.display = 'flex';
@@ -2796,6 +2898,18 @@
         var statusBayar = document.getElementById('cpSelectStatusBayar').value;
         var metodeBayar = document.getElementById('cpSelectMetode').value;
 
+        // Ambil opsi masa garansi
+        var selG = document.getElementById('cpSelectGaransi');
+        var customGInp = document.getElementById('cpInputGaransiCustom');
+        var garansiVal = '7 Hari';
+        if (selG) {
+            if (selG.value === 'custom') {
+                garansiVal = (customGInp && customGInp.value.trim()) ? customGInp.value.trim() : '7 Hari';
+            } else {
+                garansiVal = selG.value;
+            }
+        }
+
         // Update objek lokal segera untuk menghindari race condition cetak nota
         var localS = services.find(function(item) { return item.id === id; });
         if (localS) {
@@ -2803,6 +2917,7 @@
             localS.biaya_akhir = totalTagihan;
             localS.status_pembayaran = statusBayar;
             localS.metode_pembayaran = metodeBayar;
+            localS.garansi = garansiVal;
             if (!localS.tanggal_selesai) localS.tanggal_selesai = getSystemDate();
         }
 
@@ -2814,7 +2929,8 @@
                 status_servis: 'Diambil',
                 biaya_akhir: totalTagihan,
                 status_pembayaran: statusBayar,
-                metode_pembayaran: metodeBayar
+                metode_pembayaran: metodeBayar,
+                garansi: garansiVal
             })
         })
         .then(function(res) { return res.json(); })
@@ -2886,6 +3002,8 @@
         document.getElementById('instSelectMetodeBayar').value = s.metode_pembayaran || 'Tunai';
         document.getElementById('instInputUangBayar').value = total > 0 ? Number(total).toLocaleString('id-ID') : '';
         document.getElementById('instCheckLangsungDiambil').checked = true;
+        var instSelG = document.getElementById('instSelectGaransi');
+        if (instSelG) instSelG.value = s.garansi || '7 Hari';
 
         calculateInstantChange();
         document.getElementById('instantServiceModal').style.display = 'flex';
@@ -2954,6 +3072,8 @@
         var langsungDiambil = document.getElementById('instCheckLangsungDiambil').checked;
 
         var targetStatus = langsungDiambil ? 'Diambil' : 'Instan';
+        var instSelG = document.getElementById('instSelectGaransi');
+        var garansiVal = instSelG ? instSelG.value : '7 Hari';
 
         // Update objek lokal segera agar sinkron saat cetak nota
         var s = services.find(function(item) { return item.id === id; });
@@ -2964,6 +3084,7 @@
             s.biaya_akhir = totalBiaya;
             s.status_pembayaran = statusBayar;
             s.metode_pembayaran = metodeBayar;
+            s.garansi = garansiVal;
             if (!s.tanggal_selesai) {
                 s.tanggal_selesai = getSystemDate();
             }
@@ -2979,7 +3100,8 @@
                 sparepart_biaya: spBiaya,
                 biaya_akhir: totalBiaya,
                 status_pembayaran: statusBayar,
-                metode_pembayaran: metodeBayar
+                metode_pembayaran: metodeBayar,
+                garansi: garansiVal
             })
         })
         .then(function(res) { return res.json(); })
@@ -3801,7 +3923,12 @@
             else lines.push('🔧 *Layanan*      : ' + (s.menu_servis || 'Servis'));
             lines.push('💰 *Total Biaya*  : Rp ' + Number(biayaAkhir).toLocaleString('id-ID'));
             lines.push('✅ *Status*       : SIAP DIAMBIL');
-            lines.push('🛡️ *Garansi Toko* : 7 Hari');
+            var gText = (s.garansi || '7 Hari').trim();
+            if (gText.toLowerCase() === 'non-garansi' || gText.toLowerCase() === 'tanpa garansi') {
+                lines.push('🛡️ *Garansi Toko* : Non-Garansi (Tanpa Garansi)');
+            } else {
+                lines.push('🛡️ *Garansi Toko* : ' + gText + ' (Kerusakan yang sama)');
+            }
             lines.push('----------------------------------------');
             lines.push('🌐 *Lacak Status & Pratinjau Nota Online:*');
             lines.push('👉 ' + trackingUrl);
@@ -3824,7 +3951,12 @@
             lines.push('💰 *Total Bayar*  : Rp ' + Number(finalBiaya).toLocaleString('id-ID'));
             lines.push('💳 *Metode Bayar* : ' + (s.metode_pembayaran || 'Tunai'));
             lines.push('✅ *Status Bayar* : ' + (s.status_pembayaran || 'LUNAS'));
-            lines.push('🛡️ *Masa Garansi* : 7 Hari');
+            var gTextAmbil = (s.garansi || '7 Hari').trim();
+            if (gTextAmbil.toLowerCase() === 'non-garansi' || gTextAmbil.toLowerCase() === 'tanpa garansi') {
+                lines.push('🛡️ *Masa Garansi* : Non-Garansi (Tanpa Garansi)');
+            } else {
+                lines.push('🛡️ *Masa Garansi* : ' + gTextAmbil + ' (Kerusakan yang sama)');
+            }
             lines.push('----------------------------------------');
             lines.push('🌐 *Arsip Nota Digital & Garansi:*');
             lines.push('👉 ' + trackingUrl);
@@ -4136,6 +4268,10 @@
         if (inputStatusBayar) {
             inputStatusBayar.value = s.status_pembayaran || (s.status_servis === 'Diambil' ? 'LUNAS' : 'Belum Bayar');
         }
+        var rSelG = document.getElementById('rSelectGaransi');
+        if (rSelG) {
+            rSelG.value = s.garansi || '7 Hari';
+        }
 
         // Tentukan tab awal
         var chosenType = defaultType;
@@ -4310,7 +4446,15 @@
                 rStatus.innerHTML = '<span style="color: ' + color + '; font-weight: bold;">[ ' + escapeHtml(statusBayar) + ' ]</span>';
             }
             if (rFooter) {
-                rFooter.innerHTML = '* Terima kasih atas kepercayaan Anda.<br>* Garansi servis berlaku 7 hari untuk kerusakan yang sama.<br>* Unit telah dicek dan diambil dalam kondisi baik.';
+                var rSelG = document.getElementById('rSelectGaransi');
+                var gVal = (rSelG && rSelG.value) ? rSelG.value : (s.garansi || '7 Hari');
+                var gMsg = '';
+                if (gVal.toLowerCase() === 'non-garansi' || gVal.toLowerCase() === 'tanpa garansi') {
+                    gMsg = '* Servis ini tidak bergaransi (Non-Garansi).<br>';
+                } else {
+                    gMsg = '* Garansi servis berlaku <b>' + escapeHtml(gVal) + '</b> untuk kerusakan yang sama.<br>';
+                }
+                rFooter.innerHTML = '* Terima kasih atas kepercayaan Anda.<br>' + gMsg + '* Unit telah dicek dan diambil dalam kondisi baik.';
             }
         } else {
             if (priceLabel) priceLabel.innerText = 'Estimasi Biaya:';
@@ -4404,6 +4548,8 @@
         if (!activeReceiptService) return;
         var akhir = parseNumber(document.getElementById('rInputBiayaAkhir').value);
         var statusBayar = document.getElementById('rInputStatusBayar').value;
+        var rSelG = document.getElementById('rSelectGaransi');
+        var garansiVal = (rSelG && rSelG.value) ? rSelG.value : (activeReceiptService.garansi || '7 Hari');
 
         fetch('/api/services/status', {
             method: 'POST',
@@ -4412,7 +4558,8 @@
                 id: activeReceiptService.id,
                 status_servis: 'Diambil',
                 biaya_akhir: akhir,
-                status_pembayaran: statusBayar
+                status_pembayaran: statusBayar,
+                garansi: garansiVal
             })
         })
         .then(function(res) { return res.json(); })
@@ -4422,6 +4569,7 @@
                 activeReceiptService.biaya_akhir = akhir;
                 activeReceiptService.status_pembayaran = statusBayar;
                 activeReceiptService.status_servis = 'Diambil';
+                activeReceiptService.garansi = garansiVal;
                 populateReceipt(activeReceiptService);
                 loadServices();
             } else {
@@ -4493,7 +4641,12 @@
         cmd += '\x1B\x61\x01'; // Center
         if (isAmbil) {
             cmd += '* Terima kasih atas kepercayaan Anda *\n';
-            cmd += '* Garansi 7 hari kerusakan sama *\n';
+            var gEsc = (s.garansi || '7 Hari').trim();
+            if (gEsc.toLowerCase() === 'non-garansi' || gEsc.toLowerCase() === 'tanpa garansi') {
+                cmd += '* Servis ini Non-Garansi *\n';
+            } else {
+                cmd += '* Garansi servis ' + gEsc + ' kerusakan sama *\n';
+            }
         } else {
             cmd += '* Simpan nota bukti penerimaan *\n';
             cmd += '* Bawa saat pengambilan unit *\n';
@@ -8101,6 +8254,19 @@
         var finBiaya = (s.biaya_akhir || s.estimasi_biaya || 0);
         var finBiayaEl = document.getElementById('dtlBiayaAkhir');
         if (finBiayaEl) finBiayaEl.innerText = 'Rp ' + Number(finBiaya).toLocaleString('id-ID');
+
+        // Tampilkan garansi di detail popup
+        var dtlGBox = document.getElementById('dtlGaransiContainer');
+        var dtlGTxt = document.getElementById('dtlGaransiText');
+        var isDone = (s.status_servis === 'Selesai' || s.status_servis === 'Diambil');
+        if (dtlGBox && dtlGTxt) {
+            if (isDone && s.garansi) {
+                dtlGBox.style.display = 'block';
+                dtlGTxt.innerText = '🛡️ ' + s.garansi;
+            } else {
+                dtlGBox.style.display = 'none';
+            }
+        }
 
         var stBayarEl = document.getElementById('dtlStatusBayar');
         if (stBayarEl) {

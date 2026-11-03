@@ -526,6 +526,10 @@
                     <span class="detail-label">Tanggal Selesai/Ambil:</span>
                     <span class="detail-value" id="valTanggalSelesai">-</span>
                 </div>
+                <div class="detail-row" id="rowGaransi" style="display: none;">
+                    <span class="detail-label">🛡️ Masa Garansi Toko:</span>
+                    <span class="detail-value" id="valGaransi" style="font-weight: bold; color: #107c41;">-</span>
+                </div>
             </div>
 
             <!-- Catatan Teknisi -->
@@ -638,6 +642,26 @@
                 rowTglSelesai.style.display = 'flex';
             } else {
                 rowTglSelesai.style.display = 'none';
+            }
+
+            // Garansi Toko
+            var rowGaransi = document.getElementById('rowGaransi');
+            var valGaransi = document.getElementById('valGaransi');
+            if (rowGaransi && valGaransi) {
+                var gText = (s.garansi || '7 Hari').trim();
+                var isDone = (s.status_servis === 'Selesai' || s.status_servis === 'Diambil');
+                if (isDone && gText) {
+                    if (gText.toLowerCase() === 'non-garansi' || gText.toLowerCase() === 'tanpa garansi') {
+                        valGaransi.innerText = 'Non-Garansi (Tanpa Garansi)';
+                        valGaransi.style.color = '#d9534f';
+                    } else {
+                        valGaransi.innerText = gText + ' (Kerusakan yang sama)';
+                        valGaransi.style.color = '#107c41';
+                    }
+                    rowGaransi.style.display = 'flex';
+                } else {
+                    rowGaransi.style.display = 'none';
+                }
             }
 
             // Catatan Teknisi
