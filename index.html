@@ -8382,7 +8382,17 @@
     }
 
     function promptChangeUserCommission(userId, fullname, currentPct) {
-        var input = prompt("Atur persentase bagi hasil jasa untuk teknisi '" + fullname + "' (%):\n\nRumus: (Total Omset Servis − Modal SPP) × Persentase %\nContoh: Masukkan 20 untuk 20%", currentPct || 20);
+        if (!fullname || currentPct === undefined) {
+            var u = (allUsersCache || []).find(function(x) { return x.id === parseInt(userId); });
+            if (u) {
+                fullname = fullname || u.fullname || u.username;
+                currentPct = (currentPct !== undefined) ? currentPct : ((u.persen_jasa !== undefined && u.persen_jasa !== null) ? u.persen_jasa : 20.0);
+            }
+        }
+        fullname = fullname || 'Teknisi';
+        currentPct = (currentPct !== undefined && currentPct !== null) ? currentPct : 20.0;
+
+        var input = prompt("Atur persentase bagi hasil jasa untuk teknisi '" + fullname + "' (%):\n\nRumus: (Total Omset Servis − Modal SPP) × Persentase %\nContoh: Masukkan 20 untuk 20%", currentPct);
         if (input === null) return;
         var newPct = parseFloat(input.trim());
         if (isNaN(newPct) || newPct < 0 || newPct > 100) {
@@ -8390,6 +8400,54 @@
             return;
         }
         submitUpdateCommission(userId, fullname, newPct);
+    }
+
+    function submitUpdateCommission(userId, fullname, newPct) {
+        var actor = currentUser ? currentUser.username : 'superadmin';
+        fetch('/api/users/action', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'update_commission',
+                user_id: parseInt(userId),
+                persen_jasa: newPct,
+                actor: actor
+            })
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data && data.success) {
+                showToast("Persentase jasa untuk " + fullname + " berhasil diubah menjadi " + newPct + "%!", "success");
+                
+                // 1. Update cache lokal allUsersCache langsung agar UI responsif seketika
+                if (typeof allUsersCache !== 'undefined' && Array.isArray(allUsersCache)) {
+                    var u = allUsersCache.find(function(item) { return item.id === parseInt(userId); });
+                    if (u) u.persen_jasa = newPct;
+                }
+                
+                // 2. Render ulang daftar user di modal
+                if (typeof renderUsersList === 'function') renderUsersList();
+                if (typeof loadUsersList === 'function') loadUsersList();
+                
+                // 3. Jika akun yang diedit adalah akun yang sedang aktif/login
+                if (currentUser && currentUser.id === parseInt(userId)) {
+                    currentUser.persen_jasa = newPct;
+                    sessionStorage.setItem('autocash_current_user', JSON.stringify(currentUser));
+                }
+                
+                // 4. Update kartu Estimasi Pendapatan jika teknisi sedang melihat dashboard
+                if (typeof renderBagiHasilTeknisi === 'function') renderBagiHasilTeknisi();
+                
+                // 5. Update tabel rekap teknisi jika sedang dibuka
+                if (typeof renderRekapTeknisiTable === 'function') renderRekapTeknisiTable();
+            } else {
+                showToast("Gagal mengubah persentase jasa: " + ((data && data.message) || 'Terjadi kesalahan.'), "error");
+            }
+        })
+        .catch(function(e) {
+            console.error("Gagal update persen jasa:", e);
+            showToast("Terjadi kesalahan jaringan saat update persentase jasa.", "error");
+        });
     }
 
     function promptChangeUserRole(userId, username, currentRole) {
