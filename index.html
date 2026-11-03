@@ -281,9 +281,6 @@
                 <button type="button" class="tab-btn" id="tabUserActiveBtn" onclick="switchUserTab('active')">
                     👥 Pengguna Aktif (<span id="countActiveUsers">0</span>)
                 </button>
-                <button type="button" class="tab-btn" id="tabUserCommissionBtn" onclick="switchUserTab('commission')">
-                    💰 Tarif Jasa Teknisi (<span id="countCommissionTechs">0</span>)
-                </button>
                 <button type="button" class="tab-btn" id="tabUserRejectedBtn" onclick="switchUserTab('rejected')">
                     ❌ Ditolak (<span id="countRejectedUsers">0</span>)
                 </button>
@@ -304,15 +301,6 @@
                 <!-- TAB ACTIVE -->
                 <div id="userTabActiveContent" style="display: none;">
                     <div id="activeUsersContainer" style="display: flex; flex-direction: column; gap: 10px;">
-                    </div>
-                </div>
-
-                <!-- TAB COMMISSION / TARIF TEKNISI -->
-                <div id="userTabCommissionContent" style="display: none;">
-                    <div style="background: rgba(124, 58, 237, 0.05); border: 1.5px solid #c4b5fd; border-radius: 8px; padding: 12px 16px; margin-bottom: 14px; font-size: 12px; color: #5b21b6; line-height: 1.5;">
-                        💡 <b>Solusi Persentase Berbeda Tiap Teknisi:</b> Setiap akun teknisi memiliki persentase bagi hasil jasa masing-masing (contoh: Senior 30%, Junior 20%, Magang 15%). Atur angka % untuk masing-masing teknisi di bawah ini dan klik <b>Simpan</b>. Rumus: <code>(Est. OMSET − SPP) × % Jasa</code>.
-                    </div>
-                    <div id="commissionTechsContainer" style="display: flex; flex-direction: column; gap: 12px;">
                     </div>
                 </div>
 
@@ -6212,7 +6200,6 @@
 
         if (curRole === 'superadmin') {
             if (typeof loadUsersList === 'function') loadUsersList();
-            if (typeof renderSettingsTechCommissionList === 'function') renderSettingsTechCommissionList();
         }
 
         pendingLogoBase64 = null;
@@ -8139,20 +8126,12 @@
         cActive.style.display = 'none';
         cRejected.style.display = 'none';
 
-        var btnCommission = document.getElementById('tabUserCommissionBtn');
-        var cCommission = document.getElementById('userTabCommissionContent');
-        if (btnCommission) btnCommission.classList.remove('active');
-        if (cCommission) cCommission.style.display = 'none';
-
         if (tab === 'pending') {
             btnPending.classList.add('active');
             cPending.style.display = 'block';
         } else if (tab === 'active') {
             btnActive.classList.add('active');
             cActive.style.display = 'block';
-        } else if (tab === 'commission') {
-            if (btnCommission) btnCommission.classList.add('active');
-            if (cCommission) cCommission.style.display = 'block';
         } else if (tab === 'rejected') {
             btnRejected.classList.add('active');
             cRejected.style.display = 'block';
@@ -8184,9 +8163,6 @@
         var active = allUsersCache.filter(function(u) { return u.status === 'active'; });
         var rejected = allUsersCache.filter(function(u) { return u.status === 'rejected'; });
         var techUsers = active.filter(function(u) { return u.role === 'teknisi'; });
-
-        var cntComm = document.getElementById('countCommissionTechs');
-        if (cntComm) cntComm.innerText = techUsers.length;
 
         var cntAct = document.getElementById('countActiveUsers');
         if (cntAct) cntAct.innerText = active.length;
@@ -8317,47 +8293,6 @@
                 rejectedContainer.innerHTML = htmlRejected;
             }
         }
-
-        // 4. RENDER TAB TARIF JASA TEKNISI (SOLUSI PERSENTASE BERBEDA PER-TEKNISI)
-        var commContainer = document.getElementById('commissionTechsContainer');
-        if (commContainer) {
-            if (techUsers.length === 0) {
-                commContainer.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 30px;">Belum ada akun teknisi aktif yang terdaftar.</div>';
-            } else {
-                var htmlComm = '';
-                techUsers.forEach(function(u) {
-                    var pVal = (u.persen_jasa !== undefined && u.persen_jasa !== null) ? u.persen_jasa : 20.0;
-                    htmlComm += '<div style="background: var(--card-bg, #fff); border: 1.5px solid var(--border-color); border-left: 4px solid #7c3aed; border-radius: 10px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.04);">' +
-                        '<div style="display: flex; align-items: center; gap: 12px;">' +
-                            '<span style="font-size: 22px; background: #ede9fe; padding: 6px 10px; border-radius: 8px;">🔧</span>' +
-                            '<div>' +
-                                '<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">' +
-                                    '<span style="font-weight: 700; font-size: 15px; color: var(--text-color);">' + escapeHtml(u.fullname) + '</span>' +
-                                    '<span style="font-family: monospace; font-size: 12px; color: #7c3aed;">@' + escapeHtml(u.username) + '</span>' +
-                                    '<span style="background: #ede9fe; color: #7c3aed; font-size: 10px; font-weight: bold; padding: 2px 7px; border-radius: 4px; border: 1px solid #7c3aed;">TEKNISI</span>' +
-                                '</div>' +
-                                '<div style="font-size: 11.5px; color: var(--text-muted); margin-top: 3px;">' +
-                                    '<span>📱 No. HP: ' + escapeHtml(u.phone || '-') + '</span>' +
-                                '</div>' +
-                            '</div>' +
-                        '</div>' +
-                        '<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">' +
-                            '<div style="display: flex; align-items: center; gap: 6px; background: var(--input-bg, #f3f4f6); padding: 4px 10px; border-radius: 8px; border: 1px solid #c4b5fd;">' +
-                                '<label style="font-size: 12px; font-weight: 700; color: #6d28d9;">% Jasa:</label>' +
-                                '<input type="number" id="inputPersenTech_' + u.id + '" value="' + pVal + '" min="0" max="100" step="0.5" style="width: 70px; height: 32px; font-size: 14px; font-weight: 800; text-align: center; border-radius: 6px; border: 1px solid #c4b5fd; background: var(--card-bg, #fff); color: var(--text-color);">' +
-                                '<span style="font-weight: 800; font-size: 13px; color: #6d28d9;">%</span>' +
-                            '</div>' +
-                            '<button class="btn btn-primary" onclick="saveTechCommissionFromInput(' + u.id + ', \'' + escapeHtml(u.fullname || u.username) + '\')" style="height: 36px; padding: 0 16px; font-size: 12px; background: #7c3aed; font-weight: 700; border-radius: 6px; cursor: pointer;">' +
-                                '💾 Simpan' +
-                            '</button>' +
-                        '</div>' +
-                    '</div>';
-                });
-                commContainer.innerHTML = htmlComm;
-            }
-        }
-
-        renderSettingsTechCommissionList();
     }
 
     function getRoleBadgeHtml(role) {
@@ -8446,119 +8381,15 @@
         .catch(function(e) { alert("Koneksi gagal: " + e); });
     }
 
-    function saveTechCommissionFromInput(userId, fullname) {
-        var inp = document.getElementById('inputPersenTech_' + userId);
-        if (!inp) return;
-        var newPct = parseFloat(inp.value.trim());
-        if (isNaN(newPct) || newPct < 0 || newPct > 100) {
-            showToast("Harap masukkan angka persentase yang valid antara 0% hingga 100%.", "warning");
-            return;
-        }
-        submitUpdateCommission(userId, fullname, newPct);
-    }
-
-    function saveSettingsCommissionInput(userId, fullname) {
-        var inp = document.getElementById('settingsInputPersenTech_' + userId);
-        if (!inp) return;
-        var newPct = parseFloat(inp.value.trim());
-        if (isNaN(newPct) || newPct < 0 || newPct > 100) {
-            showToast("Harap masukkan angka persentase yang valid antara 0% hingga 100%.", "warning");
-            return;
-        }
-        submitUpdateCommission(userId, fullname, newPct);
-    }
-
-    function submitUpdateCommission(userId, fullname, newPct) {
-        var actor = currentUser ? currentUser.username : 'superadmin';
-        fetch('/api/users/action', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'update_commission',
-                user_id: parseInt(userId),
-                persen_jasa: newPct,
-                actor: actor
-            })
-        })
-        .then(function(res) { return res.json(); })
-        .then(function(data) {
-            if (data.success) {
-                showToast("Persentase jasa untuk " + fullname + " berhasil disimpan: " + newPct + "%!", "success");
-                loadUsersList();
-                if (currentUser && currentUser.id === parseInt(userId)) {
-                    currentUser.persen_jasa = newPct;
-                    sessionStorage.setItem('autocash_current_user', JSON.stringify(currentUser));
-                    if (typeof renderBagiHasilTeknisi === 'function') renderBagiHasilTeknisi();
-                }
-            } else {
-                showToast("Gagal mengubah persentase jasa: " + (data.message || ''), "error");
-            }
-        })
-        .catch(function(e) {
-            showToast("Terjadi kesalahan jaringan saat update persentase jasa.", "error");
-        });
-    }
-
-    function renderSettingsTechCommissionList() {
-        var cont = document.getElementById('settingsTechCommissionListContainer');
-        if (!cont) return;
-        if (typeof allUsersCache === 'undefined' || !Array.isArray(allUsersCache)) return;
-
-        var techs = allUsersCache.filter(function(u) { return u.role === 'teknisi' && u.status === 'active'; });
-        if (techs.length === 0) {
-            cont.innerHTML = '<div style="font-size: 11px; color: var(--text-muted); font-style: italic;">Belum ada akun teknisi aktif.</div>';
-            return;
-        }
-
-        var html = '';
-        techs.forEach(function(u) {
-            var pVal = (u.persen_jasa !== undefined && u.persen_jasa !== null) ? u.persen_jasa : 20.0;
-            html += '<div style="display: flex; justify-content: space-between; align-items: center; background: var(--card-bg, #fff); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 11.5px;">' +
-                '<div style="font-weight: 600; color: var(--text-color); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 130px;" title="' + escapeHtml(u.fullname) + '">' +
-                    '👨‍🔧 ' + escapeHtml(u.fullname) +
-                '</div>' +
-                '<div style="display: flex; align-items: center; gap: 4px;">' +
-                    '<input type="number" id="settingsInputPersenTech_' + u.id + '" value="' + pVal + '" min="0" max="100" step="0.5" style="width: 55px; height: 26px; font-size: 11.5px; font-weight: bold; text-align: center; border: 1px solid #c4b5fd; border-radius: 4px; background: var(--input-bg); color: var(--text-color);">' +
-                    '<span style="font-size: 11px; font-weight: bold; color: #6d28d9;">%</span>' +
-                    '<button class="btn btn-sm" onclick="saveSettingsCommissionInput(' + u.id + ', \'' + escapeHtml(u.fullname || u.username) + '\')" style="padding: 2px 7px; font-size: 11px; background: #7c3aed; color: #fff; border-radius: 4px;" title="Simpan % teknisi ini">💾</button>' +
-                '</div>' +
-            '</div>';
-        });
-        cont.innerHTML = html;
-    }
-
     function promptChangeUserCommission(userId, fullname, currentPct) {
         var input = prompt("Atur persentase bagi hasil jasa untuk teknisi '" + fullname + "' (%):\n\nRumus: (Total Omset Servis − Modal SPP) × Persentase %\nContoh: Masukkan 20 untuk 20%", currentPct || 20);
         if (input === null) return;
         var newPct = parseFloat(input.trim());
         if (isNaN(newPct) || newPct < 0 || newPct > 100) {
-            alert("Harap masukkan angka persentase yang valid antara 0% hingga 100%.");
+            showToast("Harap masukkan angka persentase yang valid antara 0% hingga 100%.", "warning");
             return;
         }
-
-        var actor = currentUser ? currentUser.username : 'superadmin';
-        fetch('/api/users/action', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'update_commission',
-                user_id: parseInt(userId),
-                persen_jasa: newPct,
-                actor: actor
-            })
-        })
-        .then(function(res) { return res.json(); })
-        .then(function(data) {
-            if (data.success) {
-                showToast("Persentase jasa untuk " + fullname + " berhasil diatur menjadi " + newPct + "%!", "success");
-                loadUsersList();
-            } else {
-                alert("Gagal mengubah persentase jasa: " + (data.message || ''));
-            }
-        })
-        .catch(function(e) {
-            alert("Terjadi kesalahan jaringan.");
-        });
+        submitUpdateCommission(userId, fullname, newPct);
     }
 
     function promptChangeUserRole(userId, username, currentRole) {
