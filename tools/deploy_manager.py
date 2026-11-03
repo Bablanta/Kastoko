@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-deploy_manager.py - Modul Terpadu Deploy & Sinkronisasi KasToko ke Server Ubuntu
+tools/deploy_manager.py - Modul Terpadu Deploy & Sinkronisasi KasToko ke Server Ubuntu
 Mendukung:
 1. Update Kode & Fitur Saja
 2. Update Kode + Sinkronisasi Database Pembukuan (pembukuan.db)
@@ -19,7 +19,10 @@ if sys.platform == "win32":
 UBUNTU_HOST = "192.168.1.8"
 UBUNTU_USER = "bablanta"
 REMOTE_DIR = "/home/bablanta/Kastoko"
-LOCAL_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Pastikan LOCAL_DIR mengarah ke direktori utama proyek (root)
+TOOLS_DIR = os.path.dirname(os.path.abspath(__file__))
+LOCAL_DIR = os.path.abspath(os.path.join(TOOLS_DIR, ".."))
 
 EXCLUDE_DIRS = {".git", "__pycache__", ".gemini", "backup"}
 CODE_EXT_EXCLUDE = {".pyc", ".tmp", ".log"}
@@ -46,6 +49,15 @@ def sync_code_files(sftp):
         dirs[:] = [d for d in dirs if d not in EXCLUDE_DIRS]
         rel_root = os.path.relpath(root, LOCAL_DIR)
         remote_root = REMOTE_DIR if rel_root == "." else os.path.join(REMOTE_DIR, rel_root).replace("\\", "/")
+
+        # Pastikan remote directory dibuat jika belum ada (misal folder tools)
+        try:
+            sftp.stat(remote_root)
+        except IOError:
+            try:
+                sftp.mkdir(remote_root)
+            except Exception:
+                pass
 
         for file in files:
             if file == "pembukuan.db" or file in ALWAYS_EXCLUDE_FILES or any(file.endswith(ext) for ext in CODE_EXT_EXCLUDE):
