@@ -895,28 +895,33 @@
                     </div>
 
                     <div class="receipt-footer">
-                        <div class="footer-terms" id="rFooterTerms">
-                            * Simpan nota ini sebagai bukti tanda terima saat mengambil unit.<br>
-                            * Kerusakan aksesoris tidak tercatat di luar tanggung jawab toko.
-                        </div>
-
-                        <!-- Blok QR Code Pelacakan Servisan Online -->
-                        <div class="receipt-tracking-box" id="rTrackingBox">
-                            <div style="font-size: 8px; font-weight: bold; letter-spacing: 0.3px; margin-bottom: 2px;">SCAN UNTUK CEK STATUS SERVIS</div>
-                            <div id="rQrCodeContainer"></div>
-                            <div style="font-size: 7.5px; font-family: monospace; color: #222; margin-top: 2px;" id="rTrackingUrlText">lacak.dhanzcell.my.id</div>
-                        </div>
-
-                        <div class="sig-row">
-                            <div class="sig-col">
-                                <div>Pelanggan</div>
-                                <div class="sig-space"></div>
-                                <div id="rSigPelanggan">( .................... )</div>
+                        <div class="receipt-footer-flex">
+                            <div class="footer-left" id="rFooterLeft">
+                                <div class="footer-terms" id="rFooterTerms">
+                                    * Simpan nota ini sebagai bukti tanda terima saat mengambil unit.<br>
+                                    * Kerusakan aksesoris tidak tercatat di luar tanggung jawab toko.
+                                </div>
+                                <div class="sig-row">
+                                    <div class="sig-col">
+                                        <div>Pelanggan</div>
+                                        <div class="sig-space"></div>
+                                        <div id="rSigPelanggan">( .................... )</div>
+                                    </div>
+                                    <div class="sig-col">
+                                        <div>Kasir / Teknisi</div>
+                                        <div class="sig-space"></div>
+                                        <div>( .................... )</div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="sig-col">
-                                <div>Kasir / Teknisi</div>
-                                <div class="sig-space"></div>
-                                <div>( .................... )</div>
+
+                            <div class="footer-right" id="rFooterRight">
+                                <!-- Blok QR Code Pelacakan Servisan Online -->
+                                <div class="receipt-tracking-box" id="rTrackingBox">
+                                    <div class="tracking-title" style="font-size: 7px; font-weight: bold; letter-spacing: 0.2px; margin-bottom: 2px;">SCAN CEK STATUS</div>
+                                    <div id="rQrCodeContainer"></div>
+                                    <div class="tracking-url" style="font-size: 6.5px; font-family: monospace; color: #222; margin-top: 1px;" id="rTrackingUrlText">lacak.dhanzcell.my.id</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -4701,7 +4706,12 @@
         var qrBox = document.getElementById('rTrackingBox');
         var qrContainer = document.getElementById('rQrCodeContainer');
         var qrUrlText = document.getElementById('rTrackingUrlText');
+        var footerRight = document.getElementById('rFooterRight');
         var kodeTiket = s.kode_servis || ('#' + s.id);
+
+        if (footerRight) {
+            footerRight.style.display = isAmbil ? 'none' : 'block';
+        }
 
         if (qrBox && qrContainer) {
             if (isAmbil) {
@@ -4717,10 +4727,11 @@
                 qrContainer.innerHTML = '';
                 if (typeof QRCode !== 'undefined') {
                     try {
+                        var qrDim = (currentReceiptPaperSize === '58') ? 48 : 50;
                         new QRCode(qrContainer, {
                             text: trackingUrl,
-                            width: 72,
-                            height: 72,
+                            width: qrDim,
+                            height: qrDim,
                             colorDark: "#000000",
                             colorLight: "#ffffff",
                             correctLevel: QRCode.CorrectLevel.M
@@ -4730,7 +4741,7 @@
                     }
                 }
                 if (qrUrlText) {
-                    qrUrlText.innerText = 'lacak.dhanzcell.my.id/lacak?nota=' + kodeTiket;
+                    qrUrlText.innerText = 'lacak.dhanzcell.my.id?nota=' + kodeTiket;
                 }
             }
         }
@@ -5155,24 +5166,42 @@
         var is58 = (currentReceiptPaperSize === '58');
         var receiptWidthCss = is58 ? '48mm' : '76mm';
         var receiptMaxWidthCss = is58 ? '58mm' : '80mm';
-        var rFontSize = is58 ? '8px' : '9.5px';
-        var rTitleSize = is58 ? '11px' : '13px';
+        var rFontSize = is58 ? '8px' : '8.8px';
+        var rTitleSize = is58 ? '11px' : '12px';
 
-        doc.write('.receipt-paper-58, .receipt-paper-80100 { width: ' + receiptWidthCss + ' !important; max-width: ' + receiptMaxWidthCss + ' !important; margin: 0 auto !important; padding: 2mm 2.5mm !important; font-family: "Courier New", Courier, monospace, "Segoe UI", Arial, sans-serif !important; color: #111111 !important; background: #ffffff !important; border: none !important; box-shadow: none !important; box-sizing: border-box !important; font-size: ' + rFontSize + ' !important; line-height: 1.18 !important; overflow: visible !important; page-break-after: avoid !important; break-after: avoid !important; page-break-inside: avoid !important; break-inside: avoid !important; }');
-        doc.write('.receipt-header { text-align: center !important; margin-bottom: 4px !important; }');
+        doc.write('.receipt-paper-58, .receipt-paper-80100 { width: ' + receiptWidthCss + ' !important; max-width: ' + receiptMaxWidthCss + ' !important; margin: 0 auto !important; padding: 1.5mm 2.5mm !important; font-family: "Courier New", Courier, monospace, "Segoe UI", Arial, sans-serif !important; color: #111111 !important; background: #ffffff !important; border: none !important; box-shadow: none !important; box-sizing: border-box !important; font-size: ' + rFontSize + ' !important; line-height: 1.15 !important; overflow: visible !important; page-break-after: avoid !important; break-after: avoid !important; page-break-inside: avoid !important; break-inside: avoid !important; }');
+        doc.write('.receipt-header { text-align: center !important; margin-bottom: 2px !important; }');
         doc.write('.store-title { font-size: ' + rTitleSize + ' !important; font-weight: bold !important; letter-spacing: 0.5px !important; margin: 0 !important; text-transform: uppercase !important; }');
-        doc.write('.receipt-sub { font-size: 7.8px !important; color: #333333 !important; margin-top: 1px !important; }');
-        doc.write('.receipt-divider-solid { border-bottom: 1.5px solid #222222 !important; margin: 3px 0 !important; }');
-        doc.write('.receipt-divider-dash { border-bottom: 1px dashed #777777 !important; margin: 3px 0 !important; }');
-        doc.write('.r-row { display: flex !important; justify-content: space-between !important; font-size: ' + rFontSize + ' !important; padding: 1px 0 !important; }');
-        doc.write('.r-row .r-label { color: #333333 !important; width: 38% !important; font-size: ' + (is58 ? '7.5px' : '9px') + ' !important; }');
-        doc.write('.r-row .r-val { color: #000000 !important; width: 62% !important; text-align: right !important; word-break: break-word !important; font-weight: 600 !important; }');
-        doc.write('.price-box { background: #f7f9f7 !important; border: 1px dashed #107c41 !important; padding: 3px 5px !important; margin: 3px 0 !important; border-radius: 3px !important; }');
-        doc.write('.price-row { display: flex !important; justify-content: space-between !important; font-size: ' + (is58 ? '9px' : '10.5px') + ' !important; font-weight: bold !important; color: #107c41 !important; }');
-        doc.write('.footer-terms { font-size: ' + (is58 ? '7px' : '8px') + ' !important; color: #444444 !important; line-height: 1.2 !important; text-align: center !important; margin-top: 4px !important; border-top: 1px dashed #888888 !important; padding-top: 3px !important; }');
-        doc.write('.sig-row { display: flex !important; justify-content: space-between !important; margin-top: 5px !important; font-size: ' + (is58 ? '7.5px' : '8px') + ' !important; text-align: center !important; }');
-        doc.write('.sig-col { width: 48% !important; }');
-        doc.write('.sig-space { height: 16px !important; }');
+        doc.write('.receipt-sub { font-size: 7.5px !important; color: #333333 !important; margin-top: 1px !important; }');
+        doc.write('.receipt-divider-solid { border-bottom: 1px solid #222222 !important; margin: 2px 0 !important; }');
+        doc.write('.receipt-divider-dash { border-bottom: 1px dashed #777777 !important; margin: 2px 0 !important; }');
+        doc.write('.r-row { display: flex !important; justify-content: space-between !important; font-size: ' + rFontSize + ' !important; padding: 0.8px 0 !important; }');
+        doc.write('.r-row .r-label { color: #333333 !important; width: 36% !important; font-size: ' + (is58 ? '7.5px' : '8.2px') + ' !important; }');
+        doc.write('.r-row .r-val { color: #000000 !important; width: 64% !important; text-align: right !important; word-break: break-word !important; font-weight: 600 !important; }');
+        doc.write('.price-box { background: #f7f9f7 !important; border: 1px dashed #107c41 !important; padding: 2px 5px !important; margin: 2px 0 !important; border-radius: 3px !important; }');
+        doc.write('.price-row { display: flex !important; justify-content: space-between !important; font-size: ' + (is58 ? '9px' : '9.8px') + ' !important; font-weight: bold !important; color: #107c41 !important; }');
+        
+        if (is58) {
+            doc.write('.receipt-footer-flex { display: flex !important; flex-direction: column !important; margin-top: 3px !important; padding-top: 2px !important; border-top: 1px dashed #888888 !important; }');
+            doc.write('.footer-left { width: 100% !important; }');
+            doc.write('.footer-terms { font-size: 7px !important; color: #444444 !important; line-height: 1.15 !important; text-align: center !important; margin-bottom: 3px !important; }');
+            doc.write('.sig-row { display: flex !important; justify-content: space-between !important; margin-top: 3px !important; font-size: 7.5px !important; text-align: center !important; }');
+            doc.write('.sig-col { width: 48% !important; }');
+            doc.write('.sig-space { height: 11px !important; }');
+            doc.write('.footer-right { width: 100% !important; margin-top: 4px !important; border-top: 1px dashed #cccccc !important; padding-top: 3px !important; text-align: center !important; }');
+            doc.write('.receipt-tracking-box { text-align: center !important; margin: 0 !important; padding: 0 !important; }');
+            doc.write('#rQrCodeContainer canvas, #rQrCodeContainer img { display: block !important; margin: 0 auto !important; image-rendering: pixelated !important; }');
+        } else {
+            doc.write('.receipt-footer-flex { display: flex !important; justify-content: space-between !important; align-items: flex-start !important; margin-top: 3px !important; padding-top: 2px !important; border-top: 1px dashed #888888 !important; gap: 6px !important; }');
+            doc.write('.footer-left { flex: 1.35 !important; display: flex !important; flex-direction: column !important; justify-content: space-between !important; }');
+            doc.write('.footer-terms { font-size: 7px !important; color: #444444 !important; line-height: 1.15 !important; margin-bottom: 3px !important; }');
+            doc.write('.sig-row { display: flex !important; justify-content: space-between !important; margin-top: 3px !important; font-size: 7.5px !important; text-align: center !important; }');
+            doc.write('.sig-col { width: 48% !important; }');
+            doc.write('.sig-space { height: 11px !important; }');
+            doc.write('.footer-right { flex: 0.85 !important; text-align: center !important; border-left: 1px dashed #cccccc !important; padding-left: 4px !important; }');
+            doc.write('.receipt-tracking-box { text-align: center !important; margin: 0 !important; padding: 0 !important; }');
+            doc.write('#rQrCodeContainer canvas, #rQrCodeContainer img { display: block !important; margin: 0 auto !important; image-rendering: pixelated !important; }');
+        }
 
         // Rules Label Stiker (Bebas terpotong: white-space normal & word-break break-word)
         doc.write('.label-paper { background: #ffffff !important; color: #000000 !important; margin: 0 auto !important; font-family: "Segoe UI", Tahoma, Arial, sans-serif !important; border: none !important; box-shadow: none !important; box-sizing: border-box !important; overflow: visible !important; page-break-after: avoid !important; break-after: avoid !important; page-break-inside: avoid !important; break-inside: avoid !important; }');

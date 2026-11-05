@@ -302,7 +302,8 @@ def format_escpos_receipt(service_dict: dict, store_profile: dict = None, paper_
         # 1. Set QR model 2
         buf.extend(b"\x1D\x28\x6B\x04\x00\x31\x41\x32\x00")
         # 2. Set module size (4 for 58mm, 5 for 80mm)
-        mod_size = b"\x05" if col_width >= 48 else b"\x04"
+        # 2. Set module size (4 for 80x100mm thermal label height optimization)
+        mod_size = b"\x04"
         buf.extend(b"\x1D\x28\x6B\x03\x00\x31\x43" + mod_size)
         # 3. Set error correction level M
         buf.extend(b"\x1D\x28\x6B\x03\x00\x31\x45\x31")
@@ -319,15 +320,15 @@ def format_escpos_receipt(service_dict: dict, store_profile: dict = None, paper_
     buf.extend(b"\n")
     # Slot Tanda Tangan
     if col_width >= 48:
-        buf.extend(b"       Pelanggan                       Kasir/Teknisi\n\n\n")
+        buf.extend(b"       Pelanggan                       Kasir/Teknisi\n\n")
         cust_trim = (nama_cust[:20] if nama_cust else "...............").center(20)
         buf.extend((f" ({cust_trim})                  (....................)\n").encode("cp437", errors="replace"))
     else:
-        buf.extend(b" Pelanggan            Teknisi\n\n\n")
+        buf.extend(b" Pelanggan            Teknisi\n\n")
         cust_trim = (nama_cust[:14] if nama_cust else "............").center(14)
         buf.extend((f"({cust_trim})     (............)\n").encode("cp437", errors="replace"))
 
-    buf.extend(b"\n\n\n")
+    buf.extend(b"\n")
     buf.extend(CUT_PAPER)
 
     return bytes(buf)
