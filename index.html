@@ -2009,7 +2009,12 @@
             <!-- Card: Form Pendaftaran & Input Servis -->
             <div class="card" id="serviceFormCard">
                 <div class="card-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                    <span id="serviceFormTitle">🛠️ Formulir Penerimaan Servis Baru</span>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span id="serviceFormTitle">🛠️ Formulir Penerimaan Servis Baru</span>
+                        <button type="button" class="btn btn-sm" id="btnHideServiceFormSuperadmin" onclick="toggleServiceFormSuperadmin(false)" style="display: none; font-size: 11px; padding: 3px 10px; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer;" title="Sembunyikan Formulir Penerimaan (Khusus Superadmin)">
+                            Sembunyikan Form
+                        </button>
+                    </div>
                     <span style="font-size: 11px; color: var(--accent-color); font-weight: normal; background: rgba(16, 124, 65, 0.08); padding: 4px 10px; border-radius: 6px;">
                         💾 Data pelanggan otomatis disimpan ke database
                     </span>
@@ -2136,6 +2141,9 @@
                     <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                         <span>📋 Antrean & Riwayat Servis</span>
                         <span id="serviceRecordCount" style="font-size: 12px; color: var(--text-muted); font-weight: normal;">Total: 0 tiket</span>
+                        <button type="button" class="btn" id="btnShowServiceFormSuperadmin" onclick="toggleServiceFormSuperadmin(true)" style="height: 30px; padding: 0 12px; font-size: 11px; font-weight: 600; display: none; align-items: center; gap: 5px; background: #e6f4ed; color: #107c41; border: 1px solid #a3cfbb; border-radius: 6px; cursor: pointer;" title="Tampilkan / Buka Formulir Penerimaan Servis Baru (Khusus Superadmin)">
+                            🛠️ Buka Formulir
+                        </button>
                         <button class="btn col-superadmin-btn" id="btnClearServiceData" onclick="confirmClearServiceData()" style="height: 30px; padding: 0 10px; font-size: 11px; font-weight: bold; display: none; align-items: center; gap: 5px; background: #dc3545; color: #fff; border: none; border-radius: 6px; box-shadow: 0 2px 6px rgba(220, 53, 69, 0.25); cursor: pointer;" title="Reset seluruh data antrean servis, data pelanggan, dan nomor nota kembali ke 001 (Khusus Superadmin)">
                             🗑️ Clear Data Servis
                         </button>
@@ -2683,11 +2691,41 @@
         });
     }
 
+    function toggleServiceFormSuperadmin(show) {
+        var srvFormCard = document.getElementById('serviceFormCard');
+        var btnHide = document.getElementById('btnHideServiceFormSuperadmin');
+        var btnShow = document.getElementById('btnShowServiceFormSuperadmin');
+
+        if (show) {
+            localStorage.setItem('autocash_hide_form_superadmin', 'false');
+            if (srvFormCard) srvFormCard.style.display = 'block';
+            if (btnHide) btnHide.style.display = 'inline-block';
+            if (btnShow) btnShow.style.display = 'none';
+            if (srvFormCard) srvFormCard.scrollIntoView({ behavior: 'smooth' });
+            showToast("Formulir Penerimaan ditampilkan.", "info");
+        } else {
+            localStorage.setItem('autocash_hide_form_superadmin', 'true');
+            if (srvFormCard) srvFormCard.style.display = 'none';
+            if (btnHide) btnHide.style.display = 'none';
+            if (btnShow) btnShow.style.display = 'inline-flex';
+            showToast("Formulir Penerimaan disembunyikan. Klik '🛠️ Buka Formulir' pada Antrean Servis jika ingin membukanya kembali.", "info");
+        }
+    }
+
     function editServiceOrder(id) {
         if (currentUser && currentUser.role === 'teknisi') {
             alert("Akses Ditolak! Role Teknisi tidak memiliki izin untuk mengedit tiket servis. Perubahan data tiket hanya dapat dilakukan oleh Admin Kasir atau Superadmin.");
             return;
         }
+
+        // Jika form sedang di-hide oleh Superadmin, otomatis tampilkan kembali untuk edit
+        var srvFormCard = document.getElementById('serviceFormCard');
+        if (srvFormCard) srvFormCard.style.display = 'block';
+        var btnShow = document.getElementById('btnShowServiceFormSuperadmin');
+        if (btnShow) btnShow.style.display = 'none';
+        var btnHide = document.getElementById('btnHideServiceFormSuperadmin');
+        if (btnHide && currentUser && currentUser.role === 'superadmin') btnHide.style.display = 'inline-block';
+
         var s = services.find(function(item) { return item.id === id; });
         if (!s) return;
 
@@ -2720,9 +2758,18 @@
     function cancelServiceEdit() {
         document.getElementById('serviceEditId').value = '';
         var isTeknisi = currentUser && currentUser.role === 'teknisi';
+        var isSuperadmin = currentUser && currentUser.role === 'superadmin';
         var srvFormCard = document.getElementById('serviceFormCard');
-        if (srvFormCard && isTeknisi) {
-            srvFormCard.style.display = 'none';
+        if (srvFormCard) {
+            if (isTeknisi) {
+                srvFormCard.style.display = 'none';
+            } else if (isSuperadmin && localStorage.getItem('autocash_hide_form_superadmin') === 'true') {
+                srvFormCard.style.display = 'none';
+                var btnShow = document.getElementById('btnShowServiceFormSuperadmin');
+                if (btnShow) btnShow.style.display = 'inline-flex';
+                var btnHide = document.getElementById('btnHideServiceFormSuperadmin');
+                if (btnHide) btnHide.style.display = 'none';
+            }
         }
         document.getElementById('srvNamaPelanggan').value = '';
         document.getElementById('srvNoHp').value = '';
@@ -7169,10 +7216,25 @@
             el.style.display = isSuperadmin ? 'inline-block' : 'none';
         });
 
-        // Formulir Penerimaan Servis Baru: Sembunyikan untuk role teknisi
+        // Formulir Penerimaan Servis Baru: Sembunyikan untuk role teknisi, dan dukung hide untuk Superadmin
         var srvFormCard = document.getElementById('serviceFormCard');
-        if (srvFormCard) {
-            srvFormCard.style.display = isTeknisi ? 'none' : 'block';
+        var btnHideFormSA = document.getElementById('btnHideServiceFormSuperadmin');
+        var btnShowFormSA = document.getElementById('btnShowServiceFormSuperadmin');
+
+        if (isTeknisi) {
+            if (srvFormCard) srvFormCard.style.display = 'none';
+            if (btnHideFormSA) btnHideFormSA.style.display = 'none';
+            if (btnShowFormSA) btnShowFormSA.style.display = 'none';
+        } else if (isSuperadmin) {
+            var isFormHiddenSA = localStorage.getItem('autocash_hide_form_superadmin') === 'true';
+            if (srvFormCard) srvFormCard.style.display = isFormHiddenSA ? 'none' : 'block';
+            if (btnHideFormSA) btnHideFormSA.style.display = isFormHiddenSA ? 'none' : 'inline-block';
+            if (btnShowFormSA) btnShowFormSA.style.display = isFormHiddenSA ? 'inline-flex' : 'none';
+        } else {
+            // Admin (Kasir Toko)
+            if (srvFormCard) srvFormCard.style.display = 'block';
+            if (btnHideFormSA) btnHideFormSA.style.display = 'none';
+            if (btnShowFormSA) btnShowFormSA.style.display = 'none';
         }
 
         // Tampilkan Card Hasil Pembagian Jasa Saya Khusus Role Teknisi
