@@ -1895,6 +1895,13 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 if not srv_id or not new_status:
                     raise Exception("ID dan status servis diperlukan.")
 
+                # Validasi Hak Akses Role terhadap Perubahan Status
+                user_role = str(data.get('role', '')).strip().lower()
+                if user_role == 'admin' and new_status not in ('Baru', 'Instan', 'Diambil'):
+                    raise Exception("Akses Ditolak: Role Admin hanya berwenang mengubah status ke Baru, Instan, atau Diambil.")
+                elif user_role == 'teknisi' and new_status not in ('Sedang Dikerjakan', 'Selesai', 'Batal'):
+                    raise Exception("Akses Ditolak: Role Teknisi hanya berwenang mengubah status ke Diproses, Selesai, atau Batal.")
+
                 conn = sqlite3.connect(DB_FILE)
                 conn.row_factory = sqlite3.Row
                 cursor = conn.cursor()

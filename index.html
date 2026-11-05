@@ -2751,6 +2751,20 @@
         if (!newStatus) return;
         if (selectEl) selectEl.value = ""; // Reset dropdown selector
 
+        // Validasi hak akses role
+        var curRole = currentUser ? (currentUser.role || 'admin') : 'admin';
+        if (curRole === 'admin') {
+            if (!['Baru', 'Instan', 'Diambil'].includes(newStatus)) {
+                showToast("Role Admin hanya berwenang mengubah status ke Baru, Instan, atau Diambil.", "warning");
+                return;
+            }
+        } else if (curRole === 'teknisi') {
+            if (!['Sedang Dikerjakan', 'Selesai', 'Batal'].includes(newStatus)) {
+                showToast("Role Teknisi hanya berwenang mengubah status ke Diproses, Selesai, atau Batal.", "warning");
+                return;
+            }
+        }
+
         if (newStatus === 'Instan') {
             openInstantServiceModal(id);
             return;
@@ -2766,7 +2780,7 @@
             return;
         }
 
-        var statusPayload = { id: id, status_servis: newStatus };
+        var statusPayload = { id: id, status_servis: newStatus, role: curRole };
         if (newStatus === 'Sedang Dikerjakan' && currentUser && currentUser.role === 'teknisi') {
             var myName = (currentUser.fullname || currentUser.username || '').trim();
             var targetSrv = services.find(function(item) { return item.id === id; });
@@ -3297,6 +3311,8 @@
 
         var isMitra = currentUser && currentUser.role === 'mitra';
         var isTeknisi = currentUser && currentUser.role === 'teknisi';
+        var isSuperadmin = currentUser && currentUser.role === 'superadmin';
+        var isAdmin = !isMitra && !isTeknisi && !isSuperadmin;
         var myName = (currentUser ? (currentUser.fullname || currentUser.username) : '').toLowerCase();
         var myUser = (currentUser ? currentUser.username : '').toLowerCase();
         var techFilterVal = document.getElementById('serviceTechFilter') ? document.getElementById('serviceTechFilter').value.trim().toLowerCase() : '';
@@ -3405,7 +3421,7 @@
             if (isMitra) {
                 actionsHtml = '<button class="btn btn-sm" onclick="event.stopPropagation(); openReceiptModal(' + s.id + ')" title="Cetak Nota / Kwitansi" style="padding: 3px 10px; font-size: 11px; background: #e6f4ed; color: #107c41;">🖨️ Cetak</button>';
             } else if (isTeknisi) {
-                // Role Teknisi: tombol Ambil Servis di kolom Aksi, tombol Detail Catatan, tombol Cetak Nota, dan Selector Status
+                // Role Teknisi: status aksi HANYA tampilkan: Diproses, Selesai, Batal
                 var takeActionBtn = '';
                 if (isUnassigned && (st === 'Baru' || st === 'Sedang Dikerjakan')) {
                     takeActionBtn = '<button class="btn btn-sm" onclick="event.stopPropagation(); assignServiceToSelf(' + s.id + ', event)" style="padding: 3px 8px; font-size: 11px; font-weight: bold; background: #7c3aed; color: #ffffff; border: none; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 2px;" title="Ambil Pengerjaan Tiket Ini">✋ Ambil Servis</button>';
@@ -3414,20 +3430,18 @@
                     takeActionBtn +
                     '<button class="btn btn-sm" onclick="event.stopPropagation(); openServiceDetailModal(' + s.id + ')" title="Lihat Detail Lengkap & Catatan Teknisi" style="padding: 3px 8px; font-size: 11px; background: #ede9fe; color: #7c3aed; border: 1px solid #c4b5fd;">🔍 Detail</button>' +
                     '<button class="btn btn-sm" onclick="event.stopPropagation(); openReceiptModal(' + s.id + ')" title="Cetak Nota" style="padding: 3px 8px; font-size: 11px; background: #e6f4ed; color: #107c41;">🖨️</button>' +
-                    '<select onclick="event.stopPropagation()" onchange="quickUpdateServiceStatus(' + s.id + ', this.value, this)" style="font-size: 11px; padding: 2px 4px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color); cursor: pointer;" title="Ganti Status Cepat">' +
+                    '<select onclick="event.stopPropagation()" onchange="quickUpdateServiceStatus(' + s.id + ', this.value, this)" style="font-size: 11px; padding: 2px 4px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color); cursor: pointer;" title="Ganti Status Cepat (Teknisi)">' +
                         '<option value="" disabled selected>⚡ Status</option>' +
-                        '<option value="Baru">Baru</option>' +
-                        '<option value="Instan">Instan</option>' +
                         '<option value="Sedang Dikerjakan">Diproses</option>' +
                         '<option value="Selesai">Selesai</option>' +
-                        '<option value="Diambil">Diambil</option>' +
                         '<option value="Batal">Batal</option>' +
                     '</select>';
-            } else {
+            } else if (isSuperadmin) {
+                // Role Superadmin (Owner): Akses penuh ke seluruh pilihan status
                 actionsHtml = 
                     '<button class="btn btn-sm" onclick="event.stopPropagation(); editServiceOrder(' + s.id + ')" title="Edit Tiket" style="padding: 3px 8px; font-size: 11px;">✏️</button>' +
                     '<button class="btn btn-sm" onclick="event.stopPropagation(); openReceiptModal(' + s.id + ')" title="Cetak Nota" style="padding: 3px 8px; font-size: 11px; background: #e6f4ed; color: #107c41;">🖨️</button>' +
-                    '<select onclick="event.stopPropagation()" onchange="quickUpdateServiceStatus(' + s.id + ', this.value, this)" style="font-size: 11px; padding: 2px 4px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color); cursor: pointer;" title="Ganti Status Cepat">' +
+                    '<select onclick="event.stopPropagation()" onchange="quickUpdateServiceStatus(' + s.id + ', this.value, this)" style="font-size: 11px; padding: 2px 4px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color); cursor: pointer;" title="Ganti Status Cepat (Superadmin)">' +
                         '<option value="" disabled selected>⚡ Status</option>' +
                         '<option value="Baru">Baru</option>' +
                         '<option value="Instan">Instan</option>' +
@@ -3437,6 +3451,17 @@
                         '<option value="Batal">Batal</option>' +
                     '</select>' +
                     '<button class="btn btn-sm btn-danger col-superadmin-btn" onclick="event.stopPropagation(); deleteServiceOrder(' + s.id + ')" title="Hapus Tiket" style="padding: 3px 8px; font-size: 11px;">🗑️</button>';
+            } else {
+                // Role Admin (Kasir / Admin Toko): status aksi HANYA tampilkan: Baru, Instan, Diambil
+                actionsHtml = 
+                    '<button class="btn btn-sm" onclick="event.stopPropagation(); editServiceOrder(' + s.id + ')" title="Edit Tiket" style="padding: 3px 8px; font-size: 11px;">✏️</button>' +
+                    '<button class="btn btn-sm" onclick="event.stopPropagation(); openReceiptModal(' + s.id + ')" title="Cetak Nota" style="padding: 3px 8px; font-size: 11px; background: #e6f4ed; color: #107c41;">🖨️</button>' +
+                    '<select onclick="event.stopPropagation()" onchange="quickUpdateServiceStatus(' + s.id + ', this.value, this)" style="font-size: 11px; padding: 2px 4px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color); cursor: pointer;" title="Ganti Status Cepat (Admin)">' +
+                        '<option value="" disabled selected>⚡ Status</option>' +
+                        '<option value="Baru">Baru</option>' +
+                        '<option value="Instan">Instan</option>' +
+                        '<option value="Diambil">Diambil</option>' +
+                    '</select>';
             }
 
             tr.innerHTML = 
