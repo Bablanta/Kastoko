@@ -6270,10 +6270,6 @@
         var setWa = document.getElementById('settingWaTarget');
         if (setWa) setWa.value = localStorage.getItem('autocash_wa_target') || 'desktop';
 
-        if (curRole === 'superadmin') {
-            if (typeof loadUsersList === 'function') loadUsersList();
-        }
-
         pendingLogoBase64 = null;
         var fileInput = document.getElementById('logoFileInput');
         if (fileInput) fileInput.value = '';
