@@ -867,7 +867,7 @@
                             <span class="r-val" id="rMerkModel">-</span>
                         </div>
                         <div class="r-row" id="rRowImeiSn" style="display: none;">
-                            <span class="r-label">IMEI / S/N:</span>
+                            <span class="r-label">IMEI / SN:</span>
                             <span class="r-val" id="rImeiSn">-</span>
                         </div>
                         <div class="r-row">
@@ -1083,7 +1083,7 @@
                     <div style="font-size: 12px; line-height: 1.7;">
                         <div><span style="color: var(--text-muted);">Perangkat:</span> <b id="dtlJenisPerangkat">-</b></div>
                         <div><span style="color: var(--text-muted);">Merk / Model:</span> <b id="dtlMerkModel">-</b></div>
-                        <div id="dtlRowImeiSn" style="display: none;"><span style="color: var(--text-muted);">IMEI / S/N:</span> <b id="dtlImeiSn">-</b></div>
+                        <div id="dtlRowImeiSn" style="display: none;"><span style="color: var(--text-muted);">IMEI / SN:</span> <b id="dtlImeiSn">-</b></div>
                         <div><span style="color: var(--text-muted);">Layanan:</span> <span id="dtlMenuServis">-</span></div>
                         <div><span style="color: var(--text-muted);">Tgl Masuk:</span> <span id="dtlTanggalMasuk">-</span></div>
                         <div><span style="color: var(--text-muted);">Tgl Selesai:</span> <span id="dtlTanggalSelesai">-</span></div>
@@ -2124,7 +2124,7 @@
                             </div>
                         </div>
                         <div class="form-group" style="margin-bottom: 10px;">
-                            <label>IMEI / S/N <span style="color: var(--text-muted); font-size: 11px; font-weight: normal;">(Opsional)</span></label>
+                            <label>IMEI / SN <span style="color: var(--text-muted); font-size: 11px; font-weight: normal;">(Opsional)</span></label>
                             <input type="text" id="srvImeiSn" class="form-control" placeholder="Cth: 352999XXXXXXXXX atau SN: ABCD1234..." maxlength="60">
                         </div>
                         <div class="form-group" style="margin-bottom: 10px;">
@@ -4922,7 +4922,7 @@
         cmd += 'Perangkat  : ' + (s.jenis_perangkat || '-') + '\n';
         cmd += 'Merk/Model : ' + (s.merk_model || '-') + '\n';
         if (s.imei_sn) {
-            cmd += 'IMEI/S/N   : ' + s.imei_sn + '\n';
+            cmd += 'IMEI / SN  : ' + s.imei_sn + '\n';
         }
         cmd += 'Layanan    : ' + (s.menu_servis || '-') + '\n';
         cmd += 'Keluhan    : ' + (s.keluhan || '-') + '\n';
