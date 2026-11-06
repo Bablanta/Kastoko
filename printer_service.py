@@ -234,6 +234,9 @@ def format_escpos_receipt(service_dict: dict, store_profile: dict = None, paper_
     buf.extend(div_line.encode("cp437"))
     buf.extend((f"Perangkat  : {perangkat}\n").encode("cp437", errors="replace"))
     buf.extend((f"Merk/Model : {unit}\n").encode("cp437", errors="replace"))
+    imei_sn = str(s.get("imei_sn") or "").strip()
+    if imei_sn:
+        buf.extend((f"IMEI/S/N   : {imei_sn}\n").encode("cp437", errors="replace"))
     buf.extend((f"Layanan    : {layanan}\n").encode("cp437", errors="replace"))
     buf.extend((f"Keluhan    : {keluhan}\n").encode("cp437", errors="replace"))
     if catatan_tek:

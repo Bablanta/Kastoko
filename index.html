@@ -419,7 +419,10 @@
                 <div style="background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px;">
                     <div style="font-weight: bold; font-size: 12.5px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; color: var(--text-color);">
                         <span>🧾 PRINTER 1: NOTA / STRUK</span>
-                        <button type="button" class="btn" style="height: 26px; font-size: 11px; padding: 0 10px; background: #eef7fc; color: #0078d4; border: 1px solid #0078d4; font-weight: 600; cursor: pointer; border-radius: 4px;" onclick="testPrintReceipt()">🧪 Uji Cetak Nota</button>
+                        <div style="display: flex; gap: 6px;">
+                            <button type="button" class="btn" style="height: 26px; font-size: 11px; padding: 0 10px; background: #eef7fc; color: #0078d4; border: 1px solid #0078d4; font-weight: 600; cursor: pointer; border-radius: 4px;" onclick="testPrintReceipt()">🧪 Uji Cetak Nota</button>
+                            <button type="button" class="btn" id="btnSettingsBtConnect" style="height: 26px; font-size: 11px; padding: 0 10px; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--border-color); font-weight: 600; cursor: pointer; border-radius: 4px;" onclick="connectBluetoothPrinter()" title="Konek langsung ke Blueprint ECO80BT via Bluetooth 4.0">📶 Konek BT</button>
+                        </div>
                     </div>
                     <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
                         <div style="flex: 1; min-width: 140px;">
@@ -863,6 +866,10 @@
                             <span class="r-label">Merk/Model:</span>
                             <span class="r-val" id="rMerkModel">-</span>
                         </div>
+                        <div class="r-row" id="rRowImeiSn" style="display: none;">
+                            <span class="r-label">IMEI / S/N:</span>
+                            <span class="r-val" id="rImeiSn">-</span>
+                        </div>
                         <div class="r-row">
                             <span class="r-label">Layanan:</span>
                             <span class="r-val" id="rMenuServis">-</span>
@@ -1076,6 +1083,7 @@
                     <div style="font-size: 12px; line-height: 1.7;">
                         <div><span style="color: var(--text-muted);">Perangkat:</span> <b id="dtlJenisPerangkat">-</b></div>
                         <div><span style="color: var(--text-muted);">Merk / Model:</span> <b id="dtlMerkModel">-</b></div>
+                        <div id="dtlRowImeiSn" style="display: none;"><span style="color: var(--text-muted);">IMEI / S/N:</span> <b id="dtlImeiSn">-</b></div>
                         <div><span style="color: var(--text-muted);">Layanan:</span> <span id="dtlMenuServis">-</span></div>
                         <div><span style="color: var(--text-muted);">Tgl Masuk:</span> <span id="dtlTanggalMasuk">-</span></div>
                         <div><span style="color: var(--text-muted);">Tgl Selesai:</span> <span id="dtlTanggalSelesai">-</span></div>
@@ -2116,6 +2124,10 @@
                             </div>
                         </div>
                         <div class="form-group" style="margin-bottom: 10px;">
+                            <label>IMEI / S/N <span style="color: var(--text-muted); font-size: 11px; font-weight: normal;">(Opsional)</span></label>
+                            <input type="text" id="srvImeiSn" class="form-control" placeholder="Cth: 352999XXXXXXXXX atau SN: ABCD1234..." maxlength="60">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 10px;">
                             <label>Keluhan Pelanggan <span style="color: red;">*</span></label>
                             <input type="text" id="srvKeluhan" class="form-control" placeholder="Cth: Layar blank, mati total, baterai kembung...">
                         </div>
@@ -2604,6 +2616,7 @@
         var merkModel = document.getElementById('srvMerkModel').value.trim();
         var keluhan = document.getElementById('srvKeluhan').value.trim();
         var catatanTeknisi = document.getElementById('srvCatatanTeknisi').value.trim();
+        var imeiSn = document.getElementById('srvImeiSn') ? document.getElementById('srvImeiSn').value.trim() : '';
 
         if (!nama) {
             alert("Nama pelanggan wajib diisi!");
@@ -2647,6 +2660,7 @@
             merk_model: merkModel,
             keluhan: keluhan,
             catatan_teknisi: catatanTeknisi,
+            imei_sn: imeiSn,
             mitra_nama: srvMitraVal,
             created_by: (currentUser ? currentUser.username : '')
         };
@@ -2744,6 +2758,7 @@
         document.getElementById('srvTanggalMasuk').value = s.tanggal_masuk || getSystemDate();
         document.getElementById('srvJenisPerangkat').value = s.jenis_perangkat || 'Smartphone / HP';
         document.getElementById('srvMerkModel').value = s.merk_model || '';
+        if (document.getElementById('srvImeiSn')) document.getElementById('srvImeiSn').value = s.imei_sn || '';
         document.getElementById('srvKeluhan').value = s.keluhan || '';
         document.getElementById('srvCatatanTeknisi').value = s.catatan_teknisi || '';
         var selMitraEdit = document.getElementById('srvMitraNama');
@@ -2785,6 +2800,7 @@
         document.getElementById('srvTanggalMasuk').value = getSystemDate();
         document.getElementById('srvJenisPerangkat').value = 'Smartphone / HP';
         document.getElementById('srvMerkModel').value = '';
+        if (document.getElementById('srvImeiSn')) document.getElementById('srvImeiSn').value = '';
         document.getElementById('srvKeluhan').value = '';
         document.getElementById('srvCatatanTeknisi').value = '';
         var selMitraCancel = document.getElementById('srvMitraNama');
@@ -3405,6 +3421,7 @@
                     s.no_hp || '',
                     s.jenis_perangkat || '',
                     s.merk_model || '',
+                    s.imei_sn || '',
                     s.keluhan || '',
                     s.catatan_teknisi || '',
                     s.mitra_nama || '',
@@ -3528,6 +3545,7 @@
                 '<td>' +
                     '<div style="font-weight: 500;">' + escapeHtml(s.merk_model) + '</div>' +
                     '<div style="font-size: 11px; color: var(--text-muted);">' + escapeHtml(s.jenis_perangkat) + '</div>' +
+                    (s.imei_sn ? '<div style="font-size: 10.5px; color: var(--text-muted); font-family: monospace; margin-top: 2px;">SN: ' + escapeHtml(s.imei_sn) + '</div>' : '') +
                 '</td>' +
                 '<td><span style="font-size: 12px; font-weight: 500;">' + escapeHtml(s.menu_servis) + '</span></td>' +
                 '<td>' +
@@ -4056,7 +4074,7 @@
         html += '<h2>Laporan Data Servis & Reparasi Toko</h2>';
         html += '<p>Tanggal Cetak: ' + new Date().toLocaleString('id-ID') + ' | Total: ' + list.length + ' Tiket</p>';
         html += '<table><thead><tr>';
-        html += '<th class="text-center">No</th><th>No. Nota</th><th>Tgl Masuk</th><th>Tgl Selesai</th><th>Pelanggan</th><th>No. WhatsApp</th><th>Perangkat</th><th>Merk/Model</th><th>Layanan</th><th>Keluhan</th><th>Teknisi</th><th>Mitra</th><th>Status Servis</th><th>Sparepart (SPP)</th><th class="text-right">Biaya SPP</th><th class="text-right">Biaya Jasa</th><th class="text-right">Total Biaya</th><th>Status Bayar</th><th>Metode Bayar</th><th>Catatan Teknisi</th>';
+        html += '<th class="text-center">No</th><th>No. Nota</th><th>Tgl Masuk</th><th>Tgl Selesai</th><th>Pelanggan</th><th>No. WhatsApp</th><th>Perangkat</th><th>Merk/Model</th><th>IMEI/SN</th><th>Layanan</th><th>Keluhan</th><th>Teknisi</th><th>Mitra</th><th>Status Servis</th><th>Sparepart (SPP)</th><th class="text-right">Biaya SPP</th><th class="text-right">Biaya Jasa</th><th class="text-right">Total Biaya</th><th>Status Bayar</th><th>Metode Bayar</th><th>Catatan Teknisi</th>';
         html += '</tr></thead><tbody>';
 
         var totSpp = 0, totJasa = 0, totBiaya = 0;
@@ -4078,6 +4096,7 @@
             html += '<td>' + escapeHtml(s.no_hp || '') + '</td>';
             html += '<td>' + escapeHtml(s.jenis_perangkat || '') + '</td>';
             html += '<td>' + escapeHtml(s.merk_model || '') + '</td>';
+            html += '<td>' + escapeHtml(s.imei_sn || '') + '</td>';
             html += '<td>' + escapeHtml(s.menu_servis || '') + '</td>';
             html += '<td>' + escapeHtml(s.keluhan || '') + '</td>';
             html += '<td>' + escapeHtml(s.teknisi_nama || '-') + '</td>';
@@ -4147,6 +4166,7 @@
             lines.push('----------------------------------------');
             lines.push('🏷️ *No. Tiket*    : ' + (s.kode_servis || ('#' + s.id)));
             lines.push('📱 *Perangkat*    : ' + (s.merk_model || '-') + ' (' + (s.jenis_perangkat || 'Unit') + ')');
+            if (s.imei_sn) lines.push('🔢 *IMEI/SN*      : ' + s.imei_sn);
             if (s.catatan_teknisi) lines.push('🔧 *Tindakan*     : ' + s.catatan_teknisi);
             else lines.push('🔧 *Layanan*      : ' + (s.menu_servis || 'Servis'));
             lines.push('💰 *Total Biaya*  : Rp ' + Number(biayaAkhir).toLocaleString('id-ID'));
@@ -4176,6 +4196,7 @@
             lines.push('🏷️ *No. Tiket*    : ' + (s.kode_servis || ('#' + s.id)));
             lines.push('📅 *Tanggal Ambil*: ' + (s.tanggal_selesai || getSystemDate()));
             lines.push('📱 *Perangkat*    : ' + (s.merk_model || '-') + ' (' + (s.jenis_perangkat || 'Unit') + ')');
+            if (s.imei_sn) lines.push('🔢 *IMEI/SN*      : ' + s.imei_sn);
             lines.push('💰 *Total Bayar*  : Rp ' + Number(finalBiaya).toLocaleString('id-ID'));
             lines.push('💳 *Metode Bayar* : ' + (s.metode_pembayaran || 'Tunai'));
             lines.push('✅ *Status Bayar* : ' + (s.status_pembayaran || 'LUNAS'));
@@ -4202,6 +4223,7 @@
             lines.push('----------------------------------------');
             lines.push('🏷️ *No. Tiket*    : ' + (s.kode_servis || ('#' + s.id)));
             lines.push('📱 *Perangkat*    : ' + (s.merk_model || '-') + ' (' + (s.jenis_perangkat || 'Unit') + ')');
+            if (s.imei_sn) lines.push('🔢 *IMEI/SN*      : ' + s.imei_sn);
             if (s.teknisi_nama) lines.push('👨‍🔧 *Teknisi*     : ' + s.teknisi_nama);
             lines.push('🔍 *Keluhan*      : ' + (s.keluhan || '-'));
             if (s.catatan_teknisi) lines.push('📝 *Catatan*      : ' + s.catatan_teknisi);
@@ -4225,6 +4247,7 @@
             lines.push('🏷️ *No. Tiket*    : ' + (s.kode_servis || ('#' + s.id)));
             lines.push('📅 *Tgl Masuk*    : ' + (s.tanggal_masuk || getSystemDate()));
             lines.push('📱 *Perangkat*    : ' + (s.merk_model || '-') + ' (' + (s.jenis_perangkat || 'Unit') + ')');
+            if (s.imei_sn) lines.push('🔢 *IMEI/SN*      : ' + s.imei_sn);
             lines.push('🔍 *Keluhan*      : ' + (s.keluhan || '-'));
             lines.push('🔧 *Layanan*      : ' + (s.menu_servis || 'Diagnosa'));
             lines.push('💵 *Est. Biaya*   : Rp ' + Number(s.estimasi_biaya || 0).toLocaleString('id-ID'));
@@ -4623,6 +4646,16 @@
         if (rPerangkat) rPerangkat.innerText = s.jenis_perangkat || '-';
         var rMerkModel = document.getElementById('rMerkModel');
         if (rMerkModel) rMerkModel.innerText = s.merk_model || '-';
+        var rowImei = document.getElementById('rRowImeiSn');
+        if (rowImei) {
+            if (s.imei_sn) {
+                rowImei.style.display = 'flex';
+                var rImeiEl = document.getElementById('rImeiSn');
+                if (rImeiEl) rImeiEl.innerText = s.imei_sn;
+            } else {
+                rowImei.style.display = 'none';
+            }
+        }
         var rMenu = document.getElementById('rMenuServis');
         if (rMenu) rMenu.innerText = s.menu_servis || '-';
         var rKeluhan = document.getElementById('rKeluhan');
@@ -4815,6 +4848,29 @@
         });
     }
 
+    function buildEscPosQr(url, colWidth) {
+        var qrCmd = '';
+        var qrBytes = [];
+        for (var i = 0; i < url.length; i++) {
+            qrBytes.push(url.charCodeAt(i) & 0xFF);
+        }
+        var len = qrBytes.length + 3;
+        var pL = len % 256;
+        var pH = Math.floor(len / 256);
+
+        // 1. Model 2
+        qrCmd += '\x1D\x28\x6B\x04\x00\x31\x41\x32\x00';
+        // 2. Module size (4 for 80mm Blueprint ECO80BT)
+        qrCmd += '\x1D\x28\x6B\x03\x00\x31\x43\x04';
+        // 3. Error correction level M (49)
+        qrCmd += '\x1D\x28\x6B\x03\x00\x31\x45\x31';
+        // 4. Store data
+        qrCmd += '\x1D\x28\x6B' + String.fromCharCode(pL) + String.fromCharCode(pH) + '\x31\x50\x30' + url;
+        // 5. Print QR Code
+        qrCmd += '\x1D\x28\x6B\x03\x00\x31\x51\x30';
+        return qrCmd;
+    }
+
     function buildReceiptEscPos(s, type) {
         var isAmbil = (type === 'ambil');
         var cmd = '';
@@ -4822,24 +4878,42 @@
         var stAddr = (currentStoreProfile && currentStoreProfile.address) ? currentStoreProfile.address : '';
         var stPhone = (currentStoreProfile && currentStoreProfile.phone) ? currentStoreProfile.phone : '';
 
+        var is58 = (currentReceiptPaperSize === '58');
+        var colWidth = is58 ? 32 : 48;
+        var divLine = (is58 ? '--------------------------------' : '------------------------------------------------') + '\n';
+        var dblLine = (is58 ? '================================' : '================================================') + '\n';
+
+        function makeTwoCol(left, right, width) {
+            left = String(left || '');
+            right = String(right || '');
+            var space = width - left.length - right.length;
+            if (space < 1) space = 1;
+            return left + ' '.repeat(space) + right + '\n';
+        }
+
         cmd += '\x1B\x40'; // Reset / Init printer
+        // Heating density / Double-strike agar Blueprint ECO80BT pekat & timbul
+        cmd += '\x1B\x47\x01'; // Double-strike ON
+        cmd += '\x1B\x37\x07\xFE\x02'; // ESC 7: Heating parameters
+
+        // Header Toko
         cmd += '\x1B\x61\x01'; // Center
         cmd += '\x1B\x45\x01'; // Bold ON
+        cmd += '\x1D\x21\x01'; // Double height
         cmd += stName + '\n';
+        cmd += '\x1D\x21\x00'; // Normal size
         cmd += '\x1B\x45\x00'; // Bold OFF
-        if (stAddr) {
-            cmd += stAddr + '\n';
-        }
-        if (stPhone) {
-            cmd += 'Telp/WA: ' + stPhone + '\n';
-        }
+        if (stAddr) cmd += stAddr + '\n';
+        if (stPhone) cmd += 'Telp/WA: ' + stPhone + '\n';
+
+        // Judul Nota
+        cmd += '\x1B\x45\x01'; // Bold ON
         cmd += (isAmbil ? 'NOTA PENGAMBILAN & KWITANSI\n' : 'TANDA TERIMA PENERIMAAN UNIT\n');
         cmd += (isAmbil ? ('Tgl Keluar: ' + (s.tanggal_selesai || getSystemDate()) + '\n') : ('Tanggal: ' + (s.tanggal_masuk || getSystemDate()) + '\n'));
-        var is58 = (currentReceiptPaperSize === '58');
-        var divLine = is58 ? '--------------------------------\n' : '------------------------------------------\n';
-        var dblLine = is58 ? '================================\n' : '==========================================\n';
+        cmd += '\x1B\x45\x00'; // Bold OFF
         cmd += dblLine;
-        
+
+        // Data Unit & Pelanggan
         cmd += '\x1B\x61\x00'; // Left align
         cmd += 'No. Tiket  : ' + (s.kode_servis || ('#' + s.id)) + '\n';
         cmd += 'Pelanggan  : ' + (s.nama_pelanggan || '-') + '\n';
@@ -4847,31 +4921,37 @@
         cmd += divLine;
         cmd += 'Perangkat  : ' + (s.jenis_perangkat || '-') + '\n';
         cmd += 'Merk/Model : ' + (s.merk_model || '-') + '\n';
+        if (s.imei_sn) {
+            cmd += 'IMEI/S/N   : ' + s.imei_sn + '\n';
+        }
         cmd += 'Layanan    : ' + (s.menu_servis || '-') + '\n';
         cmd += 'Keluhan    : ' + (s.keluhan || '-') + '\n';
         if (s.catatan_teknisi) {
             cmd += 'Catatan T. : ' + s.catatan_teknisi + '\n';
         }
-        cmd += '--------------------------------\n';
-        
+        cmd += divLine;
+
+        // Informasi Biaya
         if (isAmbil) {
             var inputAkhir = document.getElementById('rInputBiayaAkhir');
             var akhirVal = inputAkhir ? parseNumber(inputAkhir.value) : (s.biaya_akhir || s.estimasi_biaya || 0);
             var bayarVal = document.getElementById('rInputStatusBayar') ? document.getElementById('rInputStatusBayar').value : (s.status_pembayaran || 'LUNAS');
             if (s.estimasi_biaya) {
-                cmd += 'Est. Awal  : Rp ' + (s.estimasi_biaya || 0).toLocaleString('id-ID') + '\n';
+                cmd += makeTwoCol('Estimasi Awal', 'Rp ' + (s.estimasi_biaya || 0).toLocaleString('id-ID'), colWidth);
             }
             cmd += '\x1B\x45\x01'; // Bold ON
-            cmd += 'TOTAL BIAYA: Rp ' + akhirVal.toLocaleString('id-ID') + '\n';
-            cmd += 'STATUS     : ' + bayarVal + '\n';
+            cmd += makeTwoCol('TOTAL AKHIR', 'Rp ' + akhirVal.toLocaleString('id-ID'), colWidth);
+            cmd += makeTwoCol('STATUS BAYAR', bayarVal.toUpperCase(), colWidth);
             cmd += '\x1B\x45\x00'; // Bold OFF
         } else {
             cmd += '\x1B\x45\x01'; // Bold ON
-            cmd += 'Estimasi   : Rp ' + (s.estimasi_biaya || 0).toLocaleString('id-ID') + '\n';
-            cmd += 'Status     : ' + (s.status_servis || 'Baru') + '\n';
+            cmd += makeTwoCol('ESTIMASI BIAYA', 'Rp ' + (s.estimasi_biaya || 0).toLocaleString('id-ID'), colWidth);
+            cmd += makeTwoCol('STATUS TIKET', (s.status_servis || 'Baru').toUpperCase(), colWidth);
             cmd += '\x1B\x45\x00'; // Bold OFF
         }
-        cmd += '================================\n';
+        cmd += dblLine;
+
+        // Footer & Syarat
         cmd += '\x1B\x61\x01'; // Center
         if (isAmbil) {
             cmd += '* Terima kasih atas kepercayaan Anda *\n';
@@ -4883,15 +4963,38 @@
             }
         } else {
             cmd += '* Simpan nota bukti penerimaan *\n';
-            cmd += '* Bawa saat pengambilan unit *\n';
+            cmd += '* Wajib bawa saat ambil unit *\n';
+
+            // QR Code Pelacakan Servisan Online
+            var kodeTiket = s.kode_servis || ('#' + s.id);
+            var baseDomain = 'https://lacak.dhanzcell.my.id';
+            if (!window.location.hostname.includes('dhanzcell.my.id') && !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1')) {
+                baseDomain = window.location.origin;
+            }
+            var trackingUrl = baseDomain + '/lacak?nota=' + encodeURIComponent(kodeTiket);
+            cmd += '\n[ SCAN CEK STATUS SERVIS ]\n';
+            cmd += buildEscPosQr(trackingUrl, colWidth);
+            cmd += 'lacak.dhanzcell.my.id\n';
+            cmd += divLine;
         }
+
+        // Tanda Tangan
         cmd += '\n';
-        cmd += 'Pelanggan            Kasir/Teknisi\n\n\n';
-        var custName = (s.nama_pelanggan || '...............');
-        if (custName.length > 15) custName = custName.substring(0, 15);
-        cmd += '(' + custName + ')       (...........)\n';
-        cmd += '\n\n\n';
-        cmd += '\x1D\x56\x41\x00'; // Partial Cut
+        if (colWidth >= 48) {
+            cmd += '       Pelanggan                       Kasir/Teknisi\n\n\n';
+            var cName = (s.nama_pelanggan || '...............').substring(0, 18);
+            var padL = Math.max(0, Math.floor((18 - cName.length) / 2));
+            var padR = Math.max(0, 18 - cName.length - padL);
+            var cTrim = ' '.repeat(padL) + cName + ' '.repeat(padR);
+            cmd += ' (' + cTrim + ')                  (....................)\n';
+        } else {
+            cmd += ' Pelanggan            Teknisi\n\n\n';
+            var cName58 = (s.nama_pelanggan || '............').substring(0, 12);
+            cmd += '(' + cName58.padEnd(12) + ')     (............)\n';
+        }
+        cmd += '\n\n';
+        // Feeds pas di atas gerigi potong tear bar Blueprint ECO80BT
+        cmd += '\x1D\x56\x41\x03'; // Feed & Cut/Advance
         return cmd;
     }
 
@@ -4917,9 +5020,16 @@
         return cmd;
     }
 
+    function stringToEscPosBytes(str) {
+        var bytes = new Uint8Array(str.length);
+        for (var i = 0; i < str.length; i++) {
+            bytes[i] = str.charCodeAt(i) & 0xFF;
+        }
+        return bytes;
+    }
+
     async function sendRawEscPos(escPosStr, target) {
-        var encoder = new TextEncoder();
-        var bytes = encoder.encode(escPosStr);
+        var bytes = stringToEscPosBytes(escPosStr);
 
         if (target === 'bluetooth' && btCharacteristic) {
             var CHUNK = 64;
@@ -4930,7 +5040,7 @@
                 } else {
                     await btCharacteristic.writeValue(chunk);
                 }
-                await new Promise(function(r) { setTimeout(r, 25); });
+                await new Promise(function(r) { setTimeout(r, 20); });
             }
             return true;
         } else if (target === 'usb' && usbPort) {
@@ -4987,6 +5097,14 @@
                 btnUsb.style.color = 'var(--text-color)';
                 btnUsb.style.borderColor = 'var(--border-color)';
             }
+        }
+
+        var btnSettingsBt = document.getElementById('btnSettingsBtConnect');
+        if (btnSettingsBt) {
+            btnSettingsBt.innerText = isBt ? ('📶 Putus BT (' + (btDevice.name || 'ECO80BT') + ')') : '📶 Konek BT';
+            btnSettingsBt.style.background = isBt ? '#f8d7da' : 'var(--input-bg)';
+            btnSettingsBt.style.color = isBt ? '#721c24' : 'var(--text-color)';
+            btnSettingsBt.style.borderColor = isBt ? '#f5c6cb' : 'var(--border-color)';
         }
 
         if (isBt) {
@@ -5080,6 +5198,7 @@
 
             btDevice = device;
             btCharacteristic = writeChar;
+            localStorage.setItem('autocash_bt_device_name', device.name || 'Blueprint ECO80BT');
 
             updatePrinterStatusDisplay();
             showToast("Printer Bluetooth terhubung: " + (device.name || 'Printer Thermal'), "success");
@@ -5368,7 +5487,44 @@
         }
     }
 
+    function runTestPrintBluetooth() {
+        var mockService = {
+            id: 1,
+            kode_servis: 'TEST-ECO80BT',
+            nama_pelanggan: 'Tes Cetak Bluetooth',
+            no_hp: '0812-3456-7890',
+            jenis_perangkat: 'Thermal 80mm',
+            merk_model: 'Blueprint ECO 80 BT',
+            menu_servis: 'Uji Koneksi Bluetooth 4.0',
+            keluhan: 'Hasil cetak pekat & QR code tajam',
+            estimasi_biaya: 50000,
+            status_servis: 'Baru'
+        };
+        var cmd = buildReceiptEscPos(mockService, 'masuk');
+        showToast("⚡ Mengirim uji cetak ke Blueprint ECO80BT via Bluetooth...", "info");
+        sendRawEscPos(cmd, 'bluetooth').then(function() {
+            showToast("✅ Uji cetak Bluetooth ke Blueprint ECO80BT sukses!", "success");
+        }).catch(function(err) {
+            showToast("❌ Gagal kirim Bluetooth: " + err.message, "error");
+        });
+    }
+
     function testPrintReceipt() {
+        var connSel = document.getElementById('settingNotaConnection');
+        var notaConn = connSel ? connSel.value : (localStorage.getItem('autocash_nota_connection') || 'direct_backend');
+
+        if (btCharacteristic || notaConn === 'bluetooth') {
+            if (!btCharacteristic) {
+                showToast("Menghubungkan Blueprint ECO80BT via Bluetooth...", "info");
+                connectBluetoothPrinter().then(function() {
+                    if (btCharacteristic) runTestPrintBluetooth();
+                });
+                return;
+            }
+            runTestPrintBluetooth();
+            return;
+        }
+
         var sel = document.getElementById('settingNotaPrinterDevice');
         var pName = sel ? sel.value : (localStorage.getItem('autocash_nota_printer_name') || '');
         var pWidth = document.getElementById('settingNotaPaperSize') ? document.getElementById('settingNotaPaperSize').value : '58';
@@ -5454,6 +5610,43 @@
         var bayarSel = document.getElementById('rInputStatusBayar');
         if (bayarSel) sCopy.status_pembayaran = bayarSel.value;
 
+        // PRIORITAS 1: Bluetooth (Jika perangkat Bluetooth terhubung ATAU diset jalur bluetooth)
+        if (btCharacteristic || notaConn === 'bluetooth') {
+            if (!btCharacteristic) {
+                showToast("Menghubungkan printer Bluetooth...", "info");
+                connectBluetoothPrinter().then(function() {
+                    if (btCharacteristic) {
+                        var cmd = buildReceiptEscPos(sCopy, currentReceiptType);
+                        showToast("Mencetak Nota (" + currentReceiptPaperSize + "mm) via Bluetooth...", "info");
+                        sendRawEscPos(cmd, 'bluetooth').then(function() {
+                            showToast("Nota berhasil dicetak via Bluetooth!", "success");
+                        });
+                    }
+                });
+                return;
+            }
+            var cmd = buildReceiptEscPos(sCopy, currentReceiptType);
+            showToast("Mencetak Nota (" + currentReceiptPaperSize + "mm) via Bluetooth...", "info");
+            sendRawEscPos(cmd, 'bluetooth').then(function() {
+                showToast("Nota berhasil dicetak via Bluetooth!", "success");
+            });
+            return;
+        }
+
+        // PRIORITAS 2: Direct USB WebSerial
+        if (usbPort || notaConn === 'usb') {
+            var target = usbPort ? 'usb' : null;
+            if (target) {
+                showToast("Mencetak Nota (" + currentReceiptPaperSize + "mm) via USB...", "info");
+                var cmd = buildReceiptEscPos(sCopy, currentReceiptType);
+                sendRawEscPos(cmd, target).then(function() {
+                    showToast("Nota berhasil dicetak via USB!", "success");
+                });
+                return;
+            }
+        }
+
+        // PRIORITAS 3: Direct Backend (Windows Spooler)
         if (notaConn === 'direct_backend') {
             var pName = localStorage.getItem('autocash_nota_printer_name') || '';
             var pDensity = localStorage.getItem('autocash_print_density') || 'high';
@@ -5488,17 +5681,8 @@
             return;
         }
 
-        var target = btCharacteristic ? 'bluetooth' : (usbPort ? 'usb' : null);
-        if (target) {
-            showToast("Mencetak Nota (" + currentReceiptPaperSize + "mm) via " + target.toUpperCase() + "...", "info");
-            var cmd = buildReceiptEscPos(sCopy, currentReceiptType);
-            sendRawEscPos(cmd, target).then(function() {
-                showToast("Nota berhasil dicetak via " + target.toUpperCase() + "!", "success");
-            });
-        } else {
-            showToast("Mencetak Nota (" + currentReceiptPaperSize + "mm) via Driver Printer...", "info");
-            printViaBrowser('print-mode-receipt', notaWidth, notaHeight);
-        }
+        showToast("Mencetak Nota (" + currentReceiptPaperSize + "mm) via Driver Printer...", "info");
+        printViaBrowser('print-mode-receipt', notaWidth, notaHeight);
     }
 
     function printLabelOnly() {
@@ -8681,6 +8865,11 @@
 
         var modelEl = document.getElementById('dtlMerkModel');
         if (modelEl) modelEl.innerText = s.merk_model || '-';
+
+        var dtlImei = document.getElementById('dtlImeiSn');
+        var dtlRowImei = document.getElementById('dtlRowImeiSn');
+        if (dtlRowImei) dtlRowImei.style.display = s.imei_sn ? 'block' : 'none';
+        if (dtlImei) dtlImei.innerText = s.imei_sn || '-';
 
         var menuEl = document.getElementById('dtlMenuServis');
         if (menuEl) menuEl.innerText = s.menu_servis || 'Diagnosa';

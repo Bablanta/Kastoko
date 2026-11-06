@@ -510,6 +510,10 @@
                     <span class="detail-label">Perangkat:</span>
                     <span class="detail-value" id="valPerangkat">-</span>
                 </div>
+                <div class="detail-row" id="rowImeiSn" style="display: none;">
+                    <span class="detail-label">IMEI / S/N:</span>
+                    <span class="detail-value" id="valImeiSn">-</span>
+                </div>
                 <div class="detail-row">
                     <span class="detail-label">Layanan:</span>
                     <span class="detail-value" id="valLayanan">-</span>
@@ -623,6 +627,15 @@
             document.getElementById('valTanggalMasuk').innerText = s.tanggal_masuk;
             document.getElementById('valNamaPelanggan').innerText = s.nama_pelanggan;
             document.getElementById('valPerangkat').innerText = s.jenis_perangkat + (s.merk_model ? ' - ' + s.merk_model : '');
+            var rowImei = document.getElementById('rowImeiSn');
+            if (rowImei) {
+                if (s.imei_sn) {
+                    rowImei.style.display = 'flex';
+                    document.getElementById('valImeiSn').innerText = s.imei_sn;
+                } else {
+                    rowImei.style.display = 'none';
+                }
+            }
             document.getElementById('valLayanan').innerText = s.menu_servis || 'Servis Reguler';
             document.getElementById('valKeluhan').innerText = s.keluhan || '-';
 

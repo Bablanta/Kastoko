@@ -242,6 +242,15 @@ def init_db():
         except Exception as e:
             print(f"[WARNING] Gagal migrasi garansi pada services: {e}")
 
+    # Migrasi kolom imei_sn pada services
+    if "imei_sn" not in s_cols:
+        try:
+            cursor.execute("ALTER TABLE services ADD COLUMN imei_sn TEXT DEFAULT ''")
+            conn.commit()
+            print("[INFO] Kolom 'imei_sn' berhasil ditambahkan ke tabel services.")
+        except Exception as e:
+            print(f"[WARNING] Gagal migrasi imei_sn: {e}")
+
     # Migrasi kolom updated_at & created_at pada transactions
     cursor.execute("PRAGMA table_info(transactions)")
     tx_cols = [col[1] for col in cursor.fetchall()]
@@ -543,8 +552,8 @@ def execute_smart_merge(remote_data):
                     menu_servis, status_servis, estimasi_biaya, biaya_akhir,
                     status_pembayaran, sparepart_nama, sparepart_biaya,
                     metode_pembayaran, teknisi_nama, mitra_nama, created_by,
-                    tanggal_masuk, tanggal_selesai, garansi, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    tanggal_masuk, tanggal_selesai, garansi, imei_sn, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 kode_servis, cust_id, rs.get("nama_pelanggan", ""), rs.get("no_hp", ""),
                 rs.get("jenis_perangkat", ""), rs.get("merk_model", ""), rs.get("keluhan", ""),
@@ -555,6 +564,7 @@ def execute_smart_merge(remote_data):
                 rs.get("teknisi_nama", ""), rs.get("mitra_nama", ""), rs.get("created_by", ""),
                 rs.get("tanggal_masuk", ""), rs.get("tanggal_selesai", ""),
                 rs.get("garansi", "7 Hari") or "7 Hari",
+                rs.get("imei_sn", ""),
                 r_created, r_updated or now_str
             ))
             stats["services_inserted"] += 1
@@ -588,6 +598,7 @@ def execute_smart_merge(remote_data):
                         tanggal_masuk = ?,
                         tanggal_selesai = ?,
                         garansi = COALESCE(NULLIF(?, ''), garansi),
+                        imei_sn = ?,
                         updated_at = ?
                     WHERE id = ?
                 ''', (
@@ -602,6 +613,7 @@ def execute_smart_merge(remote_data):
                     rs.get("created_by", ""), rs.get("created_by", ""),
                     rs.get("tanggal_masuk", ""), rs.get("tanggal_selesai", ""),
                     rs.get("garansi", "7 Hari") or "7 Hari",
+                    rs.get("imei_sn", ""),
                     r_updated, ls["id"]
                 ))
                 stats["services_updated"] += 1
@@ -997,9 +1009,9 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     clauses.append("status_servis = ?")
                     args.append(status_filter)
                 if search_q:
-                    clauses.append("(nama_pelanggan LIKE ? OR no_hp LIKE ? OR merk_model LIKE ? OR kode_servis LIKE ? OR keluhan LIKE ?)")
+                    clauses.append("(nama_pelanggan LIKE ? OR no_hp LIKE ? OR merk_model LIKE ? OR kode_servis LIKE ? OR keluhan LIKE ? OR imei_sn LIKE ?)")
                     q_like = f"%{search_q}%"
-                    args.extend([q_like, q_like, q_like, q_like, q_like])
+                    args.extend([q_like, q_like, q_like, q_like, q_like, q_like])
                 role_filter = str(query.get('role', [None])[0] or '').strip().lower()
                 actor_filter = str(query.get('actor', [None])[0] or '').strip()
                 if role_filter == 'mitra' and actor_filter:
@@ -1793,6 +1805,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 tanggal_masuk = str(data.get('tanggal_masuk', datetime.date.today().strftime('%Y-%m-%d'))).strip()
                 tanggal_selesai = str(data.get('tanggal_selesai', '')).strip()
                 garansi = str(data.get('garansi', '7 Hari')).strip() or '7 Hari'
+                imei_sn = str(data.get('imei_sn', '')).strip()
 
                 if not nama_pelanggan:
                     raise Exception("Nama pelanggan wajib diisi.")
@@ -1829,6 +1842,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                             tanggal_masuk = ?,
                             tanggal_selesai = ?,
                             garansi = ?,
+                            imei_sn = ?,
                             updated_at = ?
                         WHERE id = ?
                     ''', (
@@ -1837,7 +1851,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                         estimasi_biaya, biaya_akhir, status_pembayaran,
                         sparepart_nama, sparepart_biaya, metode_pembayaran,
                         teknisi_nama, teknisi_nama, mitra_nama, mitra_nama,
-                        tanggal_masuk, tanggal_selesai, garansi, now_str, srv_id
+                        tanggal_masuk, tanggal_selesai, garansi, imei_sn, now_str, srv_id
                     ))
                     saved_id = srv_id
                     msg = "Data servis berhasil diperbarui."
@@ -1850,15 +1864,15 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                             menu_servis, status_servis, estimasi_biaya, biaya_akhir,
                             status_pembayaran, sparepart_nama, sparepart_biaya,
                             metode_pembayaran, teknisi_nama, mitra_nama, created_by,
-                            tanggal_masuk, tanggal_selesai, garansi, created_at, updated_at
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            tanggal_masuk, tanggal_selesai, garansi, imei_sn, created_at, updated_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ''', (
                         kode_servis, cust_id, nama_pelanggan, no_hp,
                         jenis_perangkat, merk_model, keluhan, catatan_teknisi,
                         menu_servis, status_servis, estimasi_biaya, biaya_akhir,
                         status_pembayaran, sparepart_nama, sparepart_biaya,
                         metode_pembayaran, teknisi_nama, mitra_nama, created_by,
-                        tanggal_masuk, tanggal_selesai, garansi, now_str, now_str
+                        tanggal_masuk, tanggal_selesai, garansi, imei_sn, now_str, now_str
                     ))
                     saved_id = cursor.lastrowid
                     msg = f"Tiket servis baru #{kode_servis} berhasil disimpan."
