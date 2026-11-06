@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Autocash - Pembukuan & Servis Toko</title>
-    <link rel="stylesheet" href="style.css?v=20261029_1715">
+    <link rel="stylesheet" href="style.css?v=20261107_fullwidth">
     <style>
         /* Force Settings Modal Persegi Panjang & Scrollable Atas-Bawah */
         .settings-modal-card {
@@ -5994,6 +5994,17 @@
         // Load logo (kustom permanen atau default KT)
         loadAppLogo();
 
+        var urlParams = new URLSearchParams(window.location.search);
+        var autoRole = urlParams.get('auto_role');
+        if (autoRole) {
+            sessionStorage.setItem('autocash_current_role', autoRole);
+            sessionStorage.setItem('autocash_current_user', JSON.stringify({ role: autoRole, username: autoRole }));
+        }
+        var autoTab = urlParams.get('tab');
+        if (autoTab === 'servis' || autoTab === 'pembukuan') {
+            setTimeout(function() { switchMainDashboard(autoTab); }, 200);
+        }
+
         var savedSession = sessionStorage.getItem('autocash_current_role');
         var savedUserJson = sessionStorage.getItem('autocash_current_user');
         if (savedSession) {
@@ -6026,7 +6037,7 @@
         loadCustomers();
 
         // Load active main dashboard tab
-        var savedMainDashboard = localStorage.getItem('autocash_main_dashboard') || 'pembukuan';
+        var savedMainDashboard = autoTab || localStorage.getItem('autocash_main_dashboard') || 'pembukuan';
         switchMainDashboard(savedMainDashboard);
 
         // Load preferensi cetak label & auto-print

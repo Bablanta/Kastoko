@@ -89,31 +89,19 @@
 
 
 body {
-
     background-color: var(--bg-color);
-
     color: var(--text-color);
-
-    padding: 24px;
-
+    padding: 16px 22px;
     min-height: 100vh;
-
 }
 
-
-
 .container {
-
-    max-width: 1250px;
-
-    margin: 0 auto;
-
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
     display: flex;
-
     flex-direction: column;
-
-    gap: 20px;
-
+    gap: 18px;
 }
 
 
@@ -2336,4 +2324,54 @@ table tr:hover {
 .settings-modal-body::-webkit-scrollbar-thumb:hover,
 .modal-card::-webkit-scrollbar-thumb:hover {
     background: var(--accent-color);
+}
+
+/* ========================================================
+   RESPONSIVE FLUID FULL-WIDTH BREAKPOINTS
+   ======================================================== */
+@media (max-width: 1024px) {
+    body {
+        padding: 14px 16px;
+    }
+    .container {
+        gap: 16px;
+    }
+    .card {
+        padding: 20px;
+    }
+}
+
+@media (max-width: 768px) {
+    body {
+        padding: 10px 12px;
+    }
+    header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        padding: 14px 16px;
+    }
+    .header-actions {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+    }
+    .card {
+        padding: 16px 14px;
+    }
+    .summary-cards {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px;
+    }
+}
+
+@media (max-width: 600px) {
+    .main-dashboard-nav {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 8px !important;
+    }
+    .summary-cards {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+    }
 }
