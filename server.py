@@ -27,9 +27,9 @@ def get_store_settings_dict():
         "store_name": "AUTOCASH SERVIS",
         "store_address": "",
         "store_phone": "",
-        "nota_paper_size": "58",
+        "nota_paper_size": "78x98",
         "label_paper_size": "40x30",
-        "nota_printer_name": "",
+        "nota_printer_name": "80Label Printer ( USB )",
         "label_printer_name": "",
         "label_mode": "tspl",
         "print_density": "high",
@@ -845,7 +845,14 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
         self.send_header('Pragma', 'no-cache')
         self.send_header('Expires', '0')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
         super().end_headers()
+
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.end_headers()
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
@@ -2250,13 +2257,16 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 srv_id = data.get('service_id')
                 srv_obj = data.get('service')
                 p_name = data.get('printer_name') or settings.get('nota_printer_name') or (printer_service.get_default_printer() if printer_service else None)
-                paper_w = str(data.get('paper_width') or settings.get('nota_paper_size') or '58')
+                paper_w = str(data.get('paper_width') or settings.get('nota_paper_size') or '78x98')
                 density = str(data.get('density') or settings.get('print_density') or 'high')
                 receipt_type = str(data.get('receipt_type') or 'terima')
                 is_ambil = (receipt_type == 'ambil')
 
                 if not p_name:
-                    raise Exception("Printer Nota belum dipilih. Silakan atur printer di menu Pengaturan.")
+                    if printer_service:
+                        p_name = printer_service.get_default_printer()
+                if not p_name:
+                    raise Exception("Printer Nota belum terdeteksi. Pastikan kabel USB printer terhubung dan printer menyala.")
 
                 if not srv_obj and srv_id:
                     conn = sqlite3.connect(DB_FILE)
@@ -2277,7 +2287,13 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     "phone": settings.get('store_phone', '')
                 }
 
-                raw_bytes = printer_service.format_escpos_receipt(srv_obj, store_profile=store_prof, paper_width=paper_w, density=density, is_ambil=is_ambil)
+                # Optimasi Cetak Nota Kertas Thermal Label 78 x 98 mm via TSPL (Sensor Gap Presisi)
+                is_tspl = ("78" in str(paper_w) or "label" in str(p_name).lower() or data.get('mode') == 'tspl')
+                if is_tspl:
+                    raw_bytes = printer_service.format_tspl_receipt(srv_obj, store_profile=store_prof, is_ambil=is_ambil, width_mm=78, height_mm=98)
+                else:
+                    raw_bytes = printer_service.format_escpos_receipt(srv_obj, store_profile=store_prof, paper_width=paper_w, density=density, is_ambil=is_ambil)
+
                 doc_title = f"Nota {srv_obj.get('kode_servis', '')}"
                 printer_service.send_raw_to_printer(p_name, raw_bytes, doc_name=doc_title)
 

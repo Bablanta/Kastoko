@@ -1462,10 +1462,11 @@ table tr:hover {
 
 
 
-/* KERTAS NOTA 80 x 100 mm */
+/* KERTAS NOTA 78 x 98 mm / 80 x 100 mm */
+.receipt-paper-7898,
 .receipt-paper-80100 {
     width: 76mm;
-    max-width: 80mm;
+    max-width: 78mm;
     margin: 0 auto;
     padding: 1.5mm 2.5mm;
     font-family: 'Courier New', Courier, monospace, 'Segoe UI', Arial, sans-serif;
@@ -1479,11 +1480,13 @@ table tr:hover {
     box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
+.receipt-paper-7898 .receipt-header,
 .receipt-paper-80100 .receipt-header {
     text-align: center;
     margin-bottom: 2px;
 }
 
+.receipt-paper-7898 .store-title,
 .receipt-paper-80100 .store-title {
     font-size: 12px;
     font-weight: bold;
@@ -1492,22 +1495,26 @@ table tr:hover {
     text-transform: uppercase;
 }
 
+.receipt-paper-7898 .receipt-sub,
 .receipt-paper-80100 .receipt-sub {
     font-size: 7.5px;
     color: #333333;
     margin-top: 1px;
 }
 
+.receipt-paper-7898 .receipt-divider-solid,
 .receipt-paper-80100 .receipt-divider-solid {
     border-bottom: 1px solid #222222;
     margin: 2px 0;
 }
 
+.receipt-paper-7898 .receipt-divider-dash,
 .receipt-paper-80100 .receipt-divider-dash {
     border-bottom: 1px dashed #777777;
     margin: 2px 0;
 }
 
+.receipt-paper-7898 .r-row,
 .receipt-paper-80100 .r-row {
     display: flex;
     justify-content: space-between;
@@ -1515,12 +1522,14 @@ table tr:hover {
     padding: 0.8px 0;
 }
 
+.receipt-paper-7898 .r-row .r-label,
 .receipt-paper-80100 .r-row .r-label {
     color: #333333;
     width: 36%;
     font-size: 8.2px;
 }
 
+.receipt-paper-7898 .r-row .r-val,
 .receipt-paper-80100 .r-row .r-val {
     color: #000000;
     width: 64%;
@@ -1529,6 +1538,7 @@ table tr:hover {
     font-weight: 600;
 }
 
+.receipt-paper-7898 .price-box,
 .receipt-paper-80100 .price-box {
     background: #f7f9f7;
     border: 1px dashed #107c41;
@@ -1537,6 +1547,7 @@ table tr:hover {
     border-radius: 3px;
 }
 
+.receipt-paper-7898 .price-row,
 .receipt-paper-80100 .price-row {
     display: flex;
     justify-content: space-between;
@@ -1546,6 +1557,7 @@ table tr:hover {
 }
 
 /* FOOTER DUAL-COLUMN FLEX (SIDE-BY-SIDE QR/BARCODE & TANDA TANGAN) */
+.receipt-paper-7898 .receipt-footer-flex,
 .receipt-paper-80100 .receipt-footer-flex {
     display: flex;
     justify-content: space-between;
@@ -1556,6 +1568,7 @@ table tr:hover {
     gap: 6px;
 }
 
+.receipt-paper-7898 .footer-left,
 .receipt-paper-80100 .footer-left {
     flex: 1.35;
     display: flex;
@@ -1563,6 +1576,7 @@ table tr:hover {
     justify-content: space-between;
 }
 
+.receipt-paper-7898 .footer-terms,
 .receipt-paper-80100 .footer-terms {
     font-size: 7px;
     color: #444444;
@@ -1570,6 +1584,7 @@ table tr:hover {
     margin-bottom: 3px;
 }
 
+.receipt-paper-7898 .sig-row,
 .receipt-paper-80100 .sig-row {
     display: flex;
     justify-content: space-between;
@@ -1578,14 +1593,17 @@ table tr:hover {
     text-align: center;
 }
 
+.receipt-paper-7898 .sig-col,
 .receipt-paper-80100 .sig-col {
     width: 48%;
 }
 
+.receipt-paper-7898 .sig-space,
 .receipt-paper-80100 .sig-space {
     height: 11px;
 }
 
+.receipt-paper-7898 .footer-right,
 .receipt-paper-80100 .footer-right {
     flex: 0.85;
     text-align: center;
@@ -1593,12 +1611,14 @@ table tr:hover {
     padding-left: 4px;
 }
 
+.receipt-paper-7898 .receipt-tracking-box,
 .receipt-paper-80100 .receipt-tracking-box {
     text-align: center;
     margin: 0;
     padding: 0;
 }
 
+.receipt-paper-7898 .tracking-title,
 .receipt-paper-80100 .tracking-title {
     font-size: 7px;
     font-weight: bold;
@@ -1606,6 +1626,8 @@ table tr:hover {
     margin-bottom: 2px;
 }
 
+.receipt-paper-7898 #rQrCodeContainer canvas,
+.receipt-paper-7898 #rQrCodeContainer img,
 .receipt-paper-80100 #rQrCodeContainer canvas,
 .receipt-paper-80100 #rQrCodeContainer img {
     display: block;
@@ -1613,6 +1635,7 @@ table tr:hover {
     image-rendering: pixelated;
 }
 
+.receipt-paper-7898 .tracking-url,
 .receipt-paper-80100 .tracking-url {
     font-size: 6.5px;
     font-family: monospace;

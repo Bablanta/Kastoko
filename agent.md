@@ -29,7 +29,20 @@ Dokumen ini berisi aturan baku bagi AI Agent dalam mengembangkan, memodifikasi, 
 
 ---
 
+### 4. Dilarang Commit dan Deploy Tanpa Perintah Eksplisit
+- **Jangan Commit & Push Tanpa Instruksi**: Dilarang melakukan `git commit` maupun `git push` sebelum pengguna secara tegas memberikan instruksi untuk commit.
+- **Jangan Deploy Tanpa Perintah**: Dilarang menjalankan proses deploy ke server Ubuntu (`192.168.1.8`) sebelum ada instruksi langsung dari pengguna (misal: *"deploy"*). Seluruh pengujian wajib diselesaikan di server lokal komputer saja.
+
+---
+
+### 5. Dilarang Menimpa Database yang Ada di Server
+- **Database Server Wajib Aman 100%**: Jangan pernah menimpa, menghapus, atau mengganti file database `pembukuan.db` yang berada di server Ubuntu dengan database lokal.
+- **Gunakan Mode Code Saat Deploy**: Ketika pengguna memerintahkan deploy, selalu gunakan perintah mode kode: `python tools/deploy_manager.py code` (BUKAN mode `full`), sehingga transaksi kasir riil yang berjalan di server tidak akan pernah tertimpa.
+
+---
+
 ## ⚙️ Aturan Operasional & Deployment
-1. **Lokal First**: Selalu uji perubahan pada environment lokal (`http://localhost:8080`) sebelum melakukan deploy ke server Ubuntu (`192.168.1.8`).
-2. **Deploy Terukur**: Jangan deploy ke server Ubuntu kecuali jika diinstruksikan oleh pengguna.
-3. **Gunakan Wadah `tools/`**: Untuk utilitas seperti deploy, backup, dan inspeksi database, gunakan skrip yang telah distandardisasi di dalam folder `tools/` (misal: `tools/deploy_manager.py`, `tools/db_backup.py`, `tools/db_inspect.py`).
+1. **Lokal First**: Selalu uji perubahan pada environment lokal (`http://localhost:8080`) terlebih dahulu.
+2. **Dilarang Commit & Deploy Tanpa Perintah**: Jangan melakukan `git commit`, `git push`, maupun deploy ke server Ubuntu (`192.168.1.8`) sebelum ada perintah langsung dari pengguna.
+3. **Jangan Pernah Menimpa Database Server**: Saat deploy diperintahkan, selalu gunakan mode aman `code` (`python tools/deploy_manager.py code`) untuk memastikan database `pembukuan.db` di server Ubuntu terlindungi sepenuhnya dari penimpaan data lokal.
+4. **Gunakan Wadah `tools/`**: Untuk utilitas seperti deploy, backup, dan inspeksi database, gunakan skrip yang telah distandardisasi di dalam folder `tools/` (misal: `tools/deploy_manager.py`, `tools/db_backup.py`, `tools/db_inspect.py`).
