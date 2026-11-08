@@ -1,0 +1,29 @@
+================================================================
+    KASTOKO - TOOL DETEKSI & CETAK PRINTER LOKAL (WINDOWS)
+================================================================
+
+APAKAH DI KOMPUTER INI HARUS TERPASANG PYTHON?
+>> JAWABAN: TIDAK PERLU SAMA SEKALI! <<
+Komputer kasir / laptop publik ini TIDAK MEMERLUKAN Python.
+Tool ini murni menggunakan Windows PowerShell bawaan resmi Windows (7/8/10/11).
+
+----------------------------------------------------------------
+CARA PENGGUNAAN (CUKUP 1 LANGKAH):
+----------------------------------------------------------------
+1. Hubungkan kabel printer thermal / stiker (USB) ke komputer ini,
+   dan pastikan printer sudah dalam posisi MENYALA.
+2. Klik 2x file:
+   >> Jalankan_Printer_Agent.bat <<
+3. Jendela konsol hijau akan otomatis terbuka dan menampilkan:
+   "STATUS: 🟢 SIAP MENERIMA PERINTAH CETAK!"
+   (Tidak perlu mengetik kode apapun, langsung terhubung otomatis!)
+4. Buka aplikasi KasToko di browser:
+   https://autocash.dhanzcell.my.id
+5. Masuk ke menu Pengaturan Printer: status printer otomatis
+   berwarna HIJAU 🟢 dan printer fisik di komputer ini langsung
+   terpilih untuk cetak nota & label stiker tanpa dialog Windows!
+
+PENTING:
+- Biarkan jendela agen printer tetap terbuka (bisa di-minimize)
+  selama kasir atau teknisi beroperasi.
+================================================================

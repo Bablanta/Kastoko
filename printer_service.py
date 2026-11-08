@@ -7,6 +7,13 @@ printer_service.py - Module Direct Raw Printing via Windows Spooler API (winspoo
 import ctypes
 from ctypes import wintypes
 import datetime
+import io
+import base64
+
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
 
 # Load Windows Spooler library
 try:
@@ -190,7 +197,7 @@ def format_escpos_receipt(service_dict: dict, store_profile: dict = None, paper_
     buf.extend(ALIGN_CENTER)
     buf.extend(BOLD_ON)
     buf.extend(DOUBLE_HEIGHT)
-    st_name = (prof.get("name") or "AUTOCASH SERVIS").strip()
+    st_name = (prof.get("name") or "DHANZCELL SMARTPHONE").strip()
     buf.extend((st_name + "\n").encode("cp437", errors="replace"))
 
     buf.extend(NORMAL_SIZE)
@@ -227,6 +234,7 @@ def format_escpos_receipt(service_dict: dict, store_profile: dict = None, paper_
     layanan = str(s.get("menu_servis") or "-").strip()
     keluhan = str(s.get("keluhan") or "-").strip()
     catatan_tek = str(s.get("catatan_teknisi") or "").strip()
+    sparepart_nama = str(s.get("sparepart_nama") or "").strip()
 
     buf.extend((f"No. Tiket  : {kode}\n").encode("cp437", errors="replace"))
     buf.extend((f"Pelanggan  : {nama_cust}\n").encode("cp437", errors="replace"))
@@ -240,7 +248,9 @@ def format_escpos_receipt(service_dict: dict, store_profile: dict = None, paper_
     buf.extend((f"Layanan    : {layanan}\n").encode("cp437", errors="replace"))
     buf.extend((f"Keluhan    : {keluhan}\n").encode("cp437", errors="replace"))
     if catatan_tek:
-        buf.extend((f"Catatan T. : {catatan_tek}\n").encode("cp437", errors="replace"))
+        buf.extend((f"Catatan Tek: {catatan_tek}\n").encode("cp437", errors="replace"))
+    if sparepart_nama:
+        buf.extend((f"Sparepart  : {sparepart_nama}\n").encode("cp437", errors="replace"))
 
     buf.extend(div_line.encode("cp437"))
 
@@ -254,27 +264,24 @@ def format_escpos_receipt(service_dict: dict, store_profile: dict = None, paper_
     est_biaya = float(s.get("estimasi_biaya", 0) or 0)
     biaya_akhir = float(s.get("biaya_akhir", est_biaya) or 0)
     status_bayar = str(s.get("status_pembayaran") or "Belum Bayar").strip()
-    sparepart_nama = str(s.get("sparepart_nama") or "").strip()
     sparepart_biaya = float(s.get("sparepart_biaya", 0) or 0)
 
     if is_ambil:
         if est_biaya > 0:
             est_formatted = f"Rp {int(est_biaya):,}".replace(",", ".")
             buf.extend(make_two_col("Estimasi Awal", est_formatted, col_width).encode("cp437"))
-        if sparepart_nama and sparepart_biaya > 0:
-            spp_formatted = f"Rp {int(sparepart_biaya):,}".replace(",", ".")
-            buf.extend(make_two_col(f"Part: {sparepart_nama[:16]}", spp_formatted, col_width).encode("cp437"))
 
         buf.extend(BOLD_ON)
         tot_formatted = f"Rp {int(biaya_akhir):,}".replace(",", ".")
-        buf.extend(make_two_col("TOTAL AKHIR", tot_formatted, col_width).encode("cp437"))
-        buf.extend(make_two_col("STATUS BAYAR", status_bayar.upper(), col_width).encode("cp437"))
+        buf.extend(make_two_col("TOTAL BIAYA", tot_formatted, col_width).encode("cp437"))
+        garansi_text = str(s.get("garansi") or "7 Hari").strip()
+        buf.extend(make_two_col("STATUS BAYAR", f"{status_bayar.upper()} ({garansi_text})", col_width).encode("cp437"))
         buf.extend(BOLD_OFF)
     else:
         buf.extend(BOLD_ON)
         est_formatted = f"Rp {int(est_biaya):,}".replace(",", ".")
         buf.extend(make_two_col("ESTIMASI BIAYA", est_formatted, col_width).encode("cp437"))
-        buf.extend(make_two_col("STATUS TIKET", str(s.get("status_servis") or "Baru").upper(), col_width).encode("cp437"))
+        buf.extend(make_two_col("STATUS SERVIS", str(s.get("status_servis") or "Baru").upper(), col_width).encode("cp437"))
         buf.extend(BOLD_OFF)
 
     buf.extend(dbl_line.encode("cp437"))
@@ -282,16 +289,11 @@ def format_escpos_receipt(service_dict: dict, store_profile: dict = None, paper_
     # Footer Pesan & Syarat
     buf.extend(ALIGN_CENTER)
     if is_ambil:
-        buf.extend(b"* Terima kasih atas kepercayaan Anda *\n")
-        garansi_text = str(s.get("garansi") or "7 Hari").strip()
-        if garansi_text.lower() in ("non-garansi", "tanpa garansi", "tidak ada"):
-            buf.extend(b"* Servis ini Non-Garansi *\n")
-        else:
-            g_line = f"* Garansi servis {garansi_text} kerusakan sama *\n"
-            buf.extend(g_line.encode("cp437", errors="replace"))
+        buf.extend(b"* Unit telah diterima dlm kondisi baik & normal *\n")
+        buf.extend(b"* Simpan nota ini sebagai bukti sah garansi *\n")
     else:
-        buf.extend(b"* Simpan nota ini sebagai bukti tanda terima *\n")
-        buf.extend(b"* Wajib dibawa saat pengambilan unit *\n")
+        buf.extend(b"* Simpan nota ini sebagai tanda bukti resmi *\n")
+        buf.extend(b"* Kerusakan aksesoris tidak tercatat di luar tg jawab *\n")
 
     # QR Code Pelacakan Servisan Online (Khusus Nota Penerimaan Unit)
     if not is_ambil and kode:
@@ -346,11 +348,12 @@ def format_tspl_receipt(service_dict: dict, store_profile: dict = None, is_ambil
     Format Nota Tanda Terima / Pengambilan Servis dalam bahasa TSPL murni
     untuk printer thermal label (seperti 80Label, XP-365B, Gprinter, TSC dll) ukuran 78 x 98 mm.
     Presisi 100% pada celah (gap) stiker label tanpa selip atau terpotong!
+    Margin mentok kiri (0 offset) dan batas kanan aman di dalam printhead 72mm.
     """
     s = service_dict or {}
     prof = store_profile or {}
 
-    total_w = int(width_mm * 8)   # 624 dots untuk 78mm
+    total_w = 560  # 70 mm (560 dots) aman di dalam lebar fisik printhead 72mm (576 dots)
     total_h = int(height_mm * 8)  # 784 dots untuk 98mm
 
     tspl = []
@@ -366,115 +369,137 @@ def format_tspl_receipt(service_dict: dict, store_profile: dict = None, is_ambil
 
     def center_x(txt, fw):
         w = len(txt) * fw
-        return max(16, (total_w - w) // 2)
+        return max(0, (total_w - w) // 2)
 
-    y = 12
+    y = 2
 
-    # 1. Header Toko
-    st_name = (prof.get("name") or "AUTOCASH SERVIS").strip().upper()
-    tspl.append(f'TEXT {center_x(st_name, 16)},{y},"3",0,1,1,"{st_name}"')
+    # 1. Header Toko (Rata Kiri, Mentok Atas Y=2)
+    st_name = (prof.get("name") or "DHANZCELL SMARTPHONE").strip().upper()
+    tspl.append(f'TEXT 0,{y},"3",0,1,1,"{st_name}"')
     y += 28
 
     st_addr = (prof.get("address") or "").strip()
     if st_addr:
-        tspl.append(f'TEXT {center_x(st_addr, 8)},{y},"1",0,1,1,"{st_addr[:50]}"')
-        y += 16
+        tspl.append(f'TEXT 0,{y},"1",0,1,1,"{st_addr[:50]}"')
+        y += 18
 
     st_phone = (prof.get("phone") or "").strip()
     if st_phone:
-        p_txt = f"Telp/WA: {st_phone}"
-        tspl.append(f'TEXT {center_x(p_txt, 8)},{y},"1",0,1,1,"{p_txt}"')
-        y += 18
+        p_txt = f"Telp / WA: {st_phone}"
+        tspl.append(f'TEXT 0,{y},"1",0,1,1,"{p_txt}"')
+        y += 20
 
-    # 2. Judul Nota & Garis Pembatas
-    tspl.append(f"BAR 16,{y},592,2")
+    # 2. Judul Nota & Garis Pembatas (Rata Kiri)
+    tspl.append(f"BAR 0,{y},550,2")
     y += 8
 
     title = "NOTA PENGAMBILAN & KWITANSI" if is_ambil else "TANDA TERIMA PENERIMAAN UNIT"
-    tspl.append(f'TEXT {center_x(title, 12)},{y},"2",0,1,1,"{title}"')
-    y += 24
+    tspl.append(f'TEXT 0,{y},"2",0,1,1,"{title}"')
+    y += 22
 
-    tspl.append(f"BAR 16,{y},592,2")
-    y += 8
-
-    # 3. Baris Kode Tiket & Tanggal
     kode = str(s.get("kode_servis") or f"#{s.get('id', '')}").strip()
     tgl = str(s.get("tanggal_masuk" if not is_ambil else "tanggal_selesai") or datetime.date.today().strftime("%Y-%m-%d"))[:10]
+    tspl.append(f'TEXT 0,{y},"1",0,1,1,"Waktu: {tgl}"')
+    y += 20
 
-    tspl.append(f'TEXT 20,{y},"3",0,1,1,"No. {kode}"')
-    tgl_txt = f"Tgl: {tgl}"
-    tspl.append(f'TEXT {608 - len(tgl_txt)*8},{y+4},"1",0,1,1,"{tgl_txt}"')
-    y += 30
-
-    tspl.append(f"BAR 16,{y},592,1")
+    tspl.append(f"BAR 0,{y},550,1")
     y += 8
 
-    # 4. Rincian Pelanggan & Unit
+    # 3. Rincian Pelanggan & Unit (Rata Kiri)
+    tspl.append(f'TEXT 0,{y},"3",0,1,1,"No. Tiket   : {kode}"')
+    y += 26
+
+    # 4. Rincian Pelanggan & Unit (Mentok Kiri X=0)
     nama_cust = str(s.get("nama_pelanggan") or "-").strip()[:24]
     no_hp = str(s.get("no_hp") or "-").strip()[:18]
     unit = str(s.get("merk_model") or "-").strip()[:24]
     perangkat = str(s.get("jenis_perangkat") or "").strip()[:16]
     imei_sn = str(s.get("imei_sn") or "").strip()[:24]
+    layanan = str(s.get("menu_servis") or "").strip()[:24]
     keluhan = str(s.get("keluhan") or "-").strip()[:34]
-    catatan_tek = str(s.get("catatan_teknisi") or "").strip()[:34]
+    catatan_tek = str(s.get("catatan_teknisi") or "").strip()
+    sparepart_nama = str(s.get("sparepart_nama") or "").strip()[:26]
 
-    tspl.append(f'TEXT 20,{y},"2",0,1,1,"Pelanggan  : {nama_cust}"')
+    tspl.append(f'TEXT 0,{y},"2",0,1,1,"Pelanggan   : {nama_cust}"')
     y += 22
-    tspl.append(f'TEXT 20,{y},"2",0,1,1,"No. HP/WA  : {no_hp}"')
+    tspl.append(f'TEXT 0,{y},"2",0,1,1,"No. HP/WA   : {no_hp}"')
     y += 22
-    u_txt = f"{unit} ({perangkat})" if perangkat else unit
-    tspl.append(f'TEXT 20,{y},"2",0,1,1,"Perangkat  : {u_txt[:28]}"')
+    tspl.append(f"BAR 0,{y},550,1")
+    y += 8
+    tspl.append(f'TEXT 0,{y},"2",0,1,1,"Perangkat   : {perangkat}"')
+    y += 22
+    tspl.append(f'TEXT 0,{y},"2",0,1,1,"Merk/Model  : {unit}"')
     y += 22
     if imei_sn:
-        tspl.append(f'TEXT 20,{y},"2",0,1,1,"IMEI / SN  : {imei_sn}"')
+        tspl.append(f'TEXT 0,{y},"2",0,1,1,"IMEI / SN   : {imei_sn}"')
         y += 22
-    tspl.append(f'TEXT 20,{y},"2",0,1,1,"Keluhan    : {keluhan}"')
+    if layanan and layanan != "-":
+        tspl.append(f'TEXT 0,{y},"2",0,1,1,"Layanan     : {layanan}"')
+        y += 22
+    tspl.append(f'TEXT 0,{y},"2",0,1,1,"Keluhan     : {keluhan}"')
     y += 22
     if catatan_tek:
-        tspl.append(f'TEXT 20,{y},"2",0,1,1,"Catatan T. : {catatan_tek}"')
+        tspl.append(f'TEXT 0,{y},"2",0,1,1,"Catatan Tek : {catatan_tek}"')
+        y += 22
+    if sparepart_nama:
+        tspl.append(f'TEXT 0,{y},"2",0,1,1,"Sparepart   : {sparepart_nama}"')
         y += 22
 
-    # 5. Kotak Biaya & Status
-    tspl.append(f"BAR 16,{y},592,1")
+    # 5. Kotak Biaya & Status (Mentok Kiri X=0, Batas Kanan 550)
+    tspl.append(f"BAR 0,{y},550,1")
     y += 6
 
     box_y = y
     box_h = 52
-    tspl.append(f"BOX 16,{box_y},608,{box_y + box_h},2")
+    tspl.append(f"BOX 0,{box_y},550,{box_y + box_h},2")
 
     est_biaya = float(s.get("estimasi_biaya", 0) or 0)
     biaya_akhir = float(s.get("biaya_akhir", est_biaya) or 0)
-    status_bayar = str(s.get("status_pembayaran") or "Belum Bayar").strip().upper()
+    status_bayar = str(s.get("status_pembayaran") or "Belum Bayar").strip()
+    status_servis = str(s.get("status_servis") or "Baru").strip()
 
     if is_ambil:
         tot_str = f"Rp {int(biaya_akhir):,}".replace(",", ".")
         garansi = str(s.get("garansi") or "7 Hari").strip()
-        tspl.append(f'TEXT 26,{box_y + 8},"3",0,1,1,"TOTAL BIAYA : {tot_str}"')
-        tspl.append(f'TEXT 26,{box_y + 32},"2",0,1,1,"STATUS: {status_bayar} | Garansi: {garansi}"')
+        tspl.append(f'TEXT 8,{box_y + 8},"3",0,1,1,"TOTAL BIAYA : {tot_str}"')
+        tspl.append(f'TEXT 8,{box_y + 32},"2",0,1,1,"STATUS BAYAR: {status_bayar} (Garansi {garansi})"')
     else:
         est_str = f"Rp {int(est_biaya):,}".replace(",", ".")
-        tspl.append(f'TEXT 26,{box_y + 8},"3",0,1,1,"ESTIMASI    : {est_str}"')
-        tspl.append(f'TEXT 26,{box_y + 32},"2",0,1,1,"STATUS TIKET: {status_bayar}"')
+        tspl.append(f'TEXT 8,{box_y + 8},"3",0,1,1,"ESTIMASI BIAYA: {est_str}"')
+        tspl.append(f'TEXT 8,{box_y + 32},"2",0,1,1,"STATUS SERVIS : {status_servis}"')
     y += box_h + 8
 
     # 6. Syarat & Tanda Tangan + QR Code Pelacakan
-    tspl.append(f'TEXT 20,{y},"1",0,1,1,"* Simpan nota bukti penerimaan ini sbg syarat pengambilan unit."')
-    y += 14
+    if is_ambil:
+        tspl.append(f'TEXT 0,{y},"1",0,1,1,"* Unit telah diterima dlm kondisi baik & berfungsi normal."')
+        y += 14
+        tspl.append(f'TEXT 0,{y},"1",0,1,1,"* Simpan nota ini sebagai bukti sah garansi resmi servis."')
+        y += 14
+    else:
+        tspl.append(f'TEXT 0,{y},"1",0,1,1,"* Simpan nota ini sebagai tanda bukti resmi saat mengambil unit."')
+        y += 14
+        tspl.append(f'TEXT 0,{y},"1",0,1,1,"* Kerusakan aksesoris tidak tercatat di luar tanggung jawab toko."')
+        y += 14
 
     footer_y = y
-    # Kolom Kiri: Tanda Tangan Pelanggan & Kasir
-    tspl.append(f'TEXT 60,{footer_y + 6},"1",0,1,1,"Pelanggan"')
-    tspl.append(f'TEXT 220,{footer_y + 6},"1",0,1,1,"Kasir / Teknisi"')
-    tspl.append(f'TEXT 35,{footer_y + 65},"1",0,1,1,"( .............. )"')
-    tspl.append(f'TEXT 200,{footer_y + 65},"1",0,1,1,"( .............. )"')
+    # Kolom Kiri: Tanda Tangan Pelanggan & Kasir (Garis Solid Minimalis)
+    tspl.append(f'TEXT 25,{footer_y + 4},"1",0,1,1,"Pelanggan"')
+    tspl.append(f'TEXT 165,{footer_y + 4},"1",0,1,1,"Kasir / Teknisi"')
+    tspl.append(f'BAR 15,{footer_y + 52},115,1')
+    tspl.append(f'BAR 155,{footer_y + 52},120,1')
+    tspl.append(f'TEXT 20,{footer_y + 58},"1",0,1,1,"( {nama_cust[:12]} )"')
+    tspl.append(f'TEXT 160,{footer_y + 58},"1",0,1,1,"( Dhanzcell )"')
 
     # Kolom Kanan: QR Code Pelacakan Online
-    qr_x = 450
-    tspl.append(f"BOX {qr_x - 10},{footer_y},{608},{footer_y + 92},1")
+    qr_x = 390
+    tspl.append(f"BOX {qr_x - 8},{footer_y},550,{footer_y + 92},1")
     tspl.append(f'TEXT {qr_x + 12},{footer_y + 4},"1",0,1,1,"SCAN STATUS"')
     tracking_url = f"https://lacak.dhanzcell.my.id/lacak?nota={kode}"
-    tspl.append(f'QRCODE {qr_x + 15},{footer_y + 18},L,3,A,0,"{tracking_url}"')
+    tspl.append(f'QRCODE {qr_x + 14},{footer_y + 18},L,3,A,0,"{tracking_url}"')
     tspl.append(f'TEXT {qr_x + 2},{footer_y + 78},"1",0,1,1,"lacak.dhanzcell"')
+
+    tspl.append("PRINT 1,1\n")
+    return "\r\n".join(tspl).encode("ascii", errors="replace")
 
     y = footer_y + 96
     tspl.append(f"BAR 16,{y},592,1")
@@ -488,31 +513,121 @@ def format_tspl_receipt(service_dict: dict, store_profile: dict = None, is_ambil
     return "\r\n".join(tspl).encode("ascii", errors="replace")
 
 
+def format_image_receipt(image_data, paper_width: str = "80", is_tspl: bool = True, density: str = "high") -> bytes:
+    """
+    Format Nota Grafis Monokrom (Bitmap Raster) langsung dari tangkapan layar HTML.
+    Menghasilkan cetakan yang 100% IDENTIK dengan gambar pratinjau di layar:
+    - Logo toko di kiri tercetak tajam
+    - Font modern & proporsional
+    - Kotak putus-putus (dashed border), QR Code, dan tanda tangan presisi
+    Mendukung TSPL (80Label/XP-365B) dan ESC/POS (POS-58 & POS-80).
+    """
+    if Image is None:
+        raise RuntimeError("Modul Pillow (PIL) belum terpasang di sistem.")
+
+    if isinstance(image_data, str):
+        if "," in image_data:
+            image_data = image_data.split(",", 1)[1]
+        img_bytes = base64.b64decode(image_data)
+    else:
+        img_bytes = image_data
+
+    img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+
+    # Tentukan lebar dot sesuai standar printer thermal
+    # TSPL 78mm -> 560 dots (70 bytes), mentok kiri (X=0) & pas di dalam printhead 72mm tanpa terpotong
+    # ESC/POS 58mm -> 384 dots (48 bytes)
+    # ESC/POS 80mm -> 560 dots (70 bytes)
+    if is_tspl:
+        target_w = 560
+    elif str(paper_width) == "58":
+        target_w = 384
+    else:
+        target_w = 560
+
+    aspect = img.height / float(img.width)
+    target_h = int(target_w * aspect)
+
+    # Resize gambar dengan filter Lanczos untuk ketajaman teks maksimal
+    resized = img.resize((target_w, target_h), Image.Resampling.LANCZOS)
+    gray = resized.convert("L")
+
+    # Binarisasi ke 1-bit monokrom (threshold 195)
+    # Nilai < 195 menjadi hitam, >= 195 menjadi putih kertas
+    table = [0 if i < 195 else 255 for i in range(256)]
+    mono = gray.point(table, "1")
+
+    w_bytes = target_w // 8
+    raw_tspl = mono.tobytes()  # Dalam mode '1' PIL: 0 = hitam, 1 = putih (persis TSPL)
+
+    if is_tspl:
+        height_mm = max(90, int(round(target_h / 8.0)))
+        width_mm = 78
+        buf = bytearray()
+        buf.extend(f"SIZE {width_mm} mm, {height_mm} mm\r\n".encode("ascii"))
+        buf.extend(b"GAP 2 mm, 0 mm\r\n")
+        buf.extend(b"DIRECTION 1\r\n")
+        buf.extend(b"REFERENCE 0,0\r\n")
+        buf.extend(b"OFFSET 0 mm\r\n")
+        buf.extend(b"SET PEEL OFF\r\n")
+        buf.extend(b"SET CUTTER OFF\r\n")
+        buf.extend(b"SET TEAR ON\r\n")
+        buf.extend(b"CLS\r\n")
+        # Offset X=0 dots, Y=0 dots (MENTOK KIRI & ATAS 100% tanpa margin buang di kop)
+        buf.extend(f"BITMAP 0,0,{w_bytes},{target_h},0,".encode("ascii"))
+        buf.extend(raw_tspl)
+        buf.extend(b"\r\nPRINT 1,1\r\n")
+        return bytes(buf)
+    else:
+        # ESC/POS GS v 0 (1 = hitam / print dot, 0 = putih / blank)
+        raw_escpos = bytes(b ^ 0xFF for b in raw_tspl)
+        xL = w_bytes % 256
+        xH = w_bytes // 256
+        yL = target_h % 256
+        yH = target_h // 256
+
+        buf = bytearray()
+        buf.extend(b"\x1B\x40")  # Reset printer
+        if density in ("high", "max"):
+            buf.extend(b"\x1B\x47\x01")  # Double-strike (cetak pekat)
+            buf.extend(b"\x1B\x37\x07\xFE\x02")  # Heating parameter
+        buf.extend(b"\x1B\x61\x00")  # Rata kiri
+        buf.extend(bytes([0x1D, 0x76, 0x30, 0x00, xL, xH, yL, yH]))
+        buf.extend(raw_escpos)
+        buf.extend(b"\n\n\n\x1D\x56\x41\x03")  # Feed kertas & potong
+        return bytes(buf)
+
+
 # ========================================================
 # TSPL & ESC/POS FORMATTER UNTUK LABEL STIKER UNIT
 # ========================================================
 
-def format_tspl_label(service_dict: dict, label_size: str = "40x30", store_profile: dict = None) -> bytes:
+def format_tspl_label(service_dict: dict, label_size: str = "40x20", store_profile: dict = None) -> bytes:
     """
-    Menghasilkan kode perintah TSPL murni (Taiwan Semiconductor Page Language)
-    khusus untuk printer label stiker (seperti XP-365B, 80Label, Gprinter, TSC dll).
-    Mengontrol sensor gap stiker sehingga cetakan pas di tengah stiker tanpa selip!
+    Format Label Stiker Identitas Minimalis (40x20mm / 40x30mm) dalam perintah TSPL murni:
+    - Hanya 5 field identitas: No Tiket, Nama Pelanggan, No WA, Estimasi Biaya, Keluhan.
+    - Tanpa kop, tanpa logo, tanpa QR code, tanpa teks redundan.
+    - Margin rata kiri 2mm dan rata atas 2mm (16 dots pada 203 DPI).
     """
     s = service_dict or {}
-    prof = store_profile or {}
 
     parts = str(label_size).split("x")
     w_mm = int(parts[0]) if len(parts) > 0 and parts[0].isdigit() else 40
-    h_mm = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 30
+    h_mm = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 20
 
-    kode = str(s.get("kode_servis") or f"#{s.get('id', '')}").strip()
-    tgl = str(s.get("tanggal_masuk") or datetime.date.today().strftime("%Y-%m-%d"))[:10]
-    nama_cust = str(s.get("nama_pelanggan") or "-")[:18]
-    no_hp = str(s.get("no_hp") or "-")[:15]
-    unit = str(s.get("merk_model") or "-")[:20]
-    perangkat = str(s.get("jenis_perangkat") or "")[:12]
-    keluhan = str(s.get("keluhan") or "-")[:22]
-    st_name = (prof.get("name") or "KasToko").strip()[:16]
+    def clean_t(val, max_len=24):
+        t = str(val or "-").strip().replace('"', "'")
+        return t[:max_len]
+
+    kode = clean_t(s.get("kode_servis") or f"#{s.get('id', '')}", 16)
+    nama = clean_t(s.get("nama_pelanggan"), 22)
+    no_wa = clean_t(s.get("no_hp"), 20)
+
+    biaya_val = float(s.get("biaya_akhir") or s.get("estimasi_biaya") or 0)
+    biaya_str = f"Rp {int(biaya_val):,}".replace(",", ".") if biaya_val > 0 else "Rp 0"
+    biaya_str = clean_t(biaya_str, 20)
+
+    keluhan = clean_t(s.get("keluhan"), 24)
 
     tspl = []
     tspl.append(f"SIZE {w_mm} mm, {h_mm} mm")
@@ -525,74 +640,135 @@ def format_tspl_label(service_dict: dict, label_size: str = "40x30", store_profi
     tspl.append("SET TEAR ON")
     tspl.append("CLS")
 
-    # Layout koordinat (DPI 203: 1mm = 8 dots)
-    # Header: Kode Servis Tiket
-    if h_mm >= 30:
-        tspl.append(f'TEXT 15,15,"3",0,1,1,"[{kode}]"')
-        tspl.append(f'TEXT 15,50,"2",0,1,1,"Tgl : {tgl}"')
-        tspl.append(f'TEXT 15,75,"2",0,1,1,"Nama: {nama_cust}"')
-        tspl.append(f'TEXT 15,100,"2",0,1,1,"HP  : {no_hp}"')
-        tspl.append(f'TEXT 15,125,"2",0,1,1,"Unit: {unit}"')
-        tspl.append(f'TEXT 15,150,"2",0,1,1,"Klh : {keluhan}"')
-        tspl.append(f'TEXT 15,180,"1",0,1,1,"* {st_name} Servis *"')
+    # Margin rata kiri 2mm = 16 dots, margin rata atas 2mm = 16 dots (DPI 203: 1mm = 8 dots)
+    x = 16
+    if h_mm <= 22:
+        # Kertas 40x20 mm (160 dots total height):
+        # 5 baris identitas murni presisi tinggi
+        tspl.append(f'TEXT {x},16,"3",0,1,1,"{kode}"')
+        tspl.append(f'TEXT {x},44,"2",0,1,1,"{nama}"')
+        tspl.append(f'TEXT {x},68,"2",0,1,1,"{no_wa}"')
+        tspl.append(f'TEXT {x},92,"2",0,1,1,"{biaya_str}"')
+        tspl.append(f'TEXT {x},116,"2",0,1,1,"{keluhan}"')
     else:
-        # Mini 40x20
-        tspl.append(f'TEXT 10,10,"3",0,1,1,"[{kode}]"')
-        tspl.append(f'TEXT 10,45,"2",0,1,1,"{nama_cust} ({no_hp})"')
-        tspl.append(f'TEXT 10,70,"2",0,1,1,"Unit: {unit}"')
-        tspl.append(f'TEXT 10,95,"2",0,1,1,"Klh : {keluhan}"')
+        # Kertas 40x30 mm / 50x30 mm
+        tspl.append(f'TEXT {x},16,"3",0,1,1,"{kode}"')
+        tspl.append(f'TEXT {x},52,"2",0,1,1,"{nama}"')
+        tspl.append(f'TEXT {x},86,"2",0,1,1,"{no_wa}"')
+        tspl.append(f'TEXT {x},120,"2",0,1,1,"{biaya_str}"')
+        tspl.append(f'TEXT {x},154,"2",0,1,1,"{keluhan}"')
 
     tspl.append("PRINT 1,1\n")
     return "\r\n".join(tspl).encode("ascii", errors="replace")
 
-def format_escpos_label(service_dict: dict, label_size: str = "40x30", store_profile: dict = None) -> bytes:
-    """Fallback ESC/POS untuk label stiker jika printer label dalam mode ESC/POS biasa."""
+
+def format_image_label(image_data, label_size: str = "40x20", is_tspl: bool = True) -> bytes:
+    """
+    Format Label Stiker Grafis Monokrom (Bitmap Raster) langsung dari tangkapan layar HTML.
+    Menghasilkan cetakan yang 100% IDENTIK dengan tampilan di layar (WYSIWYG):
+    - Border bersih tanpa garis terpotong
+    - Teks hitam solid & tajam
+    - QR code presisi dapat dipindai seketika
+    """
+    if Image is None:
+        raise RuntimeError("Modul Pillow (PIL) belum terpasang di sistem.")
+
+    if isinstance(image_data, str):
+        if "," in image_data:
+            image_data = image_data.split(",", 1)[1]
+        img_bytes = base64.b64decode(image_data)
+    else:
+        img_bytes = image_data
+
+    img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+
+    parts = str(label_size).split("x")
+    w_mm = int(parts[0]) if len(parts) > 0 and parts[0].isdigit() else 40
+    h_mm = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 30
+
+    target_w = int(w_mm * 8)
+    target_w = (target_w // 8) * 8
+    target_h = int(h_mm * 8)
+
+    resized = img.resize((target_w, target_h), Image.Resampling.LANCZOS)
+    gray = resized.convert("L")
+    table = [0 if i < 195 else 255 for i in range(256)]
+    mono = gray.point(table, "1")
+
+    w_bytes = target_w // 8
+    raw_tspl = mono.tobytes()
+
+    if is_tspl:
+        buf = bytearray()
+        buf.extend(f"SIZE {w_mm} mm, {h_mm} mm\r\n".encode("ascii"))
+        buf.extend(b"GAP 2 mm, 0 mm\r\n")
+        buf.extend(b"DIRECTION 1\r\n")
+        buf.extend(b"REFERENCE 0,0\r\n")
+        buf.extend(b"OFFSET 0 mm\r\n")
+        buf.extend(b"SET PEEL OFF\r\n")
+        buf.extend(b"SET CUTTER OFF\r\n")
+        buf.extend(b"SET TEAR ON\r\n")
+        buf.extend(b"CLS\r\n")
+        buf.extend(f"BITMAP 0,0,{w_bytes},{target_h},0,".encode("ascii"))
+        buf.extend(raw_tspl)
+        buf.extend(b"\r\nPRINT 1,1\r\n")
+        return bytes(buf)
+    else:
+        # ESC/POS GS v 0
+        raw_escpos = bytes(b ^ 0xFF for b in raw_tspl)
+        xL = w_bytes % 256
+        xH = w_bytes // 256
+        yL = target_h % 256
+        yH = target_h // 256
+
+        buf = bytearray()
+        buf.extend(b"\x1B\x40")
+        buf.extend(b"\x1B\x47\x01")
+        buf.extend(b"\x1B\x61\x00")
+        buf.extend(bytes([0x1D, 0x76, 0x30, 0x00, xL, xH, yL, yH]))
+        buf.extend(raw_escpos)
+        buf.extend(b"\n\n\x1D\x56\x41\x02")
+        return bytes(buf)
+
+
+def format_escpos_label(service_dict: dict, label_size: str = "40x20", store_profile: dict = None) -> bytes:
+    """Fallback ESC/POS untuk label stiker identitas (40x20mm)."""
     s = service_dict or {}
-    prof = store_profile or {}
 
     ESC = b"\x1B"
     GS = b"\x1D"
     INIT = ESC + b"\x40"
     ALIGN_LEFT = ESC + b"\x61\x00"
-    ALIGN_CENTER = ESC + b"\x61\x01"
     BOLD_ON = ESC + b"\x45\x01"
     BOLD_OFF = ESC + b"\x45\x00"
     DOUBLE_STRIKE_ON = ESC + b"\x47\x01"
     CUT_PAPER = GS + b"\x56\x41\x02"
 
     kode = str(s.get("kode_servis") or f"#{s.get('id', '')}").strip()
-    tgl = str(s.get("tanggal_masuk") or datetime.date.today().strftime("%Y-%m-%d"))[:10]
-    nama_cust = str(s.get("nama_pelanggan") or "-")
-    no_hp = str(s.get("no_hp") or "-")
-    unit = str(s.get("merk_model") or "-")
-    perangkat = str(s.get("jenis_perangkat") or "")
-    keluhan = str(s.get("keluhan") or "-")
-    st_name = (prof.get("name") or "KasToko").strip()
+    nama = str(s.get("nama_pelanggan") or "-").strip()
+    no_wa = str(s.get("no_hp") or "-").strip()
+    biaya_val = float(s.get("biaya_akhir") or s.get("estimasi_biaya") or 0)
+    biaya_str = f"Rp {int(biaya_val):,}".replace(",", ".") if biaya_val > 0 else "Rp 0"
+    keluhan = str(s.get("keluhan") or "-").strip()
 
     buf = bytearray()
     buf.extend(INIT)
     buf.extend(DOUBLE_STRIKE_ON)
-    buf.extend(ALIGN_CENTER)
-    buf.extend(BOLD_ON)
-    buf.extend((f"[{kode}]\n").encode("cp437", errors="replace"))
-    buf.extend(BOLD_OFF)
     buf.extend(ALIGN_LEFT)
-    buf.extend((f"Tgl : {tgl}\n").encode("cp437", errors="replace"))
-    buf.extend((f"Nama: {nama_cust}\n").encode("cp437", errors="replace"))
-    if no_hp and no_hp != "-":
-        buf.extend((f"HP  : {no_hp}\n").encode("cp437", errors="replace"))
-    buf.extend((f"Unit: {unit} ({perangkat})\n").encode("cp437", errors="replace"))
-    buf.extend((f"Klh : {keluhan}\n").encode("cp437", errors="replace"))
-    buf.extend(b"--------------------------------\n")
-    buf.extend(ALIGN_CENTER)
-    buf.extend((f"* {st_name} *\n").encode("cp437", errors="replace"))
-    buf.extend(b"\n\n")
+    buf.extend(BOLD_ON)
+    buf.extend((f"{kode}\n").encode("cp437", errors="replace"))
+    buf.extend(BOLD_OFF)
+    buf.extend((f"{nama}\n").encode("cp437", errors="replace"))
+    buf.extend((f"{no_wa}\n").encode("cp437", errors="replace"))
+    buf.extend((f"{biaya_str}\n").encode("cp437", errors="replace"))
+    buf.extend((f"{keluhan}\n").encode("cp437", errors="replace"))
+    buf.extend(b"\n")
     buf.extend(CUT_PAPER)
 
     return bytes(buf)
 
 def format_receipt_test_page(printer_name: str, paper_width: str = "78x98", density: str = "high") -> bytes:
-    """Menghasilkan nota uji coba (Test Print) untuk memverifikasi koneksi printer nota."""
+    """Menghasilkan nota uji coba (Test Print) untuk memverifikasi koneksi printer nota dengan margin mentok kiri."""
     if "78" in str(paper_width) or "label" in str(printer_name).lower():
         now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         tspl = [
@@ -605,20 +781,20 @@ def format_receipt_test_page(printer_name: str, paper_width: str = "78x98", dens
             "SET CUTTER OFF",
             "SET TEAR ON",
             "CLS",
-            'TEXT 150,20,"3",0,1,1,"TEST PRINT 78x98 MM"',
-            'TEXT 165,55,"2",0,1,1,"KASTOKO DIRECT PRINT"',
-            "BAR 16,85,592,2",
-            f'TEXT 24,100,"2",0,1,1,"Printer : {printer_name[:24]}"',
-            'TEXT 24,125,"2",0,1,1,"Format  : TSPL Label Mode (78x98 mm)"',
-            f'TEXT 24,150,"2",0,1,1,"Waktu   : {now_str}"',
-            f'TEXT 24,175,"2",0,1,1,"Status  : Siap Cetak (0% Dialog Windows)"',
-            "BAR 16,205,592,1",
-            "BOX 24,220,590,300,2",
-            'TEXT 60,235,"3",0,1,1,"[ OK ] HARDWARE PRINT SIAP"',
-            'TEXT 45,265,"2",0,1,1,"Klik Langsung Cetak - Tanpa Dialog"',
-            "BAR 16,320,592,1",
-            'TEXT 24,340,"1",0,1,1,"* Celah label (gap) terdeteksi otomatis oleh sensor."',
-            'TEXT 24,360,"1",0,1,1,"* Pas di 1 lembar stiker tanpa tembus ke stiker berikutnya."',
+            'TEXT 110,20,"3",0,1,1,"TEST PRINT 78x98 MM"',
+            'TEXT 135,55,"2",0,1,1,"KASTOKO DIRECT PRINT"',
+            "BAR 0,85,550,2",
+            f'TEXT 4,100,"2",0,1,1,"Printer : {printer_name[:24]}"',
+            'TEXT 4,125,"2",0,1,1,"Format  : TSPL Label Mode (Mentok Kiri)"',
+            f'TEXT 4,150,"2",0,1,1,"Waktu   : {now_str}"',
+            f'TEXT 4,175,"2",0,1,1,"Status  : Siap Cetak (0% Dialog Windows)"',
+            "BAR 0,205,550,1",
+            "BOX 0,220,550,300,2",
+            'TEXT 30,235,"3",0,1,1,"[ OK ] HARDWARE PRINT SIAP"',
+            'TEXT 20,265,"2",0,1,1,"Klik Langsung Cetak - Tanpa Dialog"',
+            "BAR 0,320,550,1",
+            'TEXT 4,340,"1",0,1,1,"* Celah label (gap) terdeteksi otomatis oleh sensor."',
+            'TEXT 4,360,"1",0,1,1,"* Pas di 1 lembar stiker tanpa tembus ke stiker berikutnya."',
             "PRINT 1,1\n"
         ]
         return "\r\n".join(tspl).encode("ascii", errors="replace")
@@ -673,40 +849,21 @@ def format_receipt_test_page(printer_name: str, paper_width: str = "78x98", dens
 
     return bytes(buf)
 
-def format_label_test_page(printer_name: str, label_size: str = "40x30", mode: str = "tspl") -> bytes:
-    """Menghasilkan stiker uji coba (Test Print) untuk printer label stiker."""
+def format_label_test_page(printer_name: str, label_size: str = "40x20", mode: str = "tspl") -> bytes:
+    """Menghasilkan stiker uji coba (Test Print) label identitas minimalis (40x20mm)."""
     parts = str(label_size).split("x")
     w_mm = int(parts[0]) if len(parts) > 0 and parts[0].isdigit() else 40
-    h_mm = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 30
-    now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    h_mm = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 20
 
+    dummy_service = {
+        "kode_servis": "SRV-20261107-004",
+        "nama_pelanggan": "Tita",
+        "no_hp": "08987125805",
+        "estimasi_biaya": 150000,
+        "keluhan": "matot"
+    }
     if mode == "tspl":
-        tspl = [
-            f"SIZE {w_mm} mm, {h_mm} mm",
-            "GAP 2 mm, 0 mm",
-            "DIRECTION 1",
-            "REFERENCE 0,0",
-            "OFFSET 0 mm",
-            "SET PEEL OFF",
-            "SET CUTTER OFF",
-            "SET TEAR ON",
-            "CLS",
-            'TEXT 15,15,"3",0,1,1,"[TEST LABEL OK]"',
-            f'TEXT 15,50,"2",0,1,1,"{printer_name[:18]}"',
-            f'TEXT 15,75,"2",0,1,1,"Size: {w_mm}x{h_mm} mm (TSPL)"',
-            f'TEXT 15,100,"2",0,1,1,"Tgl : {now_str[:10]}"',
-            f'TEXT 15,125,"2",0,1,1,"Jam : {now_str[11:]}"',
-            'TEXT 15,155,"1",0,1,1,"* KasToko Direct Print *"',
-            "PRINT 1,1\n"
-        ]
-        return "\r\n".join(tspl).encode("ascii", errors="replace")
+        return format_tspl_label(dummy_service, label_size=f"{w_mm}x{h_mm}")
     else:
-        # ESC/POS label
-        dummy = {
-            "kode_servis": "TEST-LABEL",
-            "nama_pelanggan": "Uji Printer Label",
-            "merk_model": printer_name[:16],
-            "keluhan": f"Direct ESC/POS {label_size}"
-        }
-        return format_escpos_label(dummy, label_size=label_size)
+        return format_escpos_label(dummy_service, label_size=f"{w_mm}x{h_mm}")
 

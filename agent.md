@@ -41,8 +41,21 @@ Dokumen ini berisi aturan baku bagi AI Agent dalam mengembangkan, memodifikasi, 
 
 ---
 
+### 6. Jangan Setiap Perubahan Di-update di `perubahan.md` (Tunggu Perintah)
+- **Dilarang Otomatis Mengisi `perubahan.md`**: Jangan memperbarui atau menambahkan poin riwayat ke `perubahan.md` pada setiap perubahan kecil atau iterasi percobaan.
+- **Tunggu Perintah Eksplisit**: HANYA perbarui dan catat ke `perubahan.md` jika pengguna secara tegas memberikan instruksi (contoh: *"simpan perubahan.md"* atau *"catat ke perubahan.md"*).
+
+---
+
+### 7. Selalu Lakukan Tes Print Langsung ke Hardware
+- **Wajib Uji Cetak Fisik**: Setiap kali melakukan perubahan atau penyesuaian pada format, layout, font, atau margin nota (`#receiptPrintArea`) maupun label stiker, AI Agent wajib langsung melakukan tes cetak (*real print test*) ke printer fisik (`80Label Printer`) hingga data terkirim ke spooler.
+
+---
+
 ## ⚙️ Aturan Operasional & Deployment
 1. **Lokal First**: Selalu uji perubahan pada environment lokal (`http://localhost:8080`) terlebih dahulu.
 2. **Dilarang Commit & Deploy Tanpa Perintah**: Jangan melakukan `git commit`, `git push`, maupun deploy ke server Ubuntu (`192.168.1.8`) sebelum ada perintah langsung dari pengguna.
 3. **Jangan Pernah Menimpa Database Server**: Saat deploy diperintahkan, selalu gunakan mode aman `code` (`python tools/deploy_manager.py code`) untuk memastikan database `pembukuan.db` di server Ubuntu terlindungi sepenuhnya dari penimpaan data lokal.
-4. **Gunakan Wadah `tools/`**: Untuk utilitas seperti deploy, backup, dan inspeksi database, gunakan skrip yang telah distandardisasi di dalam folder `tools/` (misal: `tools/deploy_manager.py`, `tools/db_backup.py`, `tools/db_inspect.py`).
+4. **Jangan Update `perubahan.md` Tanpa Perintah**: Tunggu instruksi spesifik dari pengguna sebelum mencatat ke `perubahan.md`.
+5. **Selalu Tes Print**: Jalankan verifikasi cetak langsung ke printer hardware setiap ada modifikasi nota.
+6. **Gunakan Wadah `tools/`**: Untuk utilitas seperti deploy, backup, dan inspeksi database, gunakan skrip yang telah distandardisasi di dalam folder `tools/` (misal: `tools/deploy_manager.py`, `tools/db_backup.py`, `tools/db_inspect.py`).

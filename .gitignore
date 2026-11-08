@@ -6,3 +6,6 @@ __pycache__/
 pembukuan.db
 backup/*
 !backup/.gitkeep
+
+# Temporary files
+scratch/

@@ -24,7 +24,7 @@ REMOTE_DIR = "/home/bablanta/Kastoko"
 TOOLS_DIR = os.path.dirname(os.path.abspath(__file__))
 LOCAL_DIR = os.path.abspath(os.path.join(TOOLS_DIR, ".."))
 
-EXCLUDE_DIRS = {".git", "__pycache__", ".gemini", "backup"}
+EXCLUDE_DIRS = {".git", "__pycache__", ".gemini", "backup", "scratch", ".venv"}
 CODE_EXT_EXCLUDE = {".pyc", ".tmp", ".log"}
 ALWAYS_EXCLUDE_FILES = {"transactions.json"}
 

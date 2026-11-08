@@ -1210,6 +1210,16 @@ table tr:hover {
 
 }
 
+.badge-claim {
+
+    background: #ffedd5;
+
+    color: #c2410c;
+
+    border: 1px solid #fed7aa;
+
+}
+
 
 
 .badge-proses {
@@ -1263,6 +1273,8 @@ table tr:hover {
 [data-theme="dark"] .badge-baru { background: #4a3b00; color: #ffe699; border-color: #665200; }
 
 [data-theme="dark"] .badge-instan { background: #002752; color: #b8daff; border-color: #003875; }
+
+[data-theme="dark"] .badge-claim { background: #431407; color: #fed7aa; border-color: #7c2d12; }
 
 [data-theme="dark"] .badge-proses { background: #2f2f35; color: #e0e0e0; border-color: #44444a; }
 
@@ -1462,135 +1474,256 @@ table tr:hover {
 
 
 
-/* KERTAS NOTA 78 x 98 mm / 80 x 100 mm */
+/* KERTAS NOTA 78 x 98 mm / 80 x 100 mm (Sederhana, Rata Kiri, Teks Hitam Pekat, Pas Printhead 72mm) */
 .receipt-paper-7898,
 .receipt-paper-80100 {
-    width: 76mm;
-    max-width: 78mm;
-    margin: 0 auto;
-    padding: 1.5mm 2.5mm;
-    font-family: 'Courier New', Courier, monospace, 'Segoe UI', Arial, sans-serif;
-    color: #111111;
+    width: 70mm;
+    max-width: 72mm;
+    margin: 0 !important;
+    margin-left: 0 !important;
+    margin-top: 0 !important;
+    padding: 0mm 1.5mm 1.5mm 0mm !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    color: #000000;
     background: #ffffff;
-    border: 1px solid #cccccc;
-    border-radius: 4px;
+    border: none !important;
+    box-shadow: none !important;
     box-sizing: border-box;
-    font-size: 8.8px;
-    line-height: 1.15;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    font-size: 8.5px;
+    line-height: 1.25;
+    text-align: left;
 }
 
+/* 1. HEADER KOP TOKO - MENTOK ATAS & KIRI */
 .receipt-paper-7898 .receipt-header,
 .receipt-paper-80100 .receipt-header {
-    text-align: center;
-    margin-bottom: 2px;
+    text-align: left;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+    margin-bottom: 2.5px;
+    padding-bottom: 2px;
+    border-bottom: 1.5px solid #000000;
+}
+
+.receipt-paper-7898 .receipt-header-left,
+.receipt-paper-80100 .receipt-header-left {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    text-align: left;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+.receipt-paper-7898 .receipt-logo-large,
+.receipt-paper-80100 .receipt-logo-large {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    object-fit: contain;
+    margin-top: 0 !important;
+}
+
+.receipt-paper-7898 .receipt-store-info,
+.receipt-paper-80100 .receipt-store-info {
+    flex: 1;
+    text-align: left;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
 }
 
 .receipt-paper-7898 .store-title,
 .receipt-paper-80100 .store-title {
-    font-size: 12px;
-    font-weight: bold;
-    letter-spacing: 0.5px;
-    margin: 0;
+    font-size: 13.5px;
+    font-weight: 900;
+    letter-spacing: 0.8px;
+    margin: 0 !important;
+    padding: 0 !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    -webkit-text-stroke: 0.8px #000000 !important;
+    text-shadow: 
+        -1px -1px 0 #000000,
+         1px -1px 0 #000000,
+        -1px  1px 0 #000000,
+         1px  1px 0 #000000 !important;
+    text-transform: uppercase;
+    line-height: 1.05;
+}
+
+.receipt-paper-7898 .receipt-sub-contact,
+.receipt-paper-80100 .receipt-sub-contact {
+    font-size: 7.5px;
+    font-weight: 600;
+    color: #000000;
+    margin-top: 1.5px;
+    line-height: 1.2;
+    text-align: left;
+}
+
+/* 2. SUBTITLE & WAKTU - RATA KIRI */
+.receipt-paper-7898 .receipt-title-bar,
+.receipt-paper-80100 .receipt-title-bar {
+    padding: 2.5px 0;
+    border-bottom: 1px solid #000000;
+    text-align: left;
+    margin-bottom: 2px;
+}
+
+.receipt-paper-7898 .receipt-title-text,
+.receipt-paper-80100 .receipt-title-text {
+    font-size: 9.5px;
+    font-weight: 900;
+    color: #000000;
+    letter-spacing: 0.4px;
     text-transform: uppercase;
 }
 
-.receipt-paper-7898 .receipt-sub,
-.receipt-paper-80100 .receipt-sub {
+.receipt-paper-7898 .receipt-title-meta,
+.receipt-paper-80100 .receipt-title-meta {
     font-size: 7.5px;
-    color: #333333;
+    font-weight: 600;
+    color: #000000;
     margin-top: 1px;
 }
 
-.receipt-paper-7898 .receipt-divider-solid,
-.receipt-paper-80100 .receipt-divider-solid {
-    border-bottom: 1px solid #222222;
-    margin: 2px 0;
+/* 3. RINCIAN TABULAR RATA KIRI */
+.receipt-paper-7898 .receipt-body,
+.receipt-paper-80100 .receipt-body {
+    padding: 1px 0;
+    text-align: left;
+}
+
+.receipt-paper-7898 .r-table-row,
+.receipt-paper-80100 .r-table-row {
+    display: flex;
+    align-items: flex-start;
+    padding: 1px 0;
+    font-size: 8.5px;
+    color: #000000;
+}
+
+.receipt-paper-7898 .r-tbl-lbl,
+.receipt-paper-80100 .r-tbl-lbl {
+    width: 27%;
+    font-weight: 600;
+    color: #000000;
+    white-space: nowrap;
+}
+
+.receipt-paper-7898 .r-tbl-sep,
+.receipt-paper-80100 .r-tbl-sep {
+    width: 3%;
+    font-weight: 700;
+    color: #000000;
+}
+
+.receipt-paper-7898 .r-tbl-val,
+.receipt-paper-80100 .r-tbl-val {
+    width: 70%;
+    font-weight: 700;
+    color: #000000;
+    word-break: break-word;
 }
 
 .receipt-paper-7898 .receipt-divider-dash,
 .receipt-paper-80100 .receipt-divider-dash {
-    border-bottom: 1px dashed #777777;
+    border-bottom: 1px dashed #000000;
     margin: 2px 0;
 }
 
-.receipt-paper-7898 .r-row,
-.receipt-paper-80100 .r-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 8.8px;
-    padding: 0.8px 0;
-}
-
-.receipt-paper-7898 .r-row .r-label,
-.receipt-paper-80100 .r-row .r-label {
-    color: #333333;
-    width: 36%;
-    font-size: 8.2px;
-}
-
-.receipt-paper-7898 .r-row .r-val,
-.receipt-paper-80100 .r-row .r-val {
-    color: #000000;
-    width: 64%;
-    text-align: right;
-    word-break: break-word;
-    font-weight: 600;
-}
-
+/* 4. KOTAK BIAYA & STATUS SEDERHANA */
 .receipt-paper-7898 .price-box,
 .receipt-paper-80100 .price-box {
-    background: #f7f9f7;
-    border: 1px dashed #107c41;
-    padding: 2px 5px;
-    margin: 2px 0;
-    border-radius: 3px;
+    border: 1.2px solid #000000;
+    border-radius: 2px;
+    padding: 3px 5px;
+    margin: 3px 0;
+    background: #ffffff;
 }
 
 .receipt-paper-7898 .price-row,
 .receipt-paper-80100 .price-row {
     display: flex;
     justify-content: space-between;
-    font-size: 9.8px;
-    font-weight: bold;
-    color: #107c41;
+    align-items: center;
 }
 
-/* FOOTER DUAL-COLUMN FLEX (SIDE-BY-SIDE QR/BARCODE & TANDA TANGAN) */
+.receipt-paper-7898 .price-lbl,
+.receipt-paper-80100 .price-lbl {
+    font-size: 9.5px;
+    font-weight: 900;
+    text-transform: uppercase;
+    color: #000000;
+}
+
+.receipt-paper-7898 .price-val,
+.receipt-paper-80100 .price-val {
+    font-size: 13px;
+    font-weight: 900;
+    color: #000000;
+    letter-spacing: 0.3px;
+}
+
+.receipt-paper-7898 .price-sub-row,
+.receipt-paper-80100 .price-sub-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1.5px;
+    padding-top: 1.5px;
+    border-top: 1px dashed #000000;
+    font-size: 8px;
+    font-weight: 700;
+    color: #000000;
+}
+
+.receipt-paper-7898 .price-status-lbl,
+.receipt-paper-80100 .price-status-lbl {
+    color: #000000;
+    font-weight: 700;
+}
+
+.receipt-paper-7898 .price-status-val,
+.receipt-paper-80100 .price-status-val {
+    font-weight: 900;
+    color: #000000;
+}
+
+/* 5. FOOTER SEDERHANA */
+.receipt-paper-7898 .footer-terms,
+.receipt-paper-80100 .footer-terms {
+    font-size: 6.8px;
+    font-weight: 500;
+    color: #000000;
+    line-height: 1.2;
+    margin: 2px 0 3px 0;
+    text-align: left;
+}
+
 .receipt-paper-7898 .receipt-footer-flex,
 .receipt-paper-80100 .receipt-footer-flex {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-top: 3px;
-    padding-top: 2px;
-    border-top: 1px dashed #888888;
-    gap: 6px;
+    padding-top: 3px;
+    border-top: 1px solid #000000;
+    gap: 4px;
 }
 
 .receipt-paper-7898 .footer-left,
 .receipt-paper-80100 .footer-left {
     flex: 1.35;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-}
-
-.receipt-paper-7898 .footer-terms,
-.receipt-paper-80100 .footer-terms {
-    font-size: 7px;
-    color: #444444;
-    line-height: 1.15;
-    margin-bottom: 3px;
 }
 
 .receipt-paper-7898 .sig-row,
 .receipt-paper-80100 .sig-row {
     display: flex;
     justify-content: space-between;
-    margin-top: 3px;
-    font-size: 7.5px;
     text-align: center;
+    margin-top: 2px;
+    font-size: 7.2px;
+    color: #000000;
 }
 
 .receipt-paper-7898 .sig-col,
@@ -1598,32 +1731,53 @@ table tr:hover {
     width: 48%;
 }
 
-.receipt-paper-7898 .sig-space,
-.receipt-paper-80100 .sig-space {
-    height: 11px;
+.receipt-paper-7898 .sig-title,
+.receipt-paper-80100 .sig-title {
+    font-size: 7.2px;
+    font-weight: 600;
+    color: #000000;
+}
+
+.receipt-paper-7898 .sig-line,
+.receipt-paper-80100 .sig-line {
+    border-bottom: 1px solid #000000;
+    height: 12px;
+    margin-bottom: 2px;
+}
+
+.receipt-paper-7898 .sig-name,
+.receipt-paper-80100 .sig-name {
+    font-size: 7px;
+    font-weight: 700;
+    color: #000000;
 }
 
 .receipt-paper-7898 .footer-right,
 .receipt-paper-80100 .footer-right {
     flex: 0.85;
     text-align: center;
-    border-left: 1px dashed #cccccc;
-    padding-left: 4px;
+    border-left: none !important;
+    padding-left: 0 !important;
 }
 
 .receipt-paper-7898 .receipt-tracking-box,
 .receipt-paper-80100 .receipt-tracking-box {
     text-align: center;
-    margin: 0;
-    padding: 0;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
 }
 
 .receipt-paper-7898 .tracking-title,
 .receipt-paper-80100 .tracking-title {
-    font-size: 7px;
-    font-weight: bold;
-    letter-spacing: 0.2px;
-    margin-bottom: 2px;
+    display: none !important;
+}
+
+.receipt-paper-7898 #rQrCodeContainer,
+.receipt-paper-80100 #rQrCodeContainer {
+    margin: 0 !important;
+    padding: 0 !important;
+    text-align: center;
 }
 
 .receipt-paper-7898 #rQrCodeContainer canvas,
@@ -1631,17 +1785,26 @@ table tr:hover {
 .receipt-paper-80100 #rQrCodeContainer canvas,
 .receipt-paper-80100 #rQrCodeContainer img {
     display: block;
-    margin: 0 auto;
+    margin: 0 auto !important;
+    margin-top: 0px !important;
+    padding: 0 !important;
     image-rendering: pixelated;
+    max-width: 58px !important;
+    max-height: 58px !important;
 }
 
 .receipt-paper-7898 .tracking-url,
 .receipt-paper-80100 .tracking-url {
-    font-size: 6.5px;
+    font-size: 5.6px;
     font-family: monospace;
-    color: #222222;
-    margin-top: 1px;
+    font-weight: 700;
+    color: #000000;
+    margin-top: 1px !important;
     word-break: break-all;
+    max-width: 82px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.1 !important;
 }
 
 /* KERTAS 58MM FOOTER */
@@ -1677,8 +1840,8 @@ table tr:hover {
 .receipt-paper-58 {
     width: 48mm;
     max-width: 58mm;
-    margin: 0 auto;
-    padding: 2mm 2.5mm;
+    margin: 0;
+    padding: 1.5mm 1.5mm 1.5mm 0.5mm;
     font-family: 'Courier New', Courier, monospace, 'Segoe UI', Arial, sans-serif;
     color: #111111;
     background: #ffffff;
@@ -1689,24 +1852,59 @@ table tr:hover {
     line-height: 1.15;
     box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     overflow: hidden;
+    text-align: left;
 }
 
 .receipt-paper-58 .receipt-header {
+    text-align: left;
+    margin-bottom: 3px;
+}
+
+.receipt-paper-58 .receipt-header-left {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 2px;
+    text-align: left;
+}
+
+.receipt-paper-58 .receipt-logo-large {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    object-fit: contain;
+    border-radius: 3px;
+}
+
+.receipt-paper-58 .receipt-store-info {
+    flex: 1;
     text-align: center;
-    margin-bottom: 4px;
+    line-height: 1.2;
 }
 
 .receipt-paper-58 .store-title {
-    font-size: 11px;
-    font-weight: bold;
-    letter-spacing: 0.5px;
+    font-size: 11.5px;
+    font-weight: 900;
+    letter-spacing: 0.4px;
     margin: 0;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    -webkit-text-stroke: 1px #000000 !important;
+    text-shadow: -0.8px -0.8px 0 #000000, 0.8px -0.8px 0 #000000, -0.8px 0.8px 0 #000000, 0.8px 0.8px 0 #000000 !important;
     text-transform: uppercase;
 }
 
 .receipt-paper-58 .receipt-sub {
-    font-size: 7.5px;
+    font-size: 7.2px;
     color: #444444;
+    margin-top: 1px;
+}
+
+.receipt-paper-58 #rReceiptSubtitle {
+    font-size: 7.5px;
+    font-weight: bold;
+    color: #111111;
+    text-transform: uppercase;
     margin-top: 1px;
 }
 
@@ -1789,137 +1987,321 @@ table tr:hover {
 
 
 /* KERTAS LABEL STIKER PERANGKAT (40x20, 40x30, 50x30 mm) */
-
 .label-paper {
-
-    background: #ffffff;
-
-    color: #000000;
-
+    background: #ffffff !important;
+    color: #000000 !important;
     margin: 0 auto;
-
-    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-
-    border: 1px dashed #666666;
-
-    border-radius: 3px;
-
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif !important;
+    border: 1px dashed #cbd5e1;
+    border-radius: 2px;
     box-sizing: border-box;
-
     overflow: hidden;
-
     box-shadow: 0 1px 6px rgba(0,0,0,0.06);
-
+    text-align: left;
+    padding: 2mm 0 0 2mm !important;
 }
-
-
 
 /* Ukuran 40 x 20 mm */
-
 .label-size-4020 {
-
     width: 40mm;
-
     height: 20mm;
-
-    padding: 1mm 1.5mm;
-
-    font-size: 7.2px;
-
-    line-height: 1.15;
-
+    padding: 2mm 0 0 2mm !important;
+    box-sizing: border-box;
+    overflow: hidden;
 }
-
-
 
 /* Ukuran 40 x 30 mm */
-
 .label-size-4030 {
-
     width: 40mm;
-
     height: 30mm;
-
-    padding: 1.5mm 2mm;
-
-    font-size: 8.2px;
-
-    line-height: 1.2;
-
+    padding: 2mm 0 0 2mm !important;
+    box-sizing: border-box;
+    overflow: hidden;
 }
-
-
 
 /* Ukuran 50 x 30 mm */
-
 .label-size-5030 {
-
     width: 50mm;
-
     height: 30mm;
-
-    padding: 1.5mm 2.5mm;
-
-    font-size: 9px;
-
-    line-height: 1.25;
-
+    padding: 2mm 0 0 2mm !important;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
-
-
-.label-paper .lbl-header {
-
-    display: flex;
-
-    justify-content: space-between;
-
-    align-items: center;
-
-    font-weight: bold;
-
-    border-bottom: 1px solid #000000;
-
-    padding-bottom: 1px;
-
-    margin-bottom: 1px;
-
-}
-
-
-
-.label-paper .lbl-code {
-
+/* 5 Baris Identitas Murni Label */
+.label-paper .lbl-ticket {
     font-family: 'Courier New', monospace;
+    font-size: 9.5px;
+    font-weight: 900;
+    line-height: 1.2;
+    color: #000000;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin: 0;
+    padding: 0;
+}
 
-    font-weight: bold;
-
+.label-paper .lbl-item {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    font-size: 8px;
+    font-weight: 600;
+    line-height: 1.18;
+    color: #000000;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin: 0;
+    padding: 0;
 }
 
 
+/* ========================================================
+   E-NOTA RESMI DIGITAL KHUSUS GAMBAR WHATSAPP
+   ======================================================== */
+.wa-receipt-card {
+    width: 380px;
+    max-width: 100%;
+    margin: 0;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #1e293b;
+    overflow: hidden;
+    box-sizing: border-box;
+    text-align: left;
+}
 
-.label-paper .lbl-row {
+.wa-header {
+    background: linear-gradient(135deg, #075e54 0%, #128c7e 100%);
+    color: #ffffff;
+    padding: 14px 16px;
+}
 
-    white-space: normal;
+.wa-header-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
 
+.wa-logo-img {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    object-fit: contain;
+    background: #ffffff;
+    padding: 3px;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.wa-brand-text {
+    flex: 1;
+    text-align: left;
+    line-height: 1.25;
+}
+
+.wa-store-name {
+    margin: 0;
+    font-size: 14.5px;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    -webkit-text-stroke: 1.2px #000000 !important;
+    text-shadow: -1px -1px 0 #000000, 1px -1px 0 #000000, -1px 1px 0 #000000, 1px 1px 0 #000000, 0 1px 0 #000000, 0 -1px 0 #000000, 1px 0 0 #000000, -1px 0 0 #000000 !important;
+}
+    color: #ffffff;
+    text-transform: uppercase;
+}
+
+.wa-store-sub {
+    font-size: 10px;
+    color: #e0f2fe;
+    margin-top: 2px;
+}
+
+.wa-badge-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.wa-type-badge {
+    background: rgba(255, 255, 255, 0.22);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 12px;
+    letter-spacing: 0.3px;
+}
+
+.wa-date-badge {
+    font-size: 10px;
+    color: #f1f5f9;
+}
+
+.wa-body {
+    padding: 14px 16px;
+}
+
+.wa-ticket-strip {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+}
+
+.wa-sub-label {
+    font-size: 9.5px;
+    color: #64748b;
+    display: block;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.wa-ticket-code {
+    font-size: 14px;
+    font-weight: 800;
+    font-family: 'Courier New', monospace;
+    color: #0f172a;
+}
+
+.wa-status-pill {
+    background: #dcfce7;
+    color: #15803d;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid #bbf7d0;
+}
+
+.wa-info-grid {
+    background: #ffffff;
+    border: 1px solid #f1f5f9;
+    border-radius: 8px;
+    padding: 2px 0;
+}
+
+.wa-grid-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 5px 4px;
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+.wa-grid-label {
+    color: #64748b;
+    font-weight: 600;
+    width: 38%;
+}
+
+.wa-grid-val {
+    color: #0f172a;
+    font-weight: 700;
+    width: 62%;
+    text-align: right;
     word-break: break-word;
-
-    overflow: visible;
-
-    line-height: 1.15;
-
-    margin-bottom: 1.5px;
-
 }
 
+.wa-keluhan-val {
+    color: #b91c1c;
+    font-style: italic;
+}
 
+.wa-divider-dashed {
+    border-bottom: 1px dashed #e2e8f0;
+    margin: 4px 0;
+}
 
-.label-paper .lbl-row b {
+.wa-price-card {
+    background: #f0fdf4;
+    border: 1.5px dashed #22c55e;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin: 12px 0;
+    text-align: center;
+}
 
-    display: inline-block;
+.wa-price-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
 
-    min-width: 14px;
+.wa-price-header span:first-child {
+    font-size: 11px;
+    font-weight: 800;
+    color: #166534;
+    text-transform: uppercase;
+}
 
+.wa-price-amount {
+    font-size: 16px;
+    font-weight: 900;
+    color: #15803d;
+}
+
+.wa-price-sub {
+    font-size: 9.5px;
+    color: #4b5563;
+    margin-top: 4px;
+    text-align: left;
+    line-height: 1.3;
+}
+
+.wa-track-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-top: 8px;
+}
+
+.wa-qr-container {
+    width: 64px;
+    height: 64px;
+    min-width: 64px;
+    background: #ffffff;
+    padding: 2px;
+    border-radius: 4px;
+    border: 1px solid #dbeafe;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.wa-qr-container canvas,
+.wa-qr-container img {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.wa-track-text {
+    flex: 1;
+    text-align: left;
+}
+
+.wa-footer {
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    padding: 10px 16px;
+    text-align: center;
 }
 
 
@@ -1932,46 +2314,30 @@ table tr:hover {
 
 @media print {
 
-    /* 1. Hapus seluruh elemen background & layout aplikasi utama agar tidak memicu halaman kosong */
-
-    body > *:not(#receiptModal) {
-
-        display: none !important;
-
+    @page {
+        margin: 0 !important;
     }
 
-
+    /* 1. Hapus seluruh elemen background & layout aplikasi utama agar tidak memicu halaman kosong */
+    body > *:not(#receiptModal) {
+        display: none !important;
+    }
 
     .no-print {
-
         display: none !important;
-
     }
 
-
-
     /* 2. Reset html & body agar tingginya pas 1 halaman dan margin 0 */
-
     html, body {
-
         width: 100% !important;
-
         height: auto !important;
-
         min-height: 0 !important;
-
         margin: 0 !important;
-
         padding: 0 !important;
-
         background: #ffffff !important;
-
         overflow: hidden !important;
-
         -webkit-print-color-adjust: exact;
-
         print-color-adjust: exact;
-
     }
 
 
@@ -2059,41 +2425,24 @@ table tr:hover {
 
 
     body.print-mode-receipt #receiptPrintArea {
-
         display: block !important;
-
         position: static !important;
-
-        width: 76mm !important;
-
-        max-width: 80mm !important;
-
+        width: 70mm !important;
+        max-width: 72mm !important;
         height: auto !important;
-
-        max-height: 96mm !important;
-
-        margin: 0 auto !important;
-
-        padding: 2mm 3mm !important;
-
+        max-height: 98mm !important;
+        margin: 0 !important;
+        margin-left: 0 !important;
+        padding: 0mm 1.5mm 1.5mm 0mm !important;
         border: none !important;
-
         box-shadow: none !important;
-
         background: #ffffff !important;
-
         color: #000000 !important;
-
         page-break-inside: avoid !important;
-
         break-inside: avoid !important;
-
         page-break-after: avoid !important;
-
         break-after: avoid !important;
-
         overflow: hidden !important;
-
     }
 
     /* Boost Kepekatan & Huruf Timbul Kepala Thermal */
@@ -2108,37 +2457,50 @@ table tr:hover {
     }
 
     #receiptPrintArea .store-title {
-        font-size: 14.5px !important;
+        font-size: 14px !important;
         font-weight: 900 !important;
-        letter-spacing: 0.5px !important;
+        letter-spacing: 0.8px !important;
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        -webkit-text-stroke: 0.8px #000000 !important;
+        text-shadow: -1px -1px 0 #000000, 1px -1px 0 #000000, -1px 1px 0 #000000, 1px 1px 0 #000000 !important;
     }
 
-    #receiptPrintArea .receipt-sub {
+    #receiptPrintArea .receipt-sub-contact {
         color: #000000 !important;
         font-weight: 600 !important;
     }
 
     #receiptPrintArea .receipt-divider-solid {
-        border-bottom: 2px solid #000000 !important;
+        border-bottom: 1.5px solid #000000 !important;
     }
 
     #receiptPrintArea .receipt-divider-dash {
-        border-bottom: 1.5px dashed #000000 !important;
+        border-bottom: 1px dashed #000000 !important;
     }
 
-    #receiptPrintArea .r-row .r-label {
+    #receiptPrintArea .r-table-row {
+        color: #000000 !important;
+    }
+
+    #receiptPrintArea .r-tbl-lbl {
         color: #000000 !important;
         font-weight: 700 !important;
     }
 
-    #receiptPrintArea .r-row .r-val {
+    #receiptPrintArea .r-tbl-sep {
+        color: #000000 !important;
+        font-weight: 700 !important;
+    }
+
+    #receiptPrintArea .r-tbl-val {
         color: #000000 !important;
         font-weight: 800 !important;
     }
 
     #receiptPrintArea .price-box {
-        border: 1.5px dashed #000000 !important;
-        background: transparent !important;
+        border: 1.2px solid #000000 !important;
+        background: #ffffff !important;
     }
 
     #receiptPrintArea .price-row,
@@ -2152,115 +2514,97 @@ table tr:hover {
         font-weight: 600 !important;
     }
 
-    #labelPrintArea .lbl-header {
-        border-bottom: 1.5px solid #000000 !important;
+    #receiptPrintArea .footer-right {
+        border-left: none !important;
+        padding-left: 0 !important;
     }
-    #labelPrintArea .lbl-code {
+
+    #receiptPrintArea .receipt-tracking-box {
+        border: none !important;
+    }
+
+    #receiptPrintArea .tracking-title {
+        display: none !important;
+    }
+
+    #receiptPrintArea #rQrCodeContainer {
+        margin: 0 !important;
+        padding: 0 !important;
+        text-align: center !important;
+    }
+
+    #receiptPrintArea #rQrCodeContainer canvas,
+    #receiptPrintArea #rQrCodeContainer img {
+        max-width: 58px !important;
+        max-height: 58px !important;
+    }
+
+    #labelPrintArea .lbl-ticket {
+        font-family: 'Courier New', monospace !important;
+        font-size: 9.5px !important;
         font-weight: 900 !important;
-    }
-    #labelPrintArea .lbl-row {
+        line-height: 1.2 !important;
         color: #000000 !important;
-        font-weight: 700 !important;
     }
-
-
+    #labelPrintArea .lbl-item {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif !important;
+        font-size: 8px !important;
+        font-weight: 600 !important;
+        line-height: 1.18 !important;
+        color: #000000 !important;
+    }
 
     /* 5. Mode Cetak: LABEL STIKER */
-
     body[class*="print-mode-label"] #previewReceiptContainer {
-
         display: none !important;
-
     }
-
-
 
     body[class*="print-mode-label"] #previewLabelContainer {
-
         display: block !important;
-
         margin: 0 !important;
-
         padding: 0 !important;
-
     }
-
-
 
     body[class*="print-mode-label"] #labelPrintArea {
-
         display: block !important;
-
         position: static !important;
-
-        margin: 0 auto !important;
-
+        margin: 0 !important;
         border: none !important;
-
         box-shadow: none !important;
-
         background: #ffffff !important;
-
         color: #000000 !important;
-
         page-break-inside: avoid !important;
-
         break-inside: avoid !important;
-
         page-break-after: avoid !important;
-
         break-after: avoid !important;
-
         overflow: hidden !important;
-
+        padding: 2mm 0 0 2mm !important;
     }
 
-
-
     body.print-mode-label-4020 #labelPrintArea {
-
         width: 40mm !important;
-
         height: 20mm !important;
-
         max-width: 40mm !important;
-
         max-height: 20mm !important;
-
-        padding: 1mm 1.5mm !important;
-
+        padding: 2mm 0 0 2mm !important;
     }
 
 
 
     body.print-mode-label-4030 #labelPrintArea {
-
         width: 40mm !important;
-
         height: 30mm !important;
-
         max-width: 40mm !important;
-
         max-height: 30mm !important;
-
-        padding: 1.5mm 2mm !important;
-
+        padding: 2mm 0 0 2mm !important;
     }
 
-
-
     body.print-mode-label-5030 #labelPrintArea {
-
         width: 50mm !important;
-
         height: 30mm !important;
-
         max-width: 50mm !important;
-
         max-height: 30mm !important;
-
-        padding: 1.5mm 2.5mm !important;
-
+        padding: 2mm 0 0 2mm !important;
     }
 
 }
@@ -2398,3 +2742,27 @@ table tr:hover {
         gap: 8px !important;
     }
 }
+
+/* Auto capitalize visual untuk form input data manual */
+.capitalize-text,
+#srvNamaPelanggan,
+#srvAlamat,
+#srvJenisPerangkat,
+#srvMerkModel,
+#srvKeluhan,
+#srvKelengkapan,
+#srvCatatanTeknisi,
+#completeSppNama,
+#completeCatatanTeknisi,
+#instantSppNama,
+#instantCatatanTeknisi,
+#cashierSparepartNama,
+#keterangan,
+#catatan,
+#debtNama,
+#debtKeterangan,
+#custNama,
+#custAlamat {
+    text-transform: capitalize;
+}
+

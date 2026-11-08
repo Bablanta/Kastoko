@@ -111,9 +111,9 @@
         }
         .receipt-tracking-box {
             text-align: center;
-            margin: 6px 0 4px 0;
-            padding-top: 5px;
-            border-top: 1px dashed #444;
+            margin: 0;
+            padding-top: 0;
+            border: none !important;
         }
         #rQrCodeContainer canvas, #rQrCodeContainer img {
             display: block;
@@ -406,8 +406,7 @@
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <span style="font-size: 20px;">🖨️</span>
                     <div>
-                        <h3 style="margin: 0; font-size: 16px; color: var(--accent-color);">Pengaturan Dual Thermal Printer</h3>
-                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Direct Python RAW (ESC/POS & TSPL murni tanpa dialog Windows)</div>
+                        <h3 style="margin: 0; font-size: 16px; color: var(--accent-color);">Pengaturan Printer</h3>
                     </div>
                 </div>
                 <button class="toast-close" style="font-size: 20px; padding: 2px 8px; cursor: pointer;" onclick="closePrinterSettingsModal()" title="Tutup">✕</button>
@@ -415,46 +414,60 @@
 
             <!-- Body (Scrollable) -->
             <div style="padding: 16px 20px; overflow-y: auto; max-height: calc(90vh - 125px); display: flex; flex-direction: column; gap: 14px;">
+                <!-- Status Deteksi Hardware Printer Lokal -->
+                <div id="printerAgentStatusBox" style="background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span id="printerAgentStatusDot" style="font-size: 18px;">🔍</span>
+                            <div>
+                                <div id="printerAgentStatusText" style="font-size: 12.5px; font-weight: bold; color: var(--text-color);">Mendeteksi printer di PC ini...</div>
+                                <div id="printerAgentSubText" style="font-size: 11px; color: var(--text-muted);">Memeriksa koneksi perangkat USB / Bluetooth lokal</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <button type="button" class="btn" onclick="loadAvailablePrinters(true)" style="height: 28px; font-size: 11px; padding: 0 10px; background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-color); cursor: pointer; border-radius: 4px;" title="Segarkan deteksi printer">🔄 Refresh</button>
+                            <a id="btnDownloadPrinterAgent" href="/api/download/printer-agent" class="btn" style="height: 28px; font-size: 11px; padding: 0 10px; background: #0b5e2f; color: #fff; border: none; font-weight: 600; cursor: pointer; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; text-decoration: none;" title="Download tool pendeteksi untuk PC/Laptop ini">📥 Unduh Tool Deteksi PC Ini</a>
+                        </div>
+                    </div>
+                    <!-- Kode Pairing 6-Digit -->
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 8px; border-top: 1px dashed var(--border-color); font-size: 11.5px; flex-wrap: wrap; gap: 6px;">
+                        <span style="color: var(--text-muted);">🔑 Kode Pairing Cepat PC Ini:</span>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span id="printerPairingCodeBadge" style="font-family: monospace; font-size: 14px; font-weight: 800; letter-spacing: 2px; color: var(--accent-color); background: rgba(0, 120, 212, 0.1); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--accent-color);">------</span>
+                            <span style="font-size: 10.5px; color: var(--text-muted);">(Ketik kode ini di terminal jika diminta)</span>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Printer 1: Nota -->
                 <div style="background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px;">
                     <div style="font-weight: bold; font-size: 12.5px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; color: var(--text-color);">
-                        <span>🧾 PRINTER 1: NOTA / STRUK</span>
+                        <span>🧾 PRINTER NOTA</span>
                         <div style="display: flex; gap: 6px;">
                             <button type="button" class="btn" style="height: 26px; font-size: 11px; padding: 0 10px; background: #eef7fc; color: #0078d4; border: 1px solid #0078d4; font-weight: 600; cursor: pointer; border-radius: 4px;" onclick="testPrintReceipt()">🧪 Uji Cetak Nota</button>
-                            <button type="button" class="btn" id="btnSettingsBtConnect" style="height: 26px; font-size: 11px; padding: 0 10px; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--border-color); font-weight: 600; cursor: pointer; border-radius: 4px;" onclick="connectBluetoothPrinter()" title="Konek langsung ke Blueprint ECO80BT via Bluetooth 4.0">📶 Konek BT</button>
                         </div>
                     </div>
                     <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
                         <div style="flex: 1; min-width: 140px;">
                             <label style="font-size: 11px; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">Ukuran Kertas Nota:</label>
                             <select id="settingNotaPaperSize" class="form-control" style="height: 38px; padding: 6px 10px; font-size: 12px;" onchange="onReceiptPaperSizeChange(this.value)">
-                                <option value="78x98" selected>🏷️ 78 x 98 mm (Thermal Label Stiker)</option>
-                                <option value="58">58 mm (POS-58 Mini Kasir)</option>
-                                <option value="80">80 mm (POS-80 Standar Kasir)</option>
+                                <option value="58">58mm</option>
+                                <option value="80" selected>80mm</option>
                             </select>
                         </div>
                         <div style="flex: 1; min-width: 140px;">
-                            <label style="font-size: 11px; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">Jalur Koneksi:</label>
+                            <label style="font-size: 11px; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">Metode Cetak / Koneksi:</label>
                             <select id="settingNotaConnection" class="form-control" style="height: 38px; padding: 6px 10px; font-size: 12px;">
-                                <option value="direct_backend" selected>⚡ Direct Raw Python (Cepat & Pekat)</option>
-                                <option value="driver">🖨️ Dialog Driver Browser (Manual)</option>
-                                <option value="usb">🔌 Direct USB (WebSerial)</option>
-                                <option value="bluetooth">📶 Direct Bluetooth</option>
+                                <option value="browser" selected>🌐 Cetak Browser (Termudah, Universal & Pasti Keluar)</option>
+                                <option value="USB">🔌 Direct Spooler Hardware (Perlu Tool Agen)</option>
                             </select>
                         </div>
                     </div>
                     <!-- Dropdown Pilihan Perangkat Printer Windows untuk Nota -->
-                    <div style="margin-bottom: 10px;">
+                    <div>
                         <label style="font-size: 11px; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">Perangkat Printer Nota (Windows):</label>
                         <select id="settingNotaPrinterDevice" class="form-control" style="height: 38px; padding: 6px 10px; font-size: 12px;">
                             <option value="">-- Memuat printer Windows... --</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="font-size: 11px; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">Kepekatan Panas Thermal (Density):</label>
-                        <select id="settingPrintDensity" class="form-control" style="height: 38px; padding: 6px 10px; font-size: 12px;">
-                            <option value="high" selected>🔥 Sangat Pekat & Timbul (Double Strike)</option>
-                            <option value="normal">Standar (Normal)</option>
                         </select>
                     </div>
                 </div>
@@ -462,25 +475,23 @@
                 <!-- Printer 2: Label Stiker -->
                 <div style="background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px;">
                     <div style="font-weight: bold; font-size: 12.5px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; color: var(--text-color);">
-                        <span>🏷️ PRINTER 2: LABEL STIKER UNIT</span>
+                        <span>🏷️ PRINTER LABEL</span>
                         <button type="button" class="btn" style="height: 26px; font-size: 11px; padding: 0 10px; background: #eef7fc; color: #0078d4; border: 1px solid #0078d4; font-weight: 600; cursor: pointer; border-radius: 4px;" onclick="testPrintLabel()">🧪 Uji Cetak Label</button>
                     </div>
                     <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
                         <div style="flex: 1; min-width: 140px;">
                             <label style="font-size: 11px; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">Ukuran Label Stiker:</label>
                             <select id="settingLabelPaperSize" class="form-control" style="height: 38px; padding: 6px 10px; font-size: 12px;" onchange="onLabelSizeChange(this.value)">
-                                <option value="40x20">40 x 20 mm (Mini Stiker)</option>
-                                <option value="40x30" selected>40 x 30 mm (Standar Stiker)</option>
+                                <option value="40x20" selected>40 x 20 mm (Mini Stiker)</option>
+                                <option value="40x30">40 x 30 mm (Standar Stiker)</option>
                                 <option value="50x30">50 x 30 mm (Stiker Lebar)</option>
                             </select>
                         </div>
                         <div style="flex: 1; min-width: 140px;">
-                            <label style="font-size: 11px; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">Jalur Koneksi:</label>
+                            <label style="font-size: 11px; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">Metode Cetak / Koneksi:</label>
                             <select id="settingLabelConnection" class="form-control" style="height: 38px; padding: 6px 10px; font-size: 12px;">
-                                <option value="direct_backend" selected>⚡ Direct Raw Python (Sensor Gap Presisi)</option>
-                                <option value="driver">🖨️ Dialog Driver Browser (Manual)</option>
-                                <option value="usb">🔌 Direct USB (WebSerial)</option>
-                                <option value="bluetooth">📶 Direct Bluetooth</option>
+                                <option value="browser" selected>🌐 Cetak Browser (Termudah, Universal & Pasti Keluar)</option>
+                                <option value="USB">🔌 Direct Spooler Hardware (Perlu Tool Agen)</option>
                             </select>
                         </div>
                     </div>
@@ -492,10 +503,10 @@
                         </select>
                     </div>
                     <div>
-                        <label style="font-size: 11px; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">Bahasa Perintah Label Barcode:</label>
+                        <label style="font-size: 11px; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">Perintah label barcode:</label>
                         <select id="settingLabelCommandMode" class="form-control" style="height: 38px; padding: 6px 10px; font-size: 12px;">
-                            <option value="tspl" selected>TSPL (Presisi Sensor Gap - XP-365B/80Label)</option>
-                            <option value="escpos">ESC/POS (Standard Thermal Text)</option>
+                            <option value="tspl" selected>TSPL</option>
+                            <option value="escpos">ESC/POS</option>
                         </select>
                     </div>
                 </div>
@@ -525,8 +536,7 @@
 
             <!-- Footer -->
             <div style="display: flex; gap: 10px; padding: 12px 20px; border-top: 1px solid var(--border-color); background: var(--card-bg);">
-                <button type="button" class="btn" onclick="closePrinterSettingsModal()" style="flex: 1; height: 40px; background: #888; color: #fff; cursor: pointer;">Batal</button>
-                <button type="button" class="btn btn-primary" onclick="savePrinterSettingsOnly()" style="flex: 2; height: 40px; font-weight: bold; font-size: 13px; cursor: pointer;">💾 Simpan Pengaturan Printer</button>
+                <button type="button" class="btn btn-primary" onclick="savePrinterSettingsOnly()" style="width: 100%; height: 40px; font-weight: bold; font-size: 13px; cursor: pointer;">💾 Simpan Pengaturan Printer</button>
             </div>
         </div>
     </div>
@@ -577,15 +587,15 @@
                         </button>
                     </div>
 
-                    <!-- Tombol Card: Pengaturan Dual Printer Thermal -->
+                    <!-- Tombol Card: Pengaturan Printer -->
                     <div class="settings-section" id="settingsSectionPrinter" style="border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; background: rgba(0,0,0,0.01);">
-                        <div style="font-size: 11px; font-weight: bold; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">🖨️ Hardware & Cetak Direct</div>
-                        <button type="button" class="settings-nav-card" onclick="openPrinterSettingsModal()" title="Buka Pengaturan Dual Thermal Printer">
+                        <div style="font-size: 11px; font-weight: bold; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">🖨️ Hardware & Cetak</div>
+                        <button type="button" class="settings-nav-card" onclick="openPrinterSettingsModal()" title="Buka Pengaturan Printer">
                             <div style="font-size: 28px; line-height: 1;">🖨️</div>
                             <div style="text-align: left; flex: 1;">
-                                <div style="font-weight: bold; font-size: 13px; color: var(--text-color);">Pengaturan Dual Thermal Printer</div>
-                                <div style="font-size: 11px; color: var(--text-muted); margin-top: 3px;">Direct Raw Python POS-58/80 & Label TSPL</div>
-                                <div style="font-size: 11px; color: #107c41; font-weight: bold; margin-top: 2px;">2 Printer Aktif (Pekat & Timbul)</div>
+                                <div style="font-weight: bold; font-size: 13px; color: var(--text-color);">Pengaturan Printer</div>
+                                <div style="font-size: 11px; color: var(--text-muted); margin-top: 3px;">Thermal POS 58/80mm & Label Stiker</div>
+                                <div style="font-size: 11px; color: #107c41; font-weight: bold; margin-top: 2px;">Printer Siap Digunakan</div>
                             </div>
                             <div style="font-size: 16px; color: var(--text-muted);">❯</div>
                         </button>
@@ -650,11 +660,6 @@
                         <div id="syncResultHint" style="font-size: 10px; color: var(--text-muted); margin-top: 6px; line-height: 1.3;"></div>
                     </div>
                 </div>
-            </div>
-
-            <!-- Footer (Sticky di bawah) -->
-            <div class="settings-modal-footer">
-                <button class="btn" style="height: 40px; width: 100%; font-weight: 600; font-size: 13px; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--border-color); cursor: pointer;" onclick="closeSettingsModal()">✕ Tutup Pengaturan</button>
             </div>
         </div>
     </div>
@@ -723,7 +728,7 @@
         <div class="modal-card receipt-modal-card">
             <!-- Modal Header -->
             <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 12px;">
-                <h3 style="margin: 0; font-size: 16px;">🖨️ Cetak Nota Servis (Thermal 78 x 98 mm)</h3>
+                <h3 style="margin: 0; font-size: 16px;">Cetak Nota</h3>
                 <button class="toast-close" onclick="closeReceiptModal()" title="Tutup">✕</button>
             </div>
 
@@ -735,163 +740,158 @@
                 <button class="print-tab-btn" id="tabPrintAmbil" onclick="switchReceiptType('ambil')">
                     📤 2. Nota Pengambilan
                 </button>
-                <button class="print-tab-btn" id="tabPrintLabel" onclick="switchReceiptType('label')" style="display: none;">
+                <button class="print-tab-btn" id="tabPrintLabel" onclick="switchReceiptType('label')">
                     🏷️ 3. Label Stiker Unit
                 </button>
             </div>
 
-            <!-- Box Pengaturan Cetak 1-Klik Langsung Cetak -->
-            <div class="print-settings-box no-print">
-                <!-- Baris Setting Kertas & Status Koneksi Direct Hardware -->
-                <div class="print-settings-row" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-weight: 600; font-size: 11.5px;">🧾 Ukuran Kertas:</span>
-                        <select id="receiptPaperSelect" class="form-control" style="width: auto; padding: 3px 8px; font-size: 11.5px; height: 32px; font-weight: bold;" onchange="onReceiptPaperSizeChange(this.value)">
-                            <option value="78x98" selected>🏷️ 78 x 98 mm (Thermal Label Stiker)</option>
-                            <option value="58">58 mm (POS-58 Mini Kasir)</option>
-                            <option value="80">80 mm (POS-80 Standar Kasir)</option>
+            <!-- Baris Khusus Nota Pengambilan: Penyesuaian Harga & Pelunasan -->
+            <div id="boxPengambilanHarga" class="no-print" style="display: none; border: 1px solid var(--border-color); border-radius: 6px; padding: 8px; margin-bottom: 10px; background: rgba(0,0,0,0.02);">
+                <div style="font-weight: bold; color: var(--accent-color); margin-bottom: 6px;">
+                    💰 Informasi Pelunasan / Pengambilan Unit:
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                    <div style="flex: 1; min-width: 130px;">
+                        <label style="font-size: 10px; color: var(--text-muted); display: block;">Total Biaya Akhir (Rp)</label>
+                        <input type="text" id="rInputBiayaAkhir" class="form-control" placeholder="0" oninput="formatCurrency(this); updateReceiptPricePreview();" onkeyup="formatCurrency(this); updateReceiptPricePreview();" style="height: 32px; font-size: 12px; font-weight: bold; color: #107c41;">
+                    </div>
+                    <div style="flex: 1; min-width: 110px;">
+                        <label style="font-size: 10px; color: var(--text-muted); display: block;">Status Pembayaran</label>
+                        <select id="rInputStatusBayar" class="form-control" onchange="updateReceiptPricePreview()" style="height: 32px; font-size: 12px;">
+                            <option value="LUNAS">✅ LUNAS</option>
+                            <option value="Belum Bayar">⏳ Belum Bayar</option>
+                            <option value="DP (Uang Muka)">💵 DP (Uang Muka)</option>
                         </select>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span class="printer-badge connected" id="directPrintBadge" style="background: #e6f4ed; color: #107c41; border: 1px solid #c3e6cb; font-size: 11px; padding: 4px 10px; border-radius: 6px; font-weight: 600;">
-                            🟢 80Label Printer (USB) - Langsung Cetak Siap (0% Dialog Windows)
-                        </span>
+                    <div style="flex: 1; min-width: 120px;">
+                        <label style="font-size: 10px; color: var(--text-muted); display: block;">🛡️ Masa Garansi</label>
+                        <select id="rSelectGaransi" class="form-control" onchange="updateReceiptPricePreview()" style="height: 32px; font-size: 11px;">
+                            <option value="7 Hari" selected>7 Hari (Standar)</option>
+                            <option value="3 Hari">3 Hari</option>
+                            <option value="14 Hari">14 Hari (2 Minggu)</option>
+                            <option value="30 Hari">30 Hari (1 Bulan)</option>
+                            <option value="60 Hari">60 Hari (2 Bulan)</option>
+                            <option value="90 Hari">90 Hari (3 Bulan)</option>
+                            <option value="Non-Garansi">Non-Garansi</option>
+                        </select>
                     </div>
-                </div>
-
-                <!-- Info Banner Ramah Pengguna -->
-                <div style="margin-top: 6px; padding: 6px 10px; background: #eef7fc; border-left: 3px solid #0078d4; border-radius: 4px; font-size: 11px; color: #1a4f70; line-height: 1.4;">
-                    ⚡ <b>1-Klik Langsung Cetak:</b> Cukup klik tombol biru <b>"🖨️ Cetak Nota (78x98 mm)"</b> di bawah. Sistem langsung mencetak ke hardware printer thermal secara senyap (*silent print*) tanpa membuka jendela dialog Windows.
-                </div>
-
-                <!-- Baris Khusus Nota Pengambilan: Penyesuaian Harga & Pelunasan -->
-                <div id="boxPengambilanHarga" style="display: none; border-top: 1px solid var(--border-color); padding-top: 8px; margin-top: 8px;">
-                    <div style="font-weight: bold; color: var(--accent-color); margin-bottom: 6px;">
-                        💰 Informasi Pelunasan / Pengambilan Unit:
-                    </div>
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-                        <div style="flex: 1; min-width: 130px;">
-                            <label style="font-size: 10px; color: var(--text-muted); display: block;">Total Biaya Akhir (Rp)</label>
-                            <input type="text" id="rInputBiayaAkhir" class="form-control" placeholder="0" oninput="formatCurrency(this); updateReceiptPricePreview();" onkeyup="formatCurrency(this); updateReceiptPricePreview();" style="height: 32px; font-size: 12px; font-weight: bold; color: #107c41;">
-                        </div>
-                        <div style="flex: 1; min-width: 110px;">
-                            <label style="font-size: 10px; color: var(--text-muted); display: block;">Status Pembayaran</label>
-                            <select id="rInputStatusBayar" class="form-control" onchange="updateReceiptPricePreview()" style="height: 32px; font-size: 12px;">
-                                <option value="LUNAS">✅ LUNAS</option>
-                                <option value="Belum Bayar">⏳ Belum Bayar</option>
-                                <option value="DP (Uang Muka)">💵 DP (Uang Muka)</option>
-                            </select>
-                        </div>
-                        <div style="flex: 1; min-width: 120px;">
-                            <label style="font-size: 10px; color: var(--text-muted); display: block;">🛡️ Masa Garansi</label>
-                            <select id="rSelectGaransi" class="form-control" onchange="updateReceiptPricePreview()" style="height: 32px; font-size: 11px;">
-                                <option value="7 Hari" selected>7 Hari (Standar)</option>
-                                <option value="3 Hari">3 Hari</option>
-                                <option value="14 Hari">14 Hari (2 Minggu)</option>
-                                <option value="30 Hari">30 Hari (1 Bulan)</option>
-                                <option value="60 Hari">60 Hari (2 Bulan)</option>
-                                <option value="90 Hari">90 Hari (3 Bulan)</option>
-                                <option value="Non-Garansi">Non-Garansi</option>
-                            </select>
-                        </div>
-                        <div style="min-width: 130px; margin-top: 14px;">
-                            <button class="btn btn-primary" onclick="savePickupPayment()" style="height: 32px; font-size: 11px; padding: 0 10px; width: 100%;">
-                                💾 Simpan
-                            </button>
-                        </div>
+                    <div style="min-width: 130px; margin-top: 14px;">
+                        <button class="btn btn-primary" onclick="savePickupPayment()" style="height: 32px; font-size: 11px; padding: 0 10px; width: 100%;">
+                            💾 Simpan
+                        </button>
                     </div>
                 </div>
             </div>
 
-            <!-- AREA PRATINJAU NOTA (80 x 100 mm) -->
-            <div id="previewReceiptContainer">
+            <!-- AREA PRATINJAU NOTA (80 x 100 mm / 78 x 98 mm - Sederhana, Rata Kiri, Teks Hitam) -->
+            <div id="previewReceiptContainer" style="display: flex; justify-content: flex-start; padding: 4px 0;">
                 <div id="receiptPrintArea" class="receipt-paper-80100">
+                    <!-- 1. Header Toko Rata Atas & Kiri -->
                     <div class="receipt-header">
-                        <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
-                            <img id="receiptLogo" src="default_logo.ico" alt="Logo" style="width: 20px; height: 20px; object-fit: contain;">
-                            <h2 class="store-title" id="rStoreTitle">AUTOCASH SERVIS</h2>
+                        <div class="receipt-header-left">
+                            <img id="receiptLogo" src="default_logo.ico" alt="Logo" class="receipt-logo-large">
+                            <div class="receipt-store-info">
+                                <h2 class="store-title" id="rStoreTitle">DHANZCELL SMARTPHONE</h2>
+                                <div class="receipt-sub-contact" id="rStoreAddress">Jl. Cibaduyut No. 92</div>
+                                <div class="receipt-sub-contact" id="rStorePhone">Telp / WA: 0852-2300-2300</div>
+                            </div>
                         </div>
-                        <div class="receipt-sub" id="rStoreAddress" style="display: none; font-size: 8.5px; margin-top: 1px;">-</div>
-                        <div class="receipt-sub" id="rStorePhone" style="display: none; font-size: 8.5px; margin-top: 1px;">-</div>
-                        <div class="receipt-sub" id="rReceiptSubtitle">TANDA TERIMA PENERIMAAN UNIT</div>
-                        <div class="receipt-sub" id="rDateTimePrint">-</div>
-                        <div class="receipt-divider-solid"></div>
                     </div>
 
+                    <!-- 2. Subtitle & Waktu Rata Kiri -->
+                    <div class="receipt-title-bar">
+                        <div class="receipt-title-text" id="rReceiptSubtitle">TANDA TERIMA PENERIMAAN UNIT</div>
+                        <div class="receipt-title-meta" id="rDateTimePrint">Waktu: 2026-11-07 20:41</div>
+                    </div>
+
+                    <!-- 3. Rincian Servis Rata Kiri Tabular -->
                     <div class="receipt-body">
-                        <div class="r-row">
-                            <span class="r-label">No. Tiket:</span>
-                            <span class="r-val" id="rKodeServis" style="font-size: 11px; font-weight: bold; font-family: 'Courier New', monospace;">-</span>
+                        <div class="r-table-row">
+                            <span class="r-tbl-lbl">No. Tiket</span>
+                            <span class="r-tbl-sep">:</span>
+                            <span class="r-tbl-val" id="rKodeServis" style="font-size: 9.5px; font-weight: 900;">-</span>
                         </div>
-                        <div class="r-row">
-                            <span class="r-label">Pelanggan:</span>
-                            <span class="r-val" id="rNama">-</span>
+                        <div class="r-table-row">
+                            <span class="r-tbl-lbl">Pelanggan</span>
+                            <span class="r-tbl-sep">:</span>
+                            <span class="r-tbl-val" id="rNama">-</span>
                         </div>
-                        <div class="r-row">
-                            <span class="r-label">No. HP/WA:</span>
-                            <span class="r-val" id="rNoHp">-</span>
+                        <div class="r-table-row">
+                            <span class="r-tbl-lbl">No. HP / WA</span>
+                            <span class="r-tbl-sep">:</span>
+                            <span class="r-tbl-val" id="rNoHp">-</span>
                         </div>
-                        <div class="receipt-divider-dash"></div>
-                        <div class="r-row">
-                            <span class="r-label">Perangkat:</span>
-                            <span class="r-val" id="rPerangkat">-</span>
-                        </div>
-                        <div class="r-row">
-                            <span class="r-label">Merk/Model:</span>
-                            <span class="r-val" id="rMerkModel">-</span>
-                        </div>
-                        <div class="r-row" id="rRowImeiSn" style="display: none;">
-                            <span class="r-label">IMEI / SN:</span>
-                            <span class="r-val" id="rImeiSn">-</span>
-                        </div>
-                        <div class="r-row">
-                            <span class="r-label">Layanan:</span>
-                            <span class="r-val" id="rMenuServis">-</span>
-                        </div>
-                        <div class="r-row">
-                            <span class="r-label">Keluhan:</span>
-                            <span class="r-val" id="rKeluhan" style="font-style: italic;">-</span>
-                        </div>
-                        <div class="r-row" id="rRowCatatan">
-                            <span class="r-label">Catatan Tek:</span>
-                            <span class="r-val" id="rCatatanTeknisi">-</span>
-                        </div>
-                        <div class="r-row" id="rRowSparepart" style="display: none;">
-                            <span class="r-label">Sparepart:</span>
-                            <span class="r-val" id="rSparepart">-</span>
-                        </div>
+
                         <div class="receipt-divider-dash"></div>
 
-                        <!-- Kotak Informasi Harga -->
+                        <div class="r-table-row">
+                            <span class="r-tbl-lbl">Perangkat</span>
+                            <span class="r-tbl-sep">:</span>
+                            <span class="r-tbl-val" id="rPerangkat">-</span>
+                        </div>
+                        <div class="r-table-row">
+                            <span class="r-tbl-lbl">Merk / Model</span>
+                            <span class="r-tbl-sep">:</span>
+                            <span class="r-tbl-val" id="rMerkModel">-</span>
+                        </div>
+                        <div class="r-table-row" id="rRowImeiSn" style="display: none;">
+                            <span class="r-tbl-lbl">IMEI / SN</span>
+                            <span class="r-tbl-sep">:</span>
+                            <span class="r-tbl-val" id="rImeiSn">-</span>
+                        </div>
+                        <div class="r-table-row">
+                            <span class="r-tbl-lbl">Layanan</span>
+                            <span class="r-tbl-sep">:</span>
+                            <span class="r-tbl-val" id="rMenuServis">-</span>
+                        </div>
+                        <div class="r-table-row">
+                            <span class="r-tbl-lbl">Keluhan</span>
+                            <span class="r-tbl-sep">:</span>
+                            <span class="r-tbl-val" id="rKeluhan" style="font-weight: 800;">-</span>
+                        </div>
+                        <div class="r-table-row" id="rRowCatatan">
+                            <span class="r-tbl-lbl">Catatan Tek</span>
+                            <span class="r-tbl-sep">:</span>
+                            <span class="r-tbl-val" id="rCatatanTeknisi">-</span>
+                        </div>
+                        <div class="r-table-row" id="rRowSparepart" style="display: none;">
+                            <span class="r-tbl-lbl">Sparepart</span>
+                            <span class="r-tbl-sep">:</span>
+                            <span class="r-tbl-val" id="rSparepart">-</span>
+                        </div>
+
+                        <!-- 4. Kotak Informasi Harga & Status Sederhana -->
                         <div class="price-box" id="rPriceBox">
                             <div class="price-row">
-                                <span id="rPriceLabel">Estimasi Biaya:</span>
-                                <span id="rBiaya">Rp 0</span>
+                                <span class="price-lbl" id="rPriceLabel">ESTIMASI BIAYA:</span>
+                                <span class="price-val" id="rBiaya">Rp 0</span>
                             </div>
-                            <div class="r-row" style="margin-top: 2px;">
-                                <span class="r-label" id="rStatusLabel">Status:</span>
-                                <span class="r-val" id="rStatus" style="font-weight: bold;">-</span>
+                            <div class="price-sub-row">
+                                <span class="price-status-lbl" id="rStatusLabel">Status Unit:</span>
+                                <span class="price-status-val" id="rStatus">-</span>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- 5. Footer Sederhana: Syarat, Tanda Tangan & QR -->
+                    <div class="footer-terms" id="rFooterTerms">
+                        * Simpan nota fisik ini sebagai tanda bukti sah saat mengambil unit.<br>
+                        * Aksesoris tidak tertulis di luar tanggung jawab toko.
                     </div>
 
                     <div class="receipt-footer">
                         <div class="receipt-footer-flex">
                             <div class="footer-left" id="rFooterLeft">
-                                <div class="footer-terms" id="rFooterTerms">
-                                    * Simpan nota ini sebagai bukti tanda terima saat mengambil unit.<br>
-                                    * Kerusakan aksesoris tidak tercatat di luar tanggung jawab toko.
-                                </div>
                                 <div class="sig-row">
                                     <div class="sig-col">
-                                        <div>Pelanggan</div>
-                                        <div class="sig-space"></div>
-                                        <div id="rSigPelanggan">( .................... )</div>
+                                        <div class="sig-title">Pelanggan</div>
+                                        <div class="sig-line"></div>
+                                        <div class="sig-name" id="rSigPelanggan">( .................... )</div>
                                     </div>
                                     <div class="sig-col">
-                                        <div>Kasir / Teknisi</div>
-                                        <div class="sig-space"></div>
-                                        <div>( .................... )</div>
+                                        <div class="sig-title">Kasir / Teknisi</div>
+                                        <div class="sig-line"></div>
+                                        <div class="sig-name">( Dhanzcell )</div>
                                     </div>
                                 </div>
                             </div>
@@ -899,9 +899,8 @@
                             <div class="footer-right" id="rFooterRight">
                                 <!-- Blok QR Code Pelacakan Servisan Online -->
                                 <div class="receipt-tracking-box" id="rTrackingBox">
-                                    <div class="tracking-title" style="font-size: 7px; font-weight: bold; letter-spacing: 0.2px; margin-bottom: 2px;">SCAN CEK STATUS</div>
                                     <div id="rQrCodeContainer"></div>
-                                    <div class="tracking-url" style="font-size: 6.5px; font-family: monospace; color: #222; margin-top: 1px;" id="rTrackingUrlText">lacak.dhanzcell.my.id</div>
+                                    <div class="tracking-url" id="rTrackingUrlText">lacak.dhanzcell.my.id</div>
                                 </div>
                             </div>
                         </div>
@@ -909,25 +908,134 @@
                 </div>
             </div>
 
-            <!-- AREA PRATINJAU LABEL STIKER (40x20 / 40x30 / 50x30 mm) -->
-            <div id="previewLabelContainer" style="display: none; padding: 10px 0;">
-                <div id="labelPrintArea" class="label-paper label-size-4030">
-                    <div class="lbl-header">
-                        <span class="lbl-code" id="lblKode">-</span>
-                        <span style="font-size: 7.5px;" id="lblTanggal">-</span>
+            <!-- AREA PRATINJAU GAMBAR WHATSAPP (E-NOTA DIGITAL) -->
+            <div id="previewWaContainer" style="display: none; justify-content: flex-start; padding: 4px 0;">
+                <div id="waReceiptCard" class="wa-receipt-card">
+                    <!-- WA Header Banner -->
+                    <div class="wa-header">
+                        <div class="wa-header-brand">
+                            <img id="waLogo" src="default_logo.ico" alt="Logo" class="wa-logo-img">
+                            <div class="wa-brand-text">
+                                <h2 id="waStoreTitle" class="wa-store-name">DHANZCELL SMARTPHONE</h2>
+                                <div id="waStoreAddress" class="wa-store-sub">Jl. Cibaduyut No. 92</div>
+                                <div id="waStorePhone" class="wa-store-sub">Telp/WA: 0852-2300-2300</div>
+                            </div>
+                        </div>
+                        <div class="wa-badge-bar">
+                            <span id="waReceiptBadge" class="wa-type-badge">📱 E-TANDA TERIMA RESMI</span>
+                            <span id="waDateTime" class="wa-date-badge">2026-11-03</span>
+                        </div>
                     </div>
-                    <div class="lbl-row"><b>P:</b> <span id="lblNama" style="font-weight: bold; word-break: break-word;">-</span></div>
-                    <div class="lbl-row" style="font-size: 7.2px; color: #333; margin-top: -1px;"><b>HP:</b> <span id="lblNoHp">-</span></div>
-                    <div class="lbl-row"><b>U:</b> <span id="lblUnit" style="font-weight: bold; word-break: break-word;">-</span></div>
-                    <div class="lbl-row"><b>K:</b> <span id="lblKeluhan" style="font-style: italic; word-break: break-word;">-</span></div>
-                    <div class="lbl-row" id="lblRowTeknisi"><b>T:</b> <span id="lblCatatan" style="word-break: break-word;">-</span></div>
+
+                    <!-- WA Body Card -->
+                    <div class="wa-body">
+                        <!-- Ticket & Status Pill -->
+                        <div class="wa-ticket-strip">
+                            <div>
+                                <span class="wa-sub-label">No. Tiket Servis:</span>
+                                <div id="waKodeServis" class="wa-ticket-code">SRV-20261103-001</div>
+                            </div>
+                            <div id="waStatusPill" class="wa-status-pill">
+                                🟢 Unit Diterima
+                            </div>
+                        </div>
+
+                        <!-- Customer & Device Info -->
+                        <div class="wa-info-grid">
+                            <div class="wa-grid-row">
+                                <span class="wa-grid-label">👤 Pelanggan:</span>
+                                <span id="waNama" class="wa-grid-val">KIKI</span>
+                            </div>
+                            <div class="wa-grid-row">
+                                <span class="wa-grid-label">📞 No. WhatsApp:</span>
+                                <span id="waNoHp" class="wa-grid-val">088704450650</span>
+                            </div>
+                            <div class="wa-divider-dashed"></div>
+                            <div class="wa-grid-row">
+                                <span class="wa-grid-label">📱 Perangkat:</span>
+                                <span id="waPerangkat" class="wa-grid-val">Smartphone / HP</span>
+                            </div>
+                            <div class="wa-grid-row">
+                                <span class="wa-grid-label">🏷️ Merk / Model:</span>
+                                <span id="waMerkModel" class="wa-grid-val">Samsung A03</span>
+                            </div>
+                            <div class="wa-grid-row" id="waRowImei" style="display: none;">
+                                <span class="wa-grid-label">🔢 IMEI / SN:</span>
+                                <span id="waImei" class="wa-grid-val">-</span>
+                            </div>
+                            <div class="wa-grid-row" id="waRowLayanan">
+                                <span class="wa-grid-label">🛠️ Layanan:</span>
+                                <span id="waLayanan" class="wa-grid-val">Diagnosa</span>
+                            </div>
+                            <div class="wa-grid-row">
+                                <span class="wa-grid-label">⚠️ Keluhan:</span>
+                                <span id="waKeluhan" class="wa-grid-val wa-keluhan-val">layar blank, Kaca lcd retak, konektor cas</span>
+                            </div>
+                            <div class="wa-grid-row" id="waRowCatatan" style="display: none;">
+                                <span class="wa-grid-label">📝 Catatan Tek:</span>
+                                <span id="waCatatan" class="wa-grid-val">-</span>
+                            </div>
+                            <div class="wa-grid-row" id="waRowSparepart" style="display: none;">
+                                <span class="wa-grid-label">🔩 Sparepart:</span>
+                                <span id="waSparepart" class="wa-grid-val">-</span>
+                            </div>
+                        </div>
+
+                        <!-- Box Biaya & Garansi -->
+                        <div class="wa-price-card" id="waPriceCard">
+                            <div class="wa-price-header">
+                                <span id="waPriceTitle">ESTIMASI BIAYA PERBAIKAN:</span>
+                                <span id="waBiaya" class="wa-price-amount">Rp 200.000</span>
+                            </div>
+                            <div class="wa-price-sub" id="waPriceNote">
+                                *Estimasi awal dapat berubah jika ditemukan kendala tambahan setelah konfirmasi teknisi.
+                            </div>
+                        </div>
+
+                        <!-- Box Lacak Status Online -->
+                        <div class="wa-track-box">
+                            <div id="waQrCodeContainer" class="wa-qr-container"></div>
+                            <div class="wa-track-text">
+                                <div style="font-weight: bold; font-size: 11px; color: #075e54;">🔍 Pantau Status Servis Online</div>
+                                <div style="font-size: 9.5px; color: #555; margin-top: 1px;">Kunjungi link pelacakan langsung:</div>
+                                <div id="waTrackingUrl" style="font-size: 9.5px; font-weight: bold; color: #0078d4; word-break: break-all; margin-top: 2px;">
+                                    lacak.dhanzcell.my.id?nota=SRV-20261103-001
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- WA Footer -->
+                    <div class="wa-footer">
+                        <div style="font-size: 10px; color: #555; font-weight: 500;">
+                            Terima kasih telah mempercayakan perbaikan gadget Anda kepada kami.
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #cbd5e1; font-size: 9px; color: #64748b;">
+                            <span>🔒 E-Tanda Terima Resmi Digital</span>
+                            <span>Diverifikasi Sistem KasToko</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AREA PRATINJAU LABEL STIKER (40x20 mm - Identitas Murni: No Tiket, Nama, No WA, Est Biaya, Keluhan) -->
+            <div id="previewLabelContainer" style="display: none; padding: 10px 0;">
+                <div id="labelPrintArea" class="label-paper label-size-4020">
+                    <div class="lbl-ticket" id="lblKode">SRV-20261107-004</div>
+                    <div class="lbl-item" id="lblNama">Tita</div>
+                    <div class="lbl-item" id="lblNoHp">08987125805</div>
+                    <div class="lbl-item" id="lblBiaya">Rp 150.000</div>
+                    <div class="lbl-item" id="lblKeluhan">matot</div>
                 </div>
             </div>
 
             <!-- Modal Action Buttons -->
             <div class="no-print" style="display: flex; gap: 8px; margin-top: 15px; flex-wrap: wrap;">
-                <button class="btn btn-primary" onclick="printReceiptOnly()" style="flex: 1.5; min-width: 160px; height: 42px; font-weight: bold; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
-                    🖨️ Cetak Nota (78x98 mm)
+                <button class="btn btn-primary" id="btnModalPrintMain" onclick="handleMainPrintAction()" style="flex: 1.5; min-width: 150px; height: 42px; font-weight: bold; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+                    🖨️ Cetak Nota
+                </button>
+                <button class="btn" id="btnModalPrintBrowser" onclick="handleBrowserPrintAction()" style="flex: 1.2; min-width: 140px; height: 42px; font-weight: 600; font-size: 12px; background: #eef7fc; color: #0078d4; border: 1px solid #0078d4; display: inline-flex; align-items: center; justify-content: center; gap: 6px;" title="Cetak langsung menggunakan jendela print browser (Paling kompatibel & pasti keluar kertas)">
+                    🌐 Cetak Browser
                 </button>
                 <button class="btn" id="btnModalPrintLabel" onclick="printLabelOnly()" style="display: none;">
                     🏷️ Cetak Label
@@ -935,16 +1043,32 @@
                 <button class="btn" id="btnModalPrintAll" onclick="printReceiptAndLabel()" style="display: none;">
                     🖨️🏷️ Print All
                 </button>
-                <button class="btn" id="btnSendWaReceipt" onclick="sendReceiptViaWhatsApp()" style="flex: 1.2; min-width: 145px; height: 42px; font-weight: bold; font-size: 12px; background: #25D366; color: #ffffff; border: none; box-shadow: 0 2px 8px rgba(37, 211, 102, 0.35);" title="Salin gambar nota ke clipboard dan buka WhatsApp">
-                    💬 Kirim WA (Gambar)
-                </button>
-                <button class="btn" onclick="downloadReceiptImage()" style="height: 42px; padding: 0 12px; font-size: 12px; font-weight: 600; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--border-color);" title="Unduh Nota Gambar PNG ke Komputer">
-                    📥 Unduh PNG
-                </button>
-                <button class="btn" onclick="closeReceiptModal()" style="height: 42px; padding: 0 16px; background: #888; color: #fff;">
-                    Tutup
+                <button class="btn" id="btnSendWaReceipt" onclick="sendReceiptViaWhatsApp()" style="flex: 1.2; min-width: 145px; height: 42px; font-weight: bold; font-size: 13px; background: #25D366; color: #ffffff; border: none; box-shadow: 0 2px 8px rgba(37, 211, 102, 0.35); display: inline-flex; align-items: center; justify-content: center; gap: 6px;" title="Salin gambar nota ke clipboard dan buka WhatsApp">
+                    💬 Kirim WA
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal Pratinjau Gambar WhatsApp -->
+    <div class="modal-overlay" id="waImagePreviewModal" style="display: none; z-index: 10008;">
+        <div class="modal-card" style="max-width: 440px; width: 92%; max-height: 90vh; display: flex; flex-direction: column; padding: 20px; border-radius: 14px; text-align: center; box-shadow: 0 14px 40px rgba(0,0,0,0.45);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                <h3 style="margin: 0; font-size: 16px; font-weight: bold; color: #107c41; display: flex; align-items: center; gap: 6px;">
+                    <span>💬</span> Pratinjau Gambar E-Nota
+                </h3>
+                <button type="button" onclick="closeWaImagePreviewModal()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-muted); padding: 0 6px; line-height: 1;">&times;</button>
+            </div>
+            <div style="flex: 1; overflow-y: auto; margin-bottom: 12px; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; background: #eef2f5;">
+                <img id="waPreviewModalImg" src="" alt="Pratinjau E-Nota" style="max-width: 100%; height: auto; border-radius: 6px; box-shadow: 0 4px 14px rgba(0,0,0,0.18); display: block; margin: 0 auto;">
+            </div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.45; background: rgba(37, 211, 102, 0.1); border-left: 3px solid #25d366; padding: 8px 10px; border-radius: 4px; text-align: left;">
+                📋 <b>Gambar telah disalin ke clipboard!</b><br>
+                Klik tombol <b>OK</b> di bawah untuk membuka WhatsApp, lalu tekan <b>Ctrl + V</b> (Paste) untuk mengirimkan gambar.
+            </div>
+            <button type="button" class="btn btn-primary" id="btnConfirmWaPreview" onclick="confirmWaImagePreview()" style="height: 44px; font-size: 15px; font-weight: bold; border-radius: 8px; background: #25d366; border-color: #25d366; color: #ffffff; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 3px 10px rgba(37, 211, 102, 0.4); cursor: pointer;">
+                OK
+            </button>
         </div>
     </div>
 
@@ -2086,6 +2210,7 @@
                             <label>Nama Pelanggan <span style="color: red;">*</span></label>
                             <input type="text" id="srvNamaPelanggan" class="form-control" list="customerNameList" placeholder="Ketik nama pelanggan..." oninput="onCustomerNameChange(this.value)" autocomplete="off">
                             <datalist id="customerNameList"></datalist>
+                            <div id="srvNamaPelangganUserWarning" style="display:none; color:#dc2626; font-size:11px; margin-top:4px; font-weight:600;">⚠️ Nama pelanggan tidak boleh menggunakan atau mengandung kata 'user'. Harap masukkan nama pelanggan asli.</div>
                         </div>
                         <div class="form-group" style="margin-bottom: 10px;">
                             <label>No. HP / WhatsApp <span style="color: red;">*</span></label>
@@ -2124,10 +2249,7 @@
                             <select id="srvStatusServis" class="form-control">
                                 <option value="Baru">🆕 Baru</option>
                                 <option value="Instan">⚡ Instan</option>
-                                <option value="Sedang Dikerjakan">⏳ Sedang Dikerjakan</option>
-                                <option value="Selesai">✅ Selesai</option>
-                                <option value="Diambil">📦 Sudah Diambil</option>
-                                <option value="Batal">❌ Dibatalkan</option>
+                                <option value="Claim Garansi">🛡️ Claim Garansi</option>
                             </select>
                         </div>
                         <div style="display: flex; gap: 10px;">
@@ -2226,6 +2348,7 @@
                             <button class="tab-btn active" id="tabSrvSemua" onclick="switchServiceFilter('Semua')">Semua</button>
                             <button class="tab-btn" id="tabSrvBaru" onclick="switchServiceFilter('Baru')">Baru</button>
                             <button class="tab-btn" id="tabSrvInstan" onclick="switchServiceFilter('Instan')">Instan</button>
+                            <button class="tab-btn" id="tabSrvGaransi" onclick="switchServiceFilter('Claim Garansi')">Garansi</button>
                             <button class="tab-btn" id="tabSrvProses" onclick="switchServiceFilter('Sedang Dikerjakan')">Diproses</button>
                             <button class="tab-btn" id="tabSrvSelesai" onclick="switchServiceFilter('Selesai')">Selesai</button>
                             <button class="tab-btn" id="tabSrvDiambil" onclick="switchServiceFilter('Diambil')">Diambil</button>
@@ -2270,6 +2393,56 @@
     var chartInstance = null;
     var lastSyncDataHash = '';
     var currentBookView = 'harian';
+
+    // ========================================================
+    // AUTO-CAPITALIZE TIAP KATA (TITLE CASE) INPUT DATA MANUAL
+    // ========================================================
+    function capitalizeWords(str) {
+        if (!str || typeof str !== 'string') return '';
+        return str.replace(/(?:^|[\s\-\/\(\[\{\.\,\:\;])([a-z\u00E0-\u00FC])/g, function(match, chr) {
+            return match.toUpperCase();
+        });
+    }
+
+    function applyAutoCapitalize(el) {
+        if (!el || typeof el.value !== 'string') return;
+        var oldVal = el.value;
+        var newVal = capitalizeWords(oldVal);
+        if (newVal !== oldVal) {
+            var start = el.selectionStart;
+            var end = el.selectionEnd;
+            el.value = newVal;
+            if (start !== null && end !== null) {
+                try { el.setSelectionRange(start, end); } catch(e){}
+            }
+        }
+    }
+
+    document.addEventListener('input', function(e) {
+        var el = e.target;
+        if (!el || (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA')) return;
+        var type = (el.type || 'text').toLowerCase();
+        if (type === 'password' || type === 'number' || type === 'email' || type === 'file' || type === 'checkbox' || type === 'radio' || type === 'date' || type === 'time' || type === 'datetime-local') return;
+        var id = (el.id || '').toLowerCase();
+        // Jangan auto-capitalize field sistem / kredensial / hp / imei / search
+        if (id.includes('pass') || (id.includes('user') && !id.includes('pelanggan')) || id.includes('phone') || id.includes('nohp') || (id.includes('hp') && !id.includes('tipe')) || id.includes('imei') || id.includes('search') || id.includes('cari') || id.includes('ip') || id.includes('token') || id.includes('url') || id.includes('port') || id.includes('printer')) {
+            return;
+        }
+        if (el.classList.contains('no-capitalize') || el.dataset.noCapitalize === 'true') return;
+        applyAutoCapitalize(el);
+    });
+
+    document.addEventListener('blur', function(e) {
+        var el = e.target;
+        if (!el || (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA')) return;
+        var type = (el.type || 'text').toLowerCase();
+        if (type === 'password' || type === 'number' || type === 'email' || type === 'file' || type === 'checkbox' || type === 'radio') return;
+        var id = (el.id || '').toLowerCase();
+        if (id.includes('pass') || (id.includes('user') && !id.includes('pelanggan')) || id.includes('phone') || id.includes('nohp') || (id.includes('hp') && !id.includes('tipe')) || id.includes('imei') || id.includes('search') || id.includes('cari') || id.includes('ip') || id.includes('token') || id.includes('url') || id.includes('port') || id.includes('printer')) {
+            return;
+        }
+        applyAutoCapitalize(el);
+    }, true);
 
     function getPassword(role) {
         var key = 'autocash_pass_' + role;
@@ -2407,7 +2580,18 @@
     }
 
     function onCustomerNameChange(name) {
-        var trimmed = name.trim().toLowerCase();
+        var warnEl = document.getElementById('srvNamaPelangganUserWarning');
+        var inputEl = document.getElementById('srvNamaPelanggan');
+        if (/user/i.test(name)) {
+            if (warnEl) warnEl.style.display = 'block';
+            if (inputEl) inputEl.style.borderColor = '#dc2626';
+            return;
+        } else {
+            if (warnEl) warnEl.style.display = 'none';
+            if (inputEl) inputEl.style.borderColor = '';
+        }
+
+        var trimmed = (name || '').trim().toLowerCase();
         if (!trimmed) return;
         var match = customers.find(function(c) {
             return c.nama.toLowerCase() === trimmed;
@@ -2495,6 +2679,24 @@
         var selModal = document.getElementById('rekapTeknisiSelect');
         var curVal = sel ? sel.value : '';
         var curValModal = selModal ? selModal.value : '';
+
+        // Role Teknisi: Proteksi privasi antar-teknisi, jangan tampilkan daftar teknisi lain
+        if (currentUser && currentUser.role === 'teknisi') {
+            var myTechName = (currentUser.fullname || currentUser.username || '').trim();
+            if (sel) {
+                sel.innerHTML = '<option value="">👨‍🔧 Semua Teknisi (Semua Riwayat)</option>' +
+                                '<option value="__my_service__">👨‍🔧 Servis Saya (' + escapeHtml(myTechName) + ')</option>' +
+                                '<option value="__unassigned__">⚠️ Belum Ada Teknisi</option>';
+                sel.value = "";
+            }
+            if (selModal) {
+                selModal.innerHTML = '<option value="' + escapeHtml(myTechName) + '">👨‍🔧 ' + escapeHtml(myTechName) + '</option>';
+                selModal.value = myTechName;
+                selModal.disabled = true;
+            }
+            return;
+        }
+
         var techs = {};
 
         // 1. Ambil dari akun pengguna dengan role teknisi yang aktif
@@ -2540,11 +2742,18 @@
         }
     }
 
-    function loadServices(isManual, callback) {
+    function getServicesApiUrl() {
         var srvUrl = '/api/services';
         if (currentUser && currentUser.role === 'mitra') {
             srvUrl += '?role=mitra&actor=' + encodeURIComponent(currentUser.username);
+        } else if (currentUser && currentUser.role === 'teknisi') {
+            srvUrl += '?role=teknisi&actor=' + encodeURIComponent(currentUser.fullname || currentUser.username) + '&username=' + encodeURIComponent(currentUser.username);
         }
+        return srvUrl;
+    }
+
+    function loadServices(isManual, callback) {
+        var srvUrl = getServicesApiUrl();
         return fetch(srvUrl)
             .then(function(res) { return res.json(); })
             .then(function(data) {
@@ -2570,7 +2779,8 @@
     }
 
     function loadServicesSilently() {
-        fetch('/api/services')
+        var srvUrl = getServicesApiUrl();
+        fetch(srvUrl)
             .then(function(res) { return res.json(); })
             .then(function(data) {
                 if (data.success) {
@@ -2590,6 +2800,7 @@
 
     function updateServiceKPI() {
         var isMitra = currentUser && currentUser.role === 'mitra';
+        var isTeknisi = currentUser && currentUser.role === 'teknisi';
         var myName = (currentUser ? (currentUser.fullname || currentUser.username) : '').toLowerCase();
         var myUser = (currentUser ? currentUser.username : '').toLowerCase();
 
@@ -2599,6 +2810,12 @@
                 var sm = (s.mitra_nama || '').toLowerCase();
                 var sc = (s.created_by || '').toLowerCase();
                 return sm === myName || sm === myUser || sc === myUser;
+            });
+        } else if (isTeknisi) {
+            list = services.filter(function(s) {
+                var st = (s.teknisi_nama || '').toLowerCase();
+                var sc = (s.created_by || '').toLowerCase();
+                return st === myName || st === myUser || sc === myUser;
             });
         }
 
@@ -2663,6 +2880,15 @@
         if (!nama) {
             alert("Nama pelanggan wajib diisi!");
             document.getElementById('srvNamaPelanggan').focus();
+            return;
+        }
+        if (/user/i.test(nama)) {
+            alert("Nama pelanggan tidak valid!\n\nNama pelanggan tidak boleh menggunakan atau mengandung kata 'user'. Harap masukkan nama pelanggan asli.");
+            var inputNama = document.getElementById('srvNamaPelanggan');
+            if (inputNama) {
+                inputNama.focus();
+                inputNama.style.borderColor = '#dc2626';
+            }
             return;
         }
         if (!noHp) {
@@ -2795,7 +3021,17 @@
         document.getElementById('srvNoHp').value = s.no_hp || '';
         document.getElementById('srvAlamat').value = s.alamat || '';
         document.getElementById('srvMenuServis').value = s.menu_servis || 'Diagnosa';
-        document.getElementById('srvStatusServis').value = s.status_servis || 'Baru';
+        var srvStatusSelect = document.getElementById('srvStatusServis');
+        if (srvStatusSelect) {
+            srvStatusSelect.innerHTML = '<option value="Baru">🆕 Baru</option><option value="Instan">⚡ Instan</option><option value="Claim Garansi">🛡️ Claim Garansi</option>';
+            if (s.status_servis && !['Baru', 'Instan', 'Claim Garansi'].includes(s.status_servis)) {
+                var opt = document.createElement('option');
+                opt.value = s.status_servis;
+                opt.innerText = s.status_servis;
+                srvStatusSelect.appendChild(opt);
+            }
+            srvStatusSelect.value = s.status_servis || 'Baru';
+        }
         document.getElementById('srvEstimasiBiaya').value = (s.estimasi_biaya || 0) > 0 ? (s.estimasi_biaya || 0).toLocaleString('id-ID') : '';
         document.getElementById('srvTanggalMasuk').value = s.tanggal_masuk || getSystemDate();
         document.getElementById('srvJenisPerangkat').value = s.jenis_perangkat || 'Smartphone / HP';
@@ -2837,7 +3073,11 @@
         document.getElementById('srvNoHp').value = '';
         document.getElementById('srvAlamat').value = '';
         document.getElementById('srvMenuServis').value = 'Diagnosa';
-        document.getElementById('srvStatusServis').value = 'Baru';
+        var srvStatusCancel = document.getElementById('srvStatusServis');
+        if (srvStatusCancel) {
+            srvStatusCancel.innerHTML = '<option value="Baru">🆕 Baru</option><option value="Instan">⚡ Instan</option><option value="Claim Garansi">🛡️ Claim Garansi</option>';
+            srvStatusCancel.value = 'Baru';
+        }
         document.getElementById('srvEstimasiBiaya').value = '';
         document.getElementById('srvTanggalMasuk').value = getSystemDate();
         document.getElementById('srvJenisPerangkat').value = 'Smartphone / HP';
@@ -2864,8 +3104,8 @@
         // Validasi hak akses role
         var curRole = currentUser ? (currentUser.role || 'admin') : 'admin';
         if (curRole === 'admin') {
-            if (!['Baru', 'Instan', 'Diambil'].includes(newStatus)) {
-                showToast("Role Admin hanya berwenang mengubah status ke Baru, Instan, atau Diambil.", "warning");
+            if (!['Baru', 'Instan', 'Claim Garansi', 'Diambil'].includes(newStatus)) {
+                showToast("Role Admin hanya berwenang mengubah status ke Baru, Instan, Claim Garansi, atau Diambil.", "warning");
                 return;
             }
         } else if (curRole === 'teknisi') {
@@ -2890,9 +3130,29 @@
             return;
         }
 
-        var statusPayload = { id: id, status_servis: newStatus, role: curRole };
+        var myName = (currentUser ? (currentUser.fullname || currentUser.username) : '').trim();
+        var myUser = (currentUser ? currentUser.username : '').trim();
+
+        // Isolasi Teknisi: teknisi dilarang mengubah tiket teknisi lain
+        if (curRole === 'teknisi') {
+            var targetSrv = services.find(function(item) { return item.id === id; });
+            if (targetSrv && targetSrv.teknisi_nama && targetSrv.teknisi_nama.trim() !== '') {
+                var sTek = targetSrv.teknisi_nama.trim().toLowerCase();
+                if (sTek !== myName.toLowerCase() && sTek !== myUser.toLowerCase()) {
+                    showToast("Akses Ditolak: Anda tidak dapat mengubah status tiket servisan milik teknisi lain.", "warning");
+                    return;
+                }
+            }
+        }
+
+        var statusPayload = {
+            id: id,
+            status_servis: newStatus,
+            role: curRole,
+            actor: myName,
+            username: myUser
+        };
         if (newStatus === 'Sedang Dikerjakan' && currentUser && currentUser.role === 'teknisi') {
-            var myName = (currentUser.fullname || currentUser.username || '').trim();
             var targetSrv = services.find(function(item) { return item.id === id; });
             if (targetSrv && (!targetSrv.teknisi_nama || targetSrv.teknisi_nama.trim() === '')) {
                 statusPayload.teknisi_nama = myName;
@@ -3390,11 +3650,12 @@
 
     function switchServiceFilter(filter) {
         currentServiceFilter = filter;
-        var tabs = ['Semua', 'Baru', 'Instan', 'Sedang Dikerjakan', 'Selesai', 'Diambil'];
+        var tabs = ['Semua', 'Baru', 'Instan', 'Claim Garansi', 'Sedang Dikerjakan', 'Selesai', 'Diambil'];
         var tabIds = {
             'Semua': 'tabSrvSemua',
             'Baru': 'tabSrvBaru',
             'Instan': 'tabSrvInstan',
+            'Claim Garansi': 'tabSrvGaransi',
             'Sedang Dikerjakan': 'tabSrvProses',
             'Selesai': 'tabSrvSelesai',
             'Diambil': 'tabSrvDiambil'
@@ -3436,15 +3697,15 @@
             }
 
             // Filter Servis Saya (khusus Teknisi)
-            if (filterOnlyMyService) {
+            if (filterOnlyMyService || techFilterVal === '__my_service__') {
                 var st = (s.teknisi_nama || '').toLowerCase();
                 if (st !== myName && st !== myUser) return false;
             }
 
             // Filter dropdown teknisi tertentu
             if (techFilterVal === '__unassigned__') {
-                if (s.teknisi_nama && s.teknisi_nama.trim() !== '') return false;
-            } else if (techFilterVal) {
+                if (s.teknisi_nama && s.teknisi_nama.trim() !== '' && s.teknisi_nama !== '-' && s.teknisi_nama.toLowerCase() !== 'null') return false;
+            } else if (techFilterVal && techFilterVal !== '__my_service__') {
                 var stVal = (s.teknisi_nama || '').toLowerCase();
                 if (stVal !== techFilterVal) return false;
             }
@@ -3495,6 +3756,7 @@
             var badgeClass = 'badge-baru';
             var st = s.status_servis;
             if (st === 'Instan' || s.menu_servis === 'Servis Instan') badgeClass = 'badge-instan';
+            else if (st === 'Claim Garansi') badgeClass = 'badge-claim';
             else if (st === 'Sedang Dikerjakan') badgeClass = 'badge-proses';
             else if (st === 'Selesai') badgeClass = 'badge-selesai';
             else if (st === 'Diambil') badgeClass = 'badge-diambil';
@@ -3509,10 +3771,22 @@
                 sppInfo = '<div style="font-size: 10.5px; color: #b71c1c; margin-top: 2px;"><b>SPP:</b> ' + escapeHtml(s.sparepart_nama || '-') + ' (Rp ' + Number(s.sparepart_biaya || 0).toLocaleString('id-ID') + ')</div>';
             }
 
+            var isUnassigned = !s.teknisi_nama || s.teknisi_nama.trim() === '' || s.teknisi_nama === '-' || s.teknisi_nama.toLowerCase() === 'null';
+            var stTekCheck = (s.teknisi_nama || '').toLowerCase();
+            var scTekCheck = (s.created_by || '').toLowerCase();
+            var isMySrv = (stTekCheck === myName || stTekCheck === myUser || scTekCheck === myUser);
+
             var biayaStr = (s.estimasi_biaya || 0) > 0 ? 'Rp ' + (s.estimasi_biaya || 0).toLocaleString('id-ID') : '-';
             if (s.status_servis === 'Diambil' && (s.biaya_akhir || s.estimasi_biaya || 0) > 0) {
                 var finalBiaya = s.biaya_akhir || s.estimasi_biaya;
                 biayaStr = 'Rp ' + Number(finalBiaya).toLocaleString('id-ID') + '<div style="font-size: 10px; color: ' + (s.status_pembayaran === 'LUNAS' ? '#107c41' : '#d9534f') + '; font-weight: normal;">' + escapeHtml(s.status_pembayaran || 'LUNAS') + '</div>';
+            }
+
+            // Aturan Pengguna:
+            // 1. "tetap tampilkan harga ketika belum ada teknisi yg melakukan aksi ambil servis" -> isUnassigned tetap tampil Rp ...
+            // 2. "cukup dengan icon gembok saja, hapus tulisan dirahasiakan"
+            if (isTeknisi && !isUnassigned && !isMySrv) {
+                biayaStr = '<span style="font-size:14px; opacity:0.85;" title="Estimasi biaya dikerjakan oleh teknisi lain">🔒</span>';
             }
 
             var badgeOnClick = '';
@@ -3523,8 +3797,6 @@
             } else if (st === 'Diambil') {
                 badgeOnClick = ' onclick="event.stopPropagation(); openCashierPickupModal(' + s.id + ')" style="cursor: pointer;" title="Klik untuk Rincian Pelunasan Kasir"';
             }
-
-            var isUnassigned = !s.teknisi_nama || s.teknisi_nama.trim() === '' || s.teknisi_nama === '-' || s.teknisi_nama.toLowerCase() === 'null';
 
             var mitraTag = s.mitra_nama ? '<div style="font-size: 10.5px; color: #d97706; font-weight: 600; margin-top: 1px;">🤝 Mitra: ' + escapeHtml(s.mitra_nama) + '</div>' : '';
 
@@ -3537,16 +3809,20 @@
                 if (isUnassigned && (st === 'Baru' || st === 'Sedang Dikerjakan')) {
                     takeActionBtn = '<button class="btn btn-sm" onclick="event.stopPropagation(); assignServiceToSelf(' + s.id + ', event)" style="padding: 3px 8px; font-size: 11px; font-weight: bold; background: #7c3aed; color: #ffffff; border: none; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 2px;" title="Ambil Pengerjaan Tiket Ini">✋ Ambil Servis</button>';
                 }
+                var quickStatusSelect = '';
+                if (isMySrv || isUnassigned) {
+                    quickStatusSelect = 
+                        '<select onclick="event.stopPropagation()" onchange="quickUpdateServiceStatus(' + s.id + ', this.value, this)" style="font-size: 11px; padding: 2px 4px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color); cursor: pointer;" title="Ganti Status Cepat (Teknisi)">' +
+                            '<option value="" disabled selected>⚡ Status</option>' +
+                            '<option value="Sedang Dikerjakan">Diproses</option>' +
+                            '<option value="Selesai">Selesai</option>' +
+                            '<option value="Batal">Batal</option>' +
+                        '</select>';
+                }
                 actionsHtml = 
                     takeActionBtn +
                     '<button class="btn btn-sm" onclick="event.stopPropagation(); openServiceDetailModal(' + s.id + ')" title="Lihat Detail Lengkap & Catatan Teknisi" style="padding: 3px 8px; font-size: 11px; background: #ede9fe; color: #7c3aed; border: 1px solid #c4b5fd;">🔍 Detail</button>' +
-                    '<button class="btn btn-sm" onclick="event.stopPropagation(); openReceiptModal(' + s.id + ')" title="Cetak Nota" style="padding: 3px 8px; font-size: 11px; background: #e6f4ed; color: #107c41;">🖨️</button>' +
-                    '<select onclick="event.stopPropagation()" onchange="quickUpdateServiceStatus(' + s.id + ', this.value, this)" style="font-size: 11px; padding: 2px 4px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color); cursor: pointer;" title="Ganti Status Cepat (Teknisi)">' +
-                        '<option value="" disabled selected>⚡ Status</option>' +
-                        '<option value="Sedang Dikerjakan">Diproses</option>' +
-                        '<option value="Selesai">Selesai</option>' +
-                        '<option value="Batal">Batal</option>' +
-                    '</select>';
+                    quickStatusSelect;
             } else if (isSuperadmin) {
                 // Role Superadmin (Owner): Akses penuh ke seluruh pilihan status
                 actionsHtml = 
@@ -3556,6 +3832,7 @@
                         '<option value="" disabled selected>⚡ Status</option>' +
                         '<option value="Baru">Baru</option>' +
                         '<option value="Instan">Instan</option>' +
+                        '<option value="Claim Garansi">Claim Garansi</option>' +
                         '<option value="Sedang Dikerjakan">Diproses</option>' +
                         '<option value="Selesai">Selesai</option>' +
                         '<option value="Diambil">Diambil</option>' +
@@ -3563,7 +3840,7 @@
                     '</select>' +
                     '<button class="btn btn-sm btn-danger col-superadmin-btn" onclick="event.stopPropagation(); deleteServiceOrder(' + s.id + ')" title="Hapus Tiket" style="padding: 3px 8px; font-size: 11px;">🗑️</button>';
             } else {
-                // Role Admin (Kasir / Admin Toko): status aksi HANYA tampilkan: Baru, Instan, Diambil
+                // Role Admin (Kasir / Admin Toko): status aksi HANYA tampilkan: Baru, Instan, Claim Garansi, Diambil
                 actionsHtml = 
                     '<button class="btn btn-sm" onclick="event.stopPropagation(); editServiceOrder(' + s.id + ')" title="Edit Tiket" style="padding: 3px 8px; font-size: 11px;">✏️</button>' +
                     '<button class="btn btn-sm" onclick="event.stopPropagation(); openReceiptModal(' + s.id + ')" title="Cetak Nota" style="padding: 3px 8px; font-size: 11px; background: #e6f4ed; color: #107c41;">🖨️</button>' +
@@ -3571,6 +3848,7 @@
                         '<option value="" disabled selected>⚡ Status</option>' +
                         '<option value="Baru">Baru</option>' +
                         '<option value="Instan">Instan</option>' +
+                        '<option value="Claim Garansi">Claim Garansi</option>' +
                         '<option value="Diambil">Diambil</option>' +
                     '</select>';
             }
@@ -4190,120 +4468,104 @@
 
     function buildWhatsAppServiceMessage(s, templateType) {
         if (!s) return '';
-        var storeName = currentStoreProfile.name || 'AUTOCASH SERVIS';
-        var storeAddr = currentStoreProfile.address || '';
-        var storePhone = currentStoreProfile.phone || '';
+        var storeName = (currentStoreProfile && currentStoreProfile.name) ? currentStoreProfile.name : 'DHANZCELL SMARTPHONE';
+        var storeAddr = (currentStoreProfile && currentStoreProfile.address) ? currentStoreProfile.address : '';
+        var storePhone = (currentStoreProfile && currentStoreProfile.phone) ? currentStoreProfile.phone : '';
         var trackingUrl = getPublicTrackingUrl(s.kode_servis || s.id);
         var pelanggan = s.nama_pelanggan || 'Pelanggan';
+        var noHp = s.no_hp || '-';
+        var kode = s.kode_servis || ('#' + s.id);
+        var perangkat = s.jenis_perangkat || '-';
+        var merkModel = s.merk_model || '-';
+        var layanan = s.menu_servis || '-';
+        var keluhan = s.keluhan || '-';
+        var catatanTek = (s.catatan_teknisi || '').trim();
+        var sparepart = (s.sparepart_nama || '').trim();
+        var garansi = (s.garansi || '7 Hari').trim();
         var lines = [];
 
-        if (templateType === 'selesai') {
+        var isAmbil = (templateType === 'ambil' || (templateType !== 'masuk' && s.status_servis === 'Diambil'));
+        var isSelesai = (templateType === 'selesai');
+        var isProses = (templateType === 'proses');
+
+        var tgl = isAmbil ? (s.tanggal_selesai || getSystemDate()) : (s.tanggal_masuk || getSystemDate());
+
+        // 1. Kop Header Toko (Sama persis dengan Kop Nota Fisik)
+        lines.push('*' + storeName.toUpperCase() + '*');
+        if (storeAddr) lines.push(storeAddr);
+        if (storePhone) lines.push('Telp/WA: ' + storePhone);
+
+        // 2. Subtitle & Tanggal
+        if (isAmbil) {
+            lines.push('*NOTA PENGAMBILAN & KWITANSI*');
+        } else if (isSelesai) {
+            lines.push('*PEMBERITAHUAN SERVIS SELESAI*');
+        } else if (isProses) {
+            lines.push('*STATUS PENGERJAAN SERVIS*');
+        } else {
+            lines.push('*TANDA TERIMA PENERIMAAN UNIT*');
+        }
+        lines.push('Tanggal: ' + tgl);
+        lines.push('----------------------------------------');
+
+        // Pesan pembuka khusus jika Selesai / Proses
+        if (isSelesai) {
+            lines.push('Halo *' + pelanggan + '*, perangkat Anda telah *SELESAI DIPERBAIKI* & *SIAP UNTUK DIAMBIL*.');
+            lines.push('----------------------------------------');
+        } else if (isProses) {
+            lines.push('Halo *' + pelanggan + '*, berikut update perkembangan pengerjaan servis unit Anda:');
+            lines.push('----------------------------------------');
+        }
+
+        // 3. Data Pelanggan (Sama persis dengan Nota Tercetak)
+        lines.push('*No. Tiket*    : ' + kode);
+        lines.push('*Pelanggan*    : ' + pelanggan);
+        lines.push('*No. HP/WA*    : ' + noHp);
+        lines.push('----------------------------------------');
+
+        // 4. Data Unit & Pengerjaan (Sama persis dengan Nota Tercetak)
+        lines.push('*Perangkat*    : ' + perangkat);
+        lines.push('*Merk/Model*   : ' + merkModel);
+        if (s.imei_sn) lines.push('*IMEI / SN*    : ' + s.imei_sn);
+        lines.push('*Layanan*      : ' + layanan);
+        lines.push('*Keluhan*      : ' + keluhan);
+        if (catatanTek) lines.push('*Catatan Tek*  : ' + catatanTek);
+        if (sparepart) lines.push('*Sparepart*    : ' + sparepart);
+        lines.push('----------------------------------------');
+
+        // 5. Kotak Keuangan & Status
+        if (isAmbil || isSelesai) {
             var biayaAkhir = (s.biaya_akhir !== undefined && s.biaya_akhir !== null && s.biaya_akhir > 0) ? s.biaya_akhir : (s.estimasi_biaya || 0);
-            lines.push('Halo *' + pelanggan + '*,');
-            lines.push('Kabar baik dari *' + storeName + '*! 🎉');
-            lines.push('');
-            lines.push('Perangkat servis Anda telah *SELESAI DIPERBAIKI* dan sudah *SIAP UNTUK DIAMBIL*.');
-            lines.push('');
-            lines.push('📋 *RINCIAN SERVIS SELESAI:*');
-            lines.push('----------------------------------------');
-            lines.push('🏷️ *No. Tiket*    : ' + (s.kode_servis || ('#' + s.id)));
-            lines.push('📱 *Perangkat*    : ' + (s.merk_model || '-') + ' (' + (s.jenis_perangkat || 'Unit') + ')');
-            if (s.imei_sn) lines.push('🔢 *IMEI/SN*      : ' + s.imei_sn);
-            if (s.catatan_teknisi) lines.push('🔧 *Tindakan*     : ' + s.catatan_teknisi);
-            else lines.push('🔧 *Layanan*      : ' + (s.menu_servis || 'Servis'));
-            lines.push('💰 *Total Biaya*  : Rp ' + Number(biayaAkhir).toLocaleString('id-ID'));
-            lines.push('✅ *Status*       : SIAP DIAMBIL');
-            var gText = (s.garansi || '7 Hari').trim();
-            if (gText.toLowerCase() === 'non-garansi' || gText.toLowerCase() === 'tanpa garansi') {
-                lines.push('🛡️ *Garansi Toko* : Non-Garansi (Tanpa Garansi)');
+            lines.push('*Total Biaya*  : Rp ' + Number(biayaAkhir).toLocaleString('id-ID'));
+            var gText = (garansi.toLowerCase() === 'non-garansi' || garansi.toLowerCase() === 'tanpa garansi') ? 'Non-Garansi' : ('Garansi ' + garansi);
+            if (isAmbil) {
+                var statBayar = s.status_pembayaran || 'LUNAS';
+                lines.push('*Status Bayar* : ' + statBayar + ' (' + gText + ')');
             } else {
-                lines.push('🛡️ *Garansi Toko* : ' + gText + ' (Kerusakan yang sama)');
-            }
-            lines.push('----------------------------------------');
-            lines.push('🌐 *Lacak Status & Pratinjau Nota Online:*');
-            lines.push('👉 ' + trackingUrl);
-            lines.push('');
-            lines.push('Silakan datang ke toko kami pada jam operasional untuk pengambilan unit. Terima kasih atas kepercayaan Anda! 🙏');
-            if (storeAddr || storePhone) {
-                lines.push('');
-                lines.push('📍 ' + storeAddr + (storePhone ? ' | 📞 ' + storePhone : ''));
-            }
-        } else if (templateType === 'ambil') {
-            var finalBiaya = (s.biaya_akhir !== undefined && s.biaya_akhir !== null && s.biaya_akhir > 0) ? s.biaya_akhir : (s.estimasi_biaya || 0);
-            lines.push('Halo *' + pelanggan + '*,');
-            lines.push('Berikut adalah bukti tanda terima pelunasan resmi dari *' + storeName + '*:');
-            lines.push('');
-            lines.push('🧾 *BUKTI PELUNASAN & KWITANSI RESMI*');
-            lines.push('----------------------------------------');
-            lines.push('🏷️ *No. Tiket*    : ' + (s.kode_servis || ('#' + s.id)));
-            lines.push('📅 *Tanggal Ambil*: ' + (s.tanggal_selesai || getSystemDate()));
-            lines.push('📱 *Perangkat*    : ' + (s.merk_model || '-') + ' (' + (s.jenis_perangkat || 'Unit') + ')');
-            if (s.imei_sn) lines.push('🔢 *IMEI/SN*      : ' + s.imei_sn);
-            lines.push('💰 *Total Bayar*  : Rp ' + Number(finalBiaya).toLocaleString('id-ID'));
-            lines.push('💳 *Metode Bayar* : ' + (s.metode_pembayaran || 'Tunai'));
-            lines.push('✅ *Status Bayar* : ' + (s.status_pembayaran || 'LUNAS'));
-            var gTextAmbil = (s.garansi || '7 Hari').trim();
-            if (gTextAmbil.toLowerCase() === 'non-garansi' || gTextAmbil.toLowerCase() === 'tanpa garansi') {
-                lines.push('🛡️ *Masa Garansi* : Non-Garansi (Tanpa Garansi)');
-            } else {
-                lines.push('🛡️ *Masa Garansi* : ' + gTextAmbil + ' (Kerusakan yang sama)');
-            }
-            lines.push('----------------------------------------');
-            lines.push('🌐 *Arsip Nota Digital & Garansi:*');
-            lines.push('👉 ' + trackingUrl);
-            lines.push('');
-            lines.push('Terima kasih banyak telah berlangganan di ' + storeName + '. Semoga perangkat Anda awet dan lancar digunakan! 🙏');
-            if (storeAddr || storePhone) {
-                lines.push('');
-                lines.push('📍 ' + storeAddr + (storePhone ? ' | 📞 ' + storePhone : ''));
-            }
-        } else if (templateType === 'proses') {
-            lines.push('Halo *' + pelanggan + '*,');
-            lines.push('Informasi perkembangan pengerjaan servis unit Anda di *' + storeName + '*:');
-            lines.push('');
-            lines.push('⚙️ *STATUS PENGERJAAN: SEDANG DIPROSES*');
-            lines.push('----------------------------------------');
-            lines.push('🏷️ *No. Tiket*    : ' + (s.kode_servis || ('#' + s.id)));
-            lines.push('📱 *Perangkat*    : ' + (s.merk_model || '-') + ' (' + (s.jenis_perangkat || 'Unit') + ')');
-            if (s.imei_sn) lines.push('🔢 *IMEI/SN*      : ' + s.imei_sn);
-            if (s.teknisi_nama) lines.push('👨‍🔧 *Teknisi*     : ' + s.teknisi_nama);
-            lines.push('🔍 *Keluhan*      : ' + (s.keluhan || '-'));
-            if (s.catatan_teknisi) lines.push('📝 *Catatan*      : ' + s.catatan_teknisi);
-            lines.push('⏳ *Status*       : Sedang Dikerjakan Teknisi');
-            lines.push('----------------------------------------');
-            lines.push('🌐 *Pantau Status Pengerjaan Real-time:*');
-            lines.push('👉 ' + trackingUrl);
-            lines.push('');
-            lines.push('Kami akan segera mengabari Anda begitu unit telah selesai diperbaiki.');
-            if (storeAddr || storePhone) {
-                lines.push('');
-                lines.push('📍 ' + storeAddr + (storePhone ? ' | 📞 ' + storePhone : ''));
+                lines.push('*Status Servis*: Siap Diambil (' + gText + ')');
             }
         } else {
-            // templateType === 'masuk'
-            lines.push('Halo *' + pelanggan + '*,');
-            lines.push('Terima kasih telah mempercayakan perbaikan perangkat Anda di *' + storeName + '*.');
-            lines.push('');
-            lines.push('📄 *TANDA TERIMA PENERIMAAN SERVIS*');
-            lines.push('----------------------------------------');
-            lines.push('🏷️ *No. Tiket*    : ' + (s.kode_servis || ('#' + s.id)));
-            lines.push('📅 *Tgl Masuk*    : ' + (s.tanggal_masuk || getSystemDate()));
-            lines.push('📱 *Perangkat*    : ' + (s.merk_model || '-') + ' (' + (s.jenis_perangkat || 'Unit') + ')');
-            if (s.imei_sn) lines.push('🔢 *IMEI/SN*      : ' + s.imei_sn);
-            lines.push('🔍 *Keluhan*      : ' + (s.keluhan || '-'));
-            lines.push('🔧 *Layanan*      : ' + (s.menu_servis || 'Diagnosa'));
-            lines.push('💵 *Est. Biaya*   : Rp ' + Number(s.estimasi_biaya || 0).toLocaleString('id-ID'));
-            lines.push('⏳ *Status*       : Menunggu Antrean Pengerjaan');
-            lines.push('----------------------------------------');
-            lines.push('🌐 *Lacak Status Servis Online 24 Jam:*');
-            lines.push('👉 ' + trackingUrl);
-            lines.push('');
-            lines.push('ℹ️ Anda dapat mengecek status pengerjaan unit kapan saja melalui tautan di atas tanpa perlu repot datang ke toko.');
-            if (storeAddr || storePhone) {
-                lines.push('');
-                lines.push('📍 ' + storeAddr + (storePhone ? ' | 📞 ' + storePhone : ''));
-            }
+            lines.push('*Estimasi Biaya*: Rp ' + Number(s.estimasi_biaya || 0).toLocaleString('id-ID'));
+            var curStatus = isProses ? 'Sedang Diproses (Dikerjakan Teknisi)' : (s.status_servis || 'Baru');
+            lines.push('*Status Servis* : ' + curStatus);
         }
+        lines.push('----------------------------------------');
+
+        // 6. Syarat & Ketentuan Toko (Sama persis dengan Nota Tercetak)
+        if (isAmbil) {
+            lines.push('* Unit telah diterima dalam kondisi baik & berfungsi normal.');
+            lines.push('* Simpan nota ini sebagai bukti sah garansi resmi servis.');
+        } else if (isSelesai) {
+            lines.push('* Mohon membawa nota tanda terima saat mengambil unit di toko.');
+        } else {
+            lines.push('* Simpan nota ini sebagai tanda bukti resmi saat mengambil unit.');
+            lines.push('* Kerusakan aksesoris tidak tercatat di luar tanggung jawab toko.');
+        }
+
+        // 7. Tautan Lacak Status Servis Online
+        lines.push('');
+        lines.push('🌐 *Lacak Status Servis Online:*');
+        lines.push('👉 ' + trackingUrl);
 
         return lines.join('\n');
     }
@@ -4406,7 +4668,15 @@
             return;
         }
 
-        var cleanPhone = (s.no_hp || '').replace(/[^0-9]/g, '');
+        var sCopy = Object.assign({}, activeReceiptService);
+        var inputAkhir = document.getElementById('rInputBiayaAkhir');
+        if (inputAkhir && parseNumber(inputAkhir.value) > 0) sCopy.biaya_akhir = parseNumber(inputAkhir.value);
+        var bayarSel = document.getElementById('rInputStatusBayar');
+        if (bayarSel && bayarSel.value) sCopy.status_pembayaran = bayarSel.value;
+        var rSelG = document.getElementById('rSelectGaransi');
+        if (rSelG && rSelG.value) sCopy.garansi = rSelG.value;
+
+        var cleanPhone = (sCopy.no_hp || '').replace(/[^0-9]/g, '');
         if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.slice(1);
         if (!cleanPhone) {
             alert('Nomor HP / WhatsApp pelanggan belum diisi pada tiket ini!');
@@ -4414,7 +4684,7 @@
         }
 
         var btn = document.getElementById('btnSendWaReceipt');
-        var originalText = btn ? btn.innerHTML : '💬 Kirim WA (Gambar)';
+        var originalText = btn ? btn.innerHTML : '💬 Kirim WA';
         if (btn) {
             btn.innerHTML = '⏳ Menyiapkan Gambar...';
             btn.disabled = true;
@@ -4422,18 +4692,39 @@
 
         var targetElement = (currentReceiptType === 'label') 
             ? document.getElementById('labelPrintArea') 
-            : document.getElementById('receiptPrintArea');
+            : document.getElementById('waReceiptCard');
 
         if (!targetElement) {
             if (btn) { btn.innerHTML = originalText; btn.disabled = false; }
             return;
         }
 
+        // Pastikan container targetElement sementara aktif jika tersembunyi agar dapat dirender oleh html2canvas
+        var waContainer = document.getElementById('previewWaContainer');
+        var wasWaContainerHidden = false;
+        if (targetElement === document.getElementById('waReceiptCard') && waContainer && waContainer.style.display === 'none') {
+            wasWaContainerHidden = true;
+            waContainer.style.display = 'flex';
+            waContainer.style.position = 'absolute';
+            waContainer.style.left = '-9999px';
+            waContainer.style.top = '0';
+        }
+
+        var cleanupHiddenContainer = function() {
+            if (wasWaContainerHidden && waContainer) {
+                waContainer.style.display = 'none';
+                waContainer.style.position = '';
+                waContainer.style.left = '';
+                waContainer.style.top = '';
+            }
+        };
+
         if (typeof html2canvas === 'function') {
             html2canvas(targetElement, {
                 scale: 2,
                 backgroundColor: '#ffffff'
             }).then(async function(canvas) {
+                cleanupHiddenContainer();
                 var copiedToClipboard = false;
                 try {
                     var blob = await new Promise(function(resolve) {
@@ -4441,7 +4732,9 @@
                     });
                     if (blob && navigator.clipboard && window.ClipboardItem) {
                         var clipboardItem = new ClipboardItem({ 'image/png': blob });
-                        await navigator.clipboard.write([clipboardItem]);
+                        var clipPromise = navigator.clipboard.write([clipboardItem]);
+                        var timeoutPromise = new Promise(function(_, reject) { setTimeout(function() { reject('clipboard timeout'); }, 1200); });
+                        await Promise.race([clipPromise, timeoutPromise]);
                         copiedToClipboard = true;
                     }
                 } catch (clipErr) {
@@ -4453,53 +4746,115 @@
                     btn.disabled = false;
                 }
 
-                var msg = buildWhatsAppReceiptMessage(s);
-                
-                if (copiedToClipboard) {
-                    showToast('📋 Gambar nota berhasil disalin ke clipboard! Saat WhatsApp terbuka, tinggal tekan Ctrl + V (Paste) lalu kirim.', 'success', 7000);
+                var msg = buildWhatsAppReceiptMessage(sCopy);
+                pendingWaData = {
+                    phone: cleanPhone,
+                    msg: msg
+                };
+
+                // Munculkan jendela pratinjau gambar dan tombol [OK]
+                var previewImg = document.getElementById('waPreviewModalImg');
+                var waModal = document.getElementById('waImagePreviewModal');
+                if (previewImg && waModal) {
+                    previewImg.src = canvas.toDataURL('image/png');
+                    waModal.style.display = 'flex';
+                    if (copiedToClipboard) {
+                        showToast('📋 Gambar E-Nota telah disalin ke clipboard! Klik OK untuk membuka WhatsApp.', 'success', 4000);
+                    }
                 } else {
-                    showToast('Membuka WhatsApp...', 'info', 3000);
+                    if (copiedToClipboard) {
+                        showToast('📋 Gambar E-Nota digital berhasil disalin ke clipboard! Saat WhatsApp terbuka, tinggal tekan Ctrl + V (Paste) lalu kirim.', 'success', 7000);
+                    } else {
+                        showToast('Membuka WhatsApp...', 'info', 3000);
+                    }
+
+                    setTimeout(function() {
+                        openWhatsAppLink(cleanPhone, msg);
+                    }, 400);
                 }
 
-                setTimeout(function() {
-                    openWhatsAppLink(cleanPhone, msg);
-                }, 400);
-
             }).catch(function(err) {
+                cleanupHiddenContainer();
                 console.error('html2canvas error:', err);
                 if (btn) {
                     btn.innerHTML = originalText;
                     btn.disabled = false;
                 }
-                var msg = buildWhatsAppReceiptMessage(s);
+                var msg = buildWhatsAppReceiptMessage(sCopy);
                 openWhatsAppLink(cleanPhone, msg);
             });
         } else {
+            cleanupHiddenContainer();
             if (btn) {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
             }
-            var msg = buildWhatsAppReceiptMessage(s);
+            var msg = buildWhatsAppReceiptMessage(sCopy);
             openWhatsAppLink(cleanPhone, msg);
         }
     }
 
+    var pendingWaData = null;
+
+    function closeWaImagePreviewModal() {
+        var m = document.getElementById('waImagePreviewModal');
+        if (m) m.style.display = 'none';
+        pendingWaData = null;
+    }
+
+    function confirmWaImagePreview() {
+        var m = document.getElementById('waImagePreviewModal');
+        if (m) m.style.display = 'none';
+        if (pendingWaData && pendingWaData.phone) {
+            openWhatsAppLink(pendingWaData.phone, pendingWaData.msg);
+        }
+        pendingWaData = null;
+    }
+
     function downloadReceiptImage() {
         var s = activeReceiptService;
-        var targetElement = (currentReceiptType === 'label') 
-            ? document.getElementById('labelPrintArea') 
-            : document.getElementById('receiptPrintArea');
+        var targetElement;
+        var prefix;
+        if (currentReceiptType === 'label') {
+            targetElement = document.getElementById('labelPrintArea');
+            prefix = 'Label_';
+        } else if (currentReceiptPreviewView === 'wa') {
+            targetElement = document.getElementById('waReceiptCard');
+            prefix = 'E-Nota_WA_';
+        } else {
+            targetElement = document.getElementById('receiptPrintArea');
+            prefix = 'Nota_Cetak_';
+        }
         if (!targetElement || !s) return;
 
-        showToast('⏳ Membuat gambar nota PNG...', 'info', 2000);
+        var waContainer = document.getElementById('previewWaContainer');
+        var wasWaContainerHidden = false;
+        if (targetElement === document.getElementById('waReceiptCard') && waContainer && waContainer.style.display === 'none') {
+            wasWaContainerHidden = true;
+            waContainer.style.display = 'flex';
+            waContainer.style.position = 'absolute';
+            waContainer.style.left = '-9999px';
+            waContainer.style.top = '0';
+        }
+
+        var cleanupHidden = function() {
+            if (wasWaContainerHidden && waContainer) {
+                waContainer.style.display = 'none';
+                waContainer.style.position = '';
+                waContainer.style.left = '';
+                waContainer.style.top = '';
+            }
+        };
+
+        showToast('⏳ Membuat gambar PNG...', 'info', 2000);
 
         if (typeof html2canvas === 'function') {
             html2canvas(targetElement, {
                 scale: 2,
                 backgroundColor: '#ffffff'
             }).then(function(canvas) {
+                cleanupHidden();
                 var a = document.createElement('a');
-                var prefix = (currentReceiptType === 'label') ? 'Label_' : 'Nota_';
                 var cleanName = (s.nama_pelanggan || 'Pelanggan').replace(/[^a-zA-Z0-9]/g, '_');
                 var fileName = prefix + (s.kode_servis || s.id) + '_' + cleanName + '.png';
                 a.download = fileName;
@@ -4507,9 +4862,11 @@
                 a.click();
                 showToast('✅ Berhasil diunduh: ' + fileName, 'success', 4000);
             }).catch(function(e) {
+                cleanupHidden();
                 alert('Gagal membuat gambar: ' + e);
             });
         } else {
+            cleanupHidden();
             alert('Modul html2canvas belum siap.');
         }
     }
@@ -4525,8 +4882,9 @@
     // LOGIKA CETAK NOTA (80x100mm) & LABEL STIKER (USB/BT)
     // ========================================================
     var currentReceiptType = 'masuk'; // 'masuk' | 'ambil'
-    var currentReceiptPaperSize = localStorage.getItem('autocash_receipt_paper_size') || '78x98';
-    var currentLabelSize = localStorage.getItem('autocash_label_size') || '40x30';
+    var currentReceiptPaperSize = localStorage.getItem('autocash_receipt_paper_size') || '80';
+    if (currentReceiptPaperSize !== '58' && currentReceiptPaperSize !== '80') currentReceiptPaperSize = '80';
+    var currentLabelSize = localStorage.getItem('autocash_label_size') || '40x20';
     var autoPrintLabel = false;
     var currentPrintDelayMs = parseInt(localStorage.getItem('autocash_print_delay') || '800');
 
@@ -4594,7 +4952,45 @@
             styleEl.id = 'dynamicPrintStyle';
             document.head.appendChild(styleEl);
         }
-        styleEl.textContent = '@page { size: ' + widthMm + 'mm ' + heightMm + 'mm; margin: 0; } @media print { body { margin: 0; padding: 0; } }';
+        // Gunakan 'size: portrait' agar browser tidak memaksa mode Landscape pada printer roll thermal yang memicu hang di driver
+        styleEl.textContent = '@page { size: portrait; margin: 0 !important; } @media print { body { margin: 0 !important; padding: 0 !important; } }';
+    }
+
+    var currentReceiptPreviewView = 'print';
+    function switchReceiptPreviewView(view) {
+        currentReceiptPreviewView = view;
+        var rcptContainer = document.getElementById('previewReceiptContainer');
+        var waContainer = document.getElementById('previewWaContainer');
+        var btnPrint = document.getElementById('btnTabPreviewPrint');
+        var btnWa = document.getElementById('btnTabPreviewWa');
+
+        if (view === 'wa') {
+            if (rcptContainer) rcptContainer.style.display = 'none';
+            if (waContainer) waContainer.style.display = 'flex';
+            if (btnPrint) {
+                btnPrint.style.background = 'var(--input-bg)';
+                btnPrint.style.color = 'var(--text-color)';
+                btnPrint.style.borderColor = 'var(--border-color)';
+            }
+            if (btnWa) {
+                btnWa.style.background = '#075e54';
+                btnWa.style.color = '#ffffff';
+                btnWa.style.borderColor = '#075e54';
+            }
+        } else {
+            if (rcptContainer) rcptContainer.style.display = 'flex';
+            if (waContainer) waContainer.style.display = 'none';
+            if (btnPrint) {
+                btnPrint.style.background = '#107c41';
+                btnPrint.style.color = '#ffffff';
+                btnPrint.style.borderColor = '#107c41';
+            }
+            if (btnWa) {
+                btnWa.style.background = 'var(--input-bg)';
+                btnWa.style.color = 'var(--text-color)';
+                btnWa.style.borderColor = 'var(--border-color)';
+            }
+        }
     }
 
     function switchReceiptType(type) {
@@ -4607,17 +5003,31 @@
         if (tabLabel) tabLabel.classList.toggle('active', type === 'label');
 
         var rcptContainer = document.getElementById('previewReceiptContainer');
+        var waContainer = document.getElementById('previewWaContainer');
         var lblContainer = document.getElementById('previewLabelContainer');
         var boxHarga = document.getElementById('boxPengambilanHarga');
+        var btnPrintTab = document.getElementById('btnTabPreviewPrint');
+
+        var btnMain = document.getElementById('btnModalPrintMain');
+        var btnBrowser = document.getElementById('btnModalPrintBrowser');
+        var btnWa = document.getElementById('btnSendWaReceipt');
 
         if (type === 'label') {
             if (rcptContainer) rcptContainer.style.display = 'none';
+            if (waContainer) waContainer.style.display = 'none';
             if (lblContainer) lblContainer.style.display = 'block';
             if (boxHarga) boxHarga.style.display = 'none';
+            if (btnMain) btnMain.innerHTML = '🏷️ Cetak Label';
+            if (btnBrowser) btnBrowser.innerHTML = '🌐 Cetak Browser';
+            if (btnWa) btnWa.style.display = 'none';
         } else {
-            if (rcptContainer) rcptContainer.style.display = 'block';
             if (lblContainer) lblContainer.style.display = 'none';
+            if (rcptContainer) rcptContainer.style.display = 'flex';
+            if (waContainer) waContainer.style.display = 'none';
             if (boxHarga) boxHarga.style.display = (type === 'ambil') ? 'block' : 'none';
+            if (btnMain) btnMain.innerHTML = '🖨️ Cetak Nota';
+            if (btnBrowser) btnBrowser.innerHTML = '🌐 Cetak Browser';
+            if (btnWa) btnWa.style.display = 'inline-flex';
         }
 
         if (activeReceiptService) {
@@ -4626,21 +5036,43 @@
         }
     }
 
+    function handleMainPrintAction() {
+        if (currentReceiptType === 'label') {
+            printLabelOnly();
+        } else {
+            printReceiptOnly();
+        }
+    }
+
+    function handleBrowserPrintAction() {
+        if (currentReceiptType === 'label') {
+            var sizeParts = (currentLabelSize || '40x20').split('x');
+            var w = parseInt(sizeParts[0]) || 40;
+            var h = parseInt(sizeParts[1]) || 20;
+            var mode = 'print-mode-label-' + currentLabelSize.replace('x', '');
+            showToast("💡 Driver thermal stiker siap. Jika pratinjau Chrome memuat lama, tekan tombol 'Print' yang sudah aktif atau Ctrl+Shift+P.", "info");
+            printViaBrowser(mode, w, h);
+        } else {
+            printViaBrowser('print-mode-receipt');
+        }
+    }
+
     function onReceiptPaperSizeChange(paperSize) {
-        currentReceiptPaperSize = paperSize || '78x98';
+        currentReceiptPaperSize = (paperSize === '58') ? '58' : '80';
         localStorage.setItem('autocash_receipt_paper_size', currentReceiptPaperSize);
         var receiptEl = document.getElementById('receiptPrintArea');
         if (receiptEl) {
-            receiptEl.className = (currentReceiptPaperSize === '58') ? 'receipt-paper-58' : 'receipt-paper-7898';
+            receiptEl.className = (currentReceiptPaperSize === '58') ? 'receipt-paper-58' : 'receipt-paper-80100';
         }
         var select = document.getElementById('receiptPaperSelect');
         if (select) select.value = currentReceiptPaperSize;
         var setSelect = document.getElementById('settingNotaPaperSize');
         if (setSelect) setSelect.value = currentReceiptPaperSize;
+        setPrintPageSize((currentReceiptPaperSize === '58') ? 58 : 80, 100);
     }
 
     function onLabelSizeChange(size) {
-        currentLabelSize = size || '40x30';
+        currentLabelSize = size || '40x20';
         localStorage.setItem('autocash_label_size', currentLabelSize);
         var labelEl = document.getElementById('labelPrintArea');
         if (labelEl) {
@@ -4650,6 +5082,11 @@
         if (select) select.value = currentLabelSize;
         var setSelect = document.getElementById('settingLabelPaperSize');
         if (setSelect) setSelect.value = currentLabelSize;
+        var parts = currentLabelSize.split('x');
+        setPrintPageSize(parseInt(parts[0]) || 40, parseInt(parts[1]) || 20);
+        if (activeReceiptService) {
+            populateLabel(activeReceiptService);
+        }
     }
 
     function toggleAutoPrintLabel(checked) {
@@ -4671,9 +5108,11 @@
         if (dateEl) {
             if (isAmbil) {
                 var tglKeluar = s.tanggal_selesai || getSystemDate();
-                dateEl.innerText = 'Masuk: ' + (s.tanggal_masuk || '-') + ' | Keluar: ' + tglKeluar;
+                dateEl.innerText = 'Waktu Keluar: ' + tglKeluar;
             } else {
-                dateEl.innerText = 'Tanggal: ' + (s.tanggal_masuk || getSystemDate());
+                var tglMasuk = s.tanggal_masuk || getSystemDate();
+                var jamMasuk = s.created_at ? s.created_at.split(' ')[1] : '';
+                dateEl.innerText = 'Waktu: ' + (jamMasuk ? (tglMasuk + ' ' + jamMasuk.slice(0, 5)) : tglMasuk);
             }
         }
 
@@ -4732,7 +5171,7 @@
         var rSigPelanggan = document.getElementById('rSigPelanggan');
 
         if (isAmbil) {
-            if (priceLabel) priceLabel.innerText = 'Total Biaya Akhir:';
+            if (priceLabel) priceLabel.innerText = 'TOTAL BIAYA:';
             var akhirVal = parseNumber(document.getElementById('rInputBiayaAkhir').value);
             if (isNaN(akhirVal) || akhirVal <= 0) {
                 akhirVal = (s.biaya_akhir !== undefined && s.biaya_akhir !== null && s.biaya_akhir > 0) ? s.biaya_akhir : (s.estimasi_biaya || 0);
@@ -4740,41 +5179,34 @@
             var statusBayar = document.getElementById('rInputStatusBayar').value || s.status_pembayaran || 'LUNAS';
 
             if (rBiaya) {
-                rBiaya.innerHTML = 'Rp ' + akhirVal.toLocaleString('id-ID') +
-                    (s.estimasi_biaya ? ' <small style="font-size: 9px; color: #666; font-weight: normal;">(Est: Rp ' + (s.estimasi_biaya || 0).toLocaleString('id-ID') + ')</small>' : '');
+                rBiaya.innerHTML = 'Rp ' + akhirVal.toLocaleString('id-ID');
             }
             if (rStatusLabel) rStatusLabel.innerText = 'Status Bayar:';
+            var rSelG = document.getElementById('rSelectGaransi');
+            var gVal = (rSelG && rSelG.value) ? rSelG.value : (s.garansi || '7 Hari');
+            var gText = (gVal.toLowerCase() === 'non-garansi' || gVal.toLowerCase() === 'tanpa garansi') ? 'Non-Garansi' : ('Garansi ' + gVal);
             if (rStatus) {
-                var color = (statusBayar === 'LUNAS') ? '#107c41' : '#d9534f';
-                rStatus.innerHTML = '<span style="color: ' + color + '; font-weight: bold;">[ ' + escapeHtml(statusBayar) + ' ]</span>';
+                rStatus.innerHTML = escapeHtml(statusBayar) + ' (' + escapeHtml(gText) + ')';
             }
             if (rFooter) {
-                var rSelG = document.getElementById('rSelectGaransi');
-                var gVal = (rSelG && rSelG.value) ? rSelG.value : (s.garansi || '7 Hari');
-                var gMsg = '';
-                if (gVal.toLowerCase() === 'non-garansi' || gVal.toLowerCase() === 'tanpa garansi') {
-                    gMsg = '* Servis ini tidak bergaransi (Non-Garansi).<br>';
-                } else {
-                    gMsg = '* Garansi servis berlaku <b>' + escapeHtml(gVal) + '</b> untuk kerusakan yang sama.<br>';
-                }
-                rFooter.innerHTML = '* Terima kasih atas kepercayaan Anda.<br>' + gMsg + '* Unit telah dicek dan diambil dalam kondisi baik.';
+                rFooter.innerHTML = '* Unit telah diterima dlm kondisi baik & normal.<br>* Simpan nota fisik ini sebagai bukti sah garansi resmi.';
             }
         } else {
-            if (priceLabel) priceLabel.innerText = 'Estimasi Biaya:';
+            if (priceLabel) priceLabel.innerText = 'ESTIMASI BIAYA:';
             if (rBiaya) {
                 rBiaya.innerText = (s.estimasi_biaya || 0) > 0 ? 'Rp ' + (s.estimasi_biaya || 0).toLocaleString('id-ID') : 'Rp 0';
             }
-            if (rStatusLabel) rStatusLabel.innerText = 'Status Servis:';
+            if (rStatusLabel) rStatusLabel.innerText = 'Status Unit:';
             if (rStatus) {
-                rStatus.innerHTML = '<span style="font-weight: bold;">' + escapeHtml(s.status_servis || 'Baru') + '</span>';
+                rStatus.innerHTML = escapeHtml(s.status_servis || 'Baru').toUpperCase();
             }
             if (rFooter) {
-                rFooter.innerHTML = '* Simpan nota ini sebagai tanda bukti resmi saat mengambil unit.<br>* Kerusakan aksesoris tidak tercatat di luar tanggung jawab toko.';
+                rFooter.innerHTML = '* Simpan nota fisik ini sebagai tanda bukti sah saat mengambil unit.<br>* Aksesoris tidak tertulis di luar tanggung jawab toko.';
             }
         }
 
         if (rSigPelanggan) {
-            rSigPelanggan.innerText = '( ' + (s.nama_pelanggan || '....................') + ' )';
+            rSigPelanggan.innerText = '( ' + (s.nama_pelanggan || 'Pelanggan') + ' )';
         }
 
         // Update QR Code Pelacakan Servisan Online
@@ -4802,14 +5234,14 @@
                 qrContainer.innerHTML = '';
                 if (typeof QRCode !== 'undefined') {
                     try {
-                        var qrDim = (currentReceiptPaperSize === '58') ? 48 : 50;
+                        var qrDim = (currentReceiptPaperSize === '58') ? 50 : 58;
                         new QRCode(qrContainer, {
                             text: trackingUrl,
                             width: qrDim,
                             height: qrDim,
                             colorDark: "#000000",
                             colorLight: "#ffffff",
-                            correctLevel: QRCode.CorrectLevel.M
+                            correctLevel: QRCode.CorrectLevel.L
                         });
                     } catch(e) {
                         console.warn("Gagal render QRCode nota:", e);
@@ -4820,32 +5252,176 @@
                 }
             }
         }
+
+        // ========================================================
+        // POPULATE E-NOTA RESMI DIGITAL WHATSAPP (#waReceiptCard)
+        // ========================================================
+        var waBadge = document.getElementById('waReceiptBadge');
+        if (waBadge) {
+            waBadge.innerText = isAmbil ? '🧾 E-KWITANSI PENGAMBILAN & GARANSI' : '📱 E-TANDA TERIMA RESMI';
+        }
+        var waDateTime = document.getElementById('waDateTime');
+        if (waDateTime) {
+            if (isAmbil) {
+                var tglKeluar = s.tanggal_selesai || getSystemDate();
+                waDateTime.innerText = 'Keluar: ' + tglKeluar;
+            } else {
+                waDateTime.innerText = 'Tgl: ' + (s.tanggal_masuk || getSystemDate());
+            }
+        }
+        var waKode = document.getElementById('waKodeServis');
+        if (waKode) waKode.innerText = kodeTiket;
+
+        var waStatusPill = document.getElementById('waStatusPill');
+        if (waStatusPill) {
+            if (isAmbil) {
+                waStatusPill.innerText = '✅ UNIT DIAMBIL';
+                waStatusPill.style.background = '#dcfce7';
+                waStatusPill.style.color = '#15803d';
+                waStatusPill.style.borderColor = '#bbf7d0';
+            } else {
+                var st = s.status_servis || 'Unit Diterima';
+                waStatusPill.innerText = '🟢 ' + st;
+                waStatusPill.style.background = '#e0f2fe';
+                waStatusPill.style.color = '#0369a1';
+                waStatusPill.style.borderColor = '#bae6fd';
+            }
+        }
+
+        var waNama = document.getElementById('waNama');
+        if (waNama) waNama.innerText = s.nama_pelanggan || '-';
+        var waNoHp = document.getElementById('waNoHp');
+        if (waNoHp) waNoHp.innerText = s.no_hp || '-';
+        var waPerangkat = document.getElementById('waPerangkat');
+        if (waPerangkat) waPerangkat.innerText = s.jenis_perangkat || '-';
+        var waMerkModel = document.getElementById('waMerkModel');
+        if (waMerkModel) waMerkModel.innerText = s.merk_model || '-';
+
+        var waRowImei = document.getElementById('waRowImei');
+        var waImei = document.getElementById('waImei');
+        if (waRowImei) {
+            if (s.imei_sn) {
+                waRowImei.style.display = 'flex';
+                if (waImei) waImei.innerText = s.imei_sn;
+            } else {
+                waRowImei.style.display = 'none';
+            }
+        }
+
+        var waRowLayanan = document.getElementById('waRowLayanan');
+        var waLayanan = document.getElementById('waLayanan');
+        if (waRowLayanan) {
+            if (s.menu_servis && s.menu_servis !== '-') {
+                waRowLayanan.style.display = 'flex';
+                if (waLayanan) waLayanan.innerText = s.menu_servis;
+            } else {
+                waRowLayanan.style.display = 'none';
+            }
+        }
+
+        var waKeluhan = document.getElementById('waKeluhan');
+        if (waKeluhan) waKeluhan.innerText = s.keluhan || '-';
+
+        var waRowCatatan = document.getElementById('waRowCatatan');
+        var waCatatan = document.getElementById('waCatatan');
+        if (waRowCatatan) {
+            if (s.catatan_teknisi) {
+                waRowCatatan.style.display = 'flex';
+                if (waCatatan) waCatatan.innerText = s.catatan_teknisi;
+            } else {
+                waRowCatatan.style.display = 'none';
+            }
+        }
+
+        var waRowSparepart = document.getElementById('waRowSparepart');
+        var waSparepart = document.getElementById('waSparepart');
+        if (waRowSparepart) {
+            if (s.sparepart_nama) {
+                waRowSparepart.style.display = 'flex';
+                if (waSparepart) waSparepart.innerText = s.sparepart_nama;
+            } else {
+                waRowSparepart.style.display = 'none';
+            }
+        }
+
+        var waPriceTitle = document.getElementById('waPriceTitle');
+        var waBiaya = document.getElementById('waBiaya');
+        var waPriceNote = document.getElementById('waPriceNote');
+
+        if (isAmbil) {
+            if (waPriceTitle) waPriceTitle.innerText = 'TOTAL BIAYA AKHIR:';
+            var akhirVal = parseNumber(document.getElementById('rInputBiayaAkhir').value);
+            if (isNaN(akhirVal) || akhirVal <= 0) {
+                akhirVal = (s.biaya_akhir !== undefined && s.biaya_akhir !== null && s.biaya_akhir > 0) ? s.biaya_akhir : (s.estimasi_biaya || 0);
+            }
+            var statusBayar = document.getElementById('rInputStatusBayar').value || s.status_pembayaran || 'LUNAS';
+            var rSelG = document.getElementById('rSelectGaransi');
+            var gVal = (rSelG && rSelG.value) ? rSelG.value : (s.garansi || '7 Hari');
+            var gText = (gVal.toLowerCase() === 'non-garansi' || gVal.toLowerCase() === 'tanpa garansi') ? 'Non-Garansi' : ('Garansi ' + gVal);
+
+            if (waBiaya) waBiaya.innerText = 'Rp ' + akhirVal.toLocaleString('id-ID');
+            if (waPriceNote) {
+                waPriceNote.innerHTML = 'Status: <b>' + escapeHtml(statusBayar) + '</b> • Garansi: <b>' + escapeHtml(gText) + '</b><br>*Harap simpan bukti ini untuk klaim garansi servis resmi.';
+            }
+        } else {
+            if (waPriceTitle) waPriceTitle.innerText = 'ESTIMASI BIAYA PERBAIKAN:';
+            if (waBiaya) {
+                waBiaya.innerText = (s.estimasi_biaya || 0) > 0 ? ('Rp ' + (s.estimasi_biaya || 0).toLocaleString('id-ID')) : 'Rp 0';
+            }
+            if (waPriceNote) {
+                waPriceNote.innerText = '*Estimasi awal dapat berubah jika ditemukan kendala tambahan setelah konfirmasi teknisi.';
+            }
+        }
+
+        // WhatsApp Card QR Code
+        var waQrContainer = document.getElementById('waQrCodeContainer');
+        var waTrackingUrlText = document.getElementById('waTrackingUrl');
+        var baseDomainWA = 'https://lacak.dhanzcell.my.id';
+        if (!window.location.hostname.includes('dhanzcell.my.id') && !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1')) {
+            baseDomainWA = window.location.origin;
+        }
+        var waTrackingUrl = baseDomainWA + '/lacak?nota=' + encodeURIComponent(kodeTiket);
+        if (waTrackingUrlText) {
+            waTrackingUrlText.innerText = 'lacak.dhanzcell.my.id?nota=' + kodeTiket;
+        }
+        if (waQrContainer && typeof QRCode !== 'undefined') {
+            waQrContainer.innerHTML = '';
+            try {
+                new QRCode(waQrContainer, {
+                    text: waTrackingUrl,
+                    width: 60,
+                    height: 60,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+            } catch(e) {
+                console.warn("Gagal render QRCode WhatsApp:", e);
+            }
+        }
     }
 
     function populateLabel(s) {
         if (!s) return;
+
+        var kodeVal = s.kode_servis || ('#' + s.id);
         var lblKode = document.getElementById('lblKode');
-        if (lblKode) lblKode.innerText = s.kode_servis || ('#' + s.id);
-        var lblTgl = document.getElementById('lblTanggal');
-        if (lblTgl) lblTgl.innerText = (s.tanggal_masuk || getSystemDate()).substring(0, 10);
+        if (lblKode) lblKode.innerText = kodeVal;
+
         var lblNama = document.getElementById('lblNama');
         if (lblNama) lblNama.innerText = s.nama_pelanggan || '-';
+
         var lblNoHp = document.getElementById('lblNoHp');
         if (lblNoHp) lblNoHp.innerText = s.no_hp || '-';
-        var lblUnit = document.getElementById('lblUnit');
-        if (lblUnit) lblUnit.innerText = (s.merk_model || '-') + ' (' + (s.jenis_perangkat || '') + ')';
+
+        var lblBiaya = document.getElementById('lblBiaya');
+        if (lblBiaya) {
+            var biayaVal = parseFloat(s.biaya_akhir || s.estimasi_biaya || 0);
+            lblBiaya.innerText = biayaVal > 0 ? ('Rp ' + Math.round(biayaVal).toLocaleString('id-ID')) : 'Rp 0';
+        }
+
         var lblKeluhan = document.getElementById('lblKeluhan');
         if (lblKeluhan) lblKeluhan.innerText = s.keluhan || '-';
-        var lblCatatan = document.getElementById('lblCatatan');
-        var rowCat = document.getElementById('lblRowTeknisi');
-        if (lblCatatan && rowCat) {
-            if (s.catatan_teknisi) {
-                rowCat.style.display = 'block';
-                lblCatatan.innerText = s.catatan_teknisi;
-            } else {
-                rowCat.style.display = 'none';
-            }
-        }
     }
 
     function updateReceiptPricePreview() {
@@ -5317,73 +5893,102 @@
         doc.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Cetak</title>');
 
         // Inisialisasi CSS Internal Lengkap untuk Keandalan 100% Seluruh Model Browser Tanpa Ketergantungan Eksternal
+        widthMm = widthMm || ((elementId === 'receiptPrintArea') ? ((currentReceiptPaperSize === '58') ? 58 : 80) : 40);
+        heightMm = heightMm || ((elementId === 'receiptPrintArea') ? 100 : 30);
+
         doc.write('<style>');
-        doc.write('* { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }');
+        doc.write('* { box-sizing: border-box !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }');
         doc.write('@page { size: ' + widthMm + 'mm ' + heightMm + 'mm; margin: 0 !important; }');
-        doc.write('html, body { margin: 0 !important; padding: 0 !important; width: 100% !important; height: auto !important; min-height: 0 !important; background: #ffffff !important; color: #000000 !important; overflow: hidden !important; font-family: "Courier New", Courier, monospace, "Segoe UI", Arial, sans-serif; }');
-        doc.write('body { display: flex !important; justify-content: center !important; align-items: flex-start !important; margin: 0 !important; padding: 0 !important; }');
+        doc.write('html, body { margin: 0 !important; padding: 0 !important; width: 100% !important; height: auto !important; min-height: 0 !important; background: #ffffff !important; color: #000000 !important; overflow: hidden !important; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif !important; }');
+        doc.write('body { display: flex !important; justify-content: flex-start !important; align-items: flex-start !important; margin: 0 !important; padding: 0 !important; }');
 
-        // Rules Nota 58mm & 80mm
+        // Rules Nota 58mm & 80mm (Sederhana, Rata Kiri, Teks Hitam Pekat, Pas Printhead 72mm, Cukup 1 Label)
         var is58 = (currentReceiptPaperSize === '58');
-        var receiptWidthCss = is58 ? '48mm' : '76mm';
-        var receiptMaxWidthCss = is58 ? '58mm' : '80mm';
-        var rFontSize = is58 ? '8px' : '8.8px';
-        var rTitleSize = is58 ? '11px' : '12px';
+        var receiptWidthCss = is58 ? '48mm' : '70mm';
+        var receiptMaxWidthCss = is58 ? '54mm' : '72mm';
+        var rFontSize = is58 ? '7.5px' : '8.5px';
+        var rTitleSize = is58 ? '11.5px' : '13.5px';
 
-        doc.write('.receipt-paper-58, .receipt-paper-80100 { width: ' + receiptWidthCss + ' !important; max-width: ' + receiptMaxWidthCss + ' !important; margin: 0 auto !important; padding: 1.5mm 2.5mm !important; font-family: "Courier New", Courier, monospace, "Segoe UI", Arial, sans-serif !important; color: #111111 !important; background: #ffffff !important; border: none !important; box-shadow: none !important; box-sizing: border-box !important; font-size: ' + rFontSize + ' !important; line-height: 1.15 !important; overflow: visible !important; page-break-after: avoid !important; break-after: avoid !important; page-break-inside: avoid !important; break-inside: avoid !important; }');
-        doc.write('.receipt-header { text-align: center !important; margin-bottom: 2px !important; }');
-        doc.write('.store-title { font-size: ' + rTitleSize + ' !important; font-weight: bold !important; letter-spacing: 0.5px !important; margin: 0 !important; text-transform: uppercase !important; }');
-        doc.write('.receipt-sub { font-size: 7.5px !important; color: #333333 !important; margin-top: 1px !important; }');
-        doc.write('.receipt-divider-solid { border-bottom: 1px solid #222222 !important; margin: 2px 0 !important; }');
-        doc.write('.receipt-divider-dash { border-bottom: 1px dashed #777777 !important; margin: 2px 0 !important; }');
-        doc.write('.r-row { display: flex !important; justify-content: space-between !important; font-size: ' + rFontSize + ' !important; padding: 0.8px 0 !important; }');
-        doc.write('.r-row .r-label { color: #333333 !important; width: 36% !important; font-size: ' + (is58 ? '7.5px' : '8.2px') + ' !important; }');
-        doc.write('.r-row .r-val { color: #000000 !important; width: 64% !important; text-align: right !important; word-break: break-word !important; font-weight: 600 !important; }');
-        doc.write('.price-box { background: #f7f9f7 !important; border: 1px dashed #107c41 !important; padding: 2px 5px !important; margin: 2px 0 !important; border-radius: 3px !important; }');
-        doc.write('.price-row { display: flex !important; justify-content: space-between !important; font-size: ' + (is58 ? '9px' : '9.8px') + ' !important; font-weight: bold !important; color: #107c41 !important; }');
+        doc.write('.receipt-paper-58, .receipt-paper-80100, #receiptPrintArea { width: ' + receiptWidthCss + ' !important; max-width: ' + receiptMaxWidthCss + ' !important; max-height: 98mm !important; margin: 0 !important; margin-left: 0 !important; margin-top: 0 !important; padding: 0mm 1.5mm 1.5mm 0mm !important; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif !important; color: #000000 !important; background: #ffffff !important; border: none !important; box-shadow: none !important; box-sizing: border-box !important; font-size: ' + rFontSize + ' !important; line-height: 1.25 !important; overflow: hidden !important; page-break-after: avoid !important; break-after: avoid !important; page-break-inside: avoid !important; break-inside: avoid !important; text-align: left !important; }');
         
-        if (is58) {
-            doc.write('.receipt-footer-flex { display: flex !important; flex-direction: column !important; margin-top: 3px !important; padding-top: 2px !important; border-top: 1px dashed #888888 !important; }');
-            doc.write('.footer-left { width: 100% !important; }');
-            doc.write('.footer-terms { font-size: 7px !important; color: #444444 !important; line-height: 1.15 !important; text-align: center !important; margin-bottom: 3px !important; }');
-            doc.write('.sig-row { display: flex !important; justify-content: space-between !important; margin-top: 3px !important; font-size: 7.5px !important; text-align: center !important; }');
-            doc.write('.sig-col { width: 48% !important; }');
-            doc.write('.sig-space { height: 11px !important; }');
-            doc.write('.footer-right { width: 100% !important; margin-top: 4px !important; border-top: 1px dashed #cccccc !important; padding-top: 3px !important; text-align: center !important; }');
-            doc.write('.receipt-tracking-box { text-align: center !important; margin: 0 !important; padding: 0 !important; }');
-            doc.write('#rQrCodeContainer canvas, #rQrCodeContainer img { display: block !important; margin: 0 auto !important; image-rendering: pixelated !important; }');
-        } else {
-            doc.write('.receipt-footer-flex { display: flex !important; justify-content: space-between !important; align-items: flex-start !important; margin-top: 3px !important; padding-top: 2px !important; border-top: 1px dashed #888888 !important; gap: 6px !important; }');
-            doc.write('.footer-left { flex: 1.35 !important; display: flex !important; flex-direction: column !important; justify-content: space-between !important; }');
-            doc.write('.footer-terms { font-size: 7px !important; color: #444444 !important; line-height: 1.15 !important; margin-bottom: 3px !important; }');
-            doc.write('.sig-row { display: flex !important; justify-content: space-between !important; margin-top: 3px !important; font-size: 7.5px !important; text-align: center !important; }');
-            doc.write('.sig-col { width: 48% !important; }');
-            doc.write('.sig-space { height: 11px !important; }');
-            doc.write('.footer-right { flex: 0.85 !important; text-align: center !important; border-left: 1px dashed #cccccc !important; padding-left: 4px !important; }');
-            doc.write('.receipt-tracking-box { text-align: center !important; margin: 0 !important; padding: 0 !important; }');
-            doc.write('#rQrCodeContainer canvas, #rQrCodeContainer img { display: block !important; margin: 0 auto !important; image-rendering: pixelated !important; }');
-        }
+        // 1. Header Kop Toko - Mentok Atas & Kiri
+        doc.write('.receipt-header { text-align: left !important; margin-top: 0 !important; padding-top: 0 !important; margin-bottom: 2.5px !important; padding-bottom: 2px !important; border-bottom: 1.5px solid #000000 !important; }');
+        doc.write('.receipt-header-left { display: flex !important; align-items: flex-start !important; gap: ' + (is58 ? '5px' : '8px') + ' !important; text-align: left !important; margin-top: 0 !important; padding-top: 0 !important; }');
+        doc.write('.receipt-logo-large { width: ' + (is58 ? '34px' : '40px') + ' !important; height: ' + (is58 ? '34px' : '40px') + ' !important; min-width: ' + (is58 ? '34px' : '40px') + ' !important; object-fit: contain !important; margin-top: 0 !important; }');
+        doc.write('.receipt-store-info { flex: 1 !important; text-align: left !important; margin-top: 0 !important; padding-top: 0 !important; }');
+        doc.write('.store-title { font-size: ' + rTitleSize + ' !important; font-weight: 900 !important; letter-spacing: 0.8px !important; margin: 0 !important; padding: 0 !important; color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; -webkit-text-stroke: 0.8px #000000 !important; text-shadow: -1px -1px 0 #000000, 1px -1px 0 #000000, -1px 1px 0 #000000, 1px 1px 0 #000000 !important; text-transform: uppercase !important; line-height: 1.05 !important; }');
+        doc.write('.receipt-sub-contact { font-size: ' + (is58 ? '6.8px' : '7.5px') + ' !important; font-weight: 600 !important; color: #000000 !important; margin-top: 1.5px !important; line-height: 1.2 !important; text-align: left !important; }');
+        
+        // 2. Subtitle & Waktu - Rata Kiri
+        doc.write('.receipt-title-bar { padding: 2.5px 0 !important; border-bottom: 1px solid #000000 !important; text-align: left !important; margin-bottom: 2px !important; }');
+        doc.write('.receipt-title-text { font-size: ' + (is58 ? '8.5px' : '9.5px') + ' !important; font-weight: 900 !important; color: #000000 !important; letter-spacing: 0.4px !important; text-transform: uppercase !important; }');
+        doc.write('.receipt-title-meta { font-size: ' + (is58 ? '6.8px' : '7.5px') + ' !important; font-weight: 600 !important; color: #000000 !important; margin-top: 1px !important; }');
+        
+        // 3. Rincian Servis Tabular Rata Kiri
+        doc.write('.receipt-body { padding: 1px 0 !important; text-align: left !important; }');
+        doc.write('.r-table-row { display: flex !important; align-items: flex-start !important; padding: 1px 0 !important; font-size: ' + rFontSize + ' !important; color: #000000 !important; line-height: 1.2 !important; }');
+        doc.write('.r-tbl-lbl { width: ' + (is58 ? '32%' : '27%') + ' !important; font-weight: 600 !important; color: #000000 !important; white-space: nowrap !important; }');
+        doc.write('.r-tbl-sep { width: 3% !important; font-weight: 700 !important; color: #000000 !important; }');
+        doc.write('.r-tbl-val { width: ' + (is58 ? '65%' : '70%') + ' !important; font-weight: 700 !important; color: #000000 !important; word-break: break-word !important; }');
+        doc.write('.receipt-divider-dash { border-bottom: 1px dashed #000000 !important; margin: 2px 0 !important; }');
+        
+        // 4. Kotak Biaya & Status Sederhana
+        doc.write('.price-box { border: 1.2px solid #000000 !important; border-radius: 2px !important; padding: 2.5px 4px !important; margin: 2.5px 0 !important; background: #ffffff !important; }');
+        doc.write('.price-row { display: flex !important; justify-content: space-between !important; align-items: center !important; }');
+        doc.write('.price-lbl { font-size: ' + (is58 ? '8.5px' : '9.5px') + ' !important; font-weight: 900 !important; text-transform: uppercase !important; color: #000000 !important; }');
+        doc.write('.price-val { font-size: ' + (is58 ? '11px' : '13px') + ' !important; font-weight: 900 !important; color: #000000 !important; letter-spacing: 0.3px !important; }');
+        doc.write('.price-sub-row { display: flex !important; justify-content: space-between !important; align-items: center !important; margin-top: 1.5px !important; padding-top: 1.5px !important; border-top: 1px dashed #000000 !important; font-size: 7.8px !important; font-weight: 700 !important; color: #000000 !important; }');
+        doc.write('.price-status-lbl { color: #000000 !important; font-weight: 700 !important; }');
+        doc.write('.price-status-val { font-weight: 900 !important; color: #000000 !important; }');
+        
+        // 5. Footer Sederhana: Syarat, Tanda Tangan & QR Code
+        doc.write('.footer-terms { font-size: 6.8px !important; font-weight: 500 !important; color: #000000 !important; line-height: 1.2 !important; margin: 2px 0 3px 0 !important; text-align: left !important; }');
+        doc.write('.receipt-footer-flex { display: flex !important; justify-content: space-between !important; align-items: flex-start !important; padding-top: 3px !important; border-top: 1px solid #000000 !important; gap: 4px !important; }');
+        doc.write('.footer-left { flex: 1.35 !important; }');
+        doc.write('.sig-row { display: flex !important; justify-content: space-between !important; text-align: center !important; margin-top: 2px !important; font-size: 7.2px !important; color: #000000 !important; }');
+        doc.write('.sig-col { width: 48% !important; }');
+        doc.write('.sig-title { font-size: 7.2px !important; font-weight: 600 !important; color: #000000 !important; }');
+        doc.write('.sig-line { border-bottom: 1px solid #000000 !important; height: 11px !important; margin-bottom: 2px !important; }');
+        doc.write('.sig-name { font-size: 7px !important; font-weight: 700 !important; color: #000000 !important; }');
+        doc.write('.footer-right { flex: 0.85 !important; text-align: center !important; border-left: none !important; padding-left: 0 !important; }');
+        doc.write('.receipt-tracking-box { text-align: center !important; margin: 0 !important; padding: 0 !important; border: none !important; }');
+        doc.write('.tracking-title { display: none !important; }');
+        doc.write('#rQrCodeContainer { margin: 0 !important; padding: 0 !important; text-align: center !important; }');
+        doc.write('#rQrCodeContainer canvas, #rQrCodeContainer img { display: block !important; margin: 0 auto !important; margin-top: 0px !important; padding: 0 !important; image-rendering: pixelated !important; max-width: 58px !important; max-height: 58px !important; }');
+        doc.write('.tracking-url { font-size: 5.6px !important; font-family: monospace !important; font-weight: 700 !important; color: #000000 !important; margin-top: 1px !important; word-break: break-all !important; max-width: 82px !important; margin-left: auto !important; margin-right: auto !important; line-height: 1.1 !important; }');
 
-        // Rules Label Stiker (Bebas terpotong: white-space normal & word-break break-word)
-        doc.write('.label-paper { background: #ffffff !important; color: #000000 !important; margin: 0 auto !important; font-family: "Segoe UI", Tahoma, Arial, sans-serif !important; border: none !important; box-shadow: none !important; box-sizing: border-box !important; overflow: visible !important; page-break-after: avoid !important; break-after: avoid !important; page-break-inside: avoid !important; break-inside: avoid !important; }');
-        doc.write('.label-size-4020 { width: 40mm !important; height: 20mm !important; max-width: 40mm !important; max-height: 20mm !important; padding: 1mm 1.5mm !important; font-size: 7.2px !important; line-height: 1.15 !important; }');
-        doc.write('.label-size-4030 { width: 40mm !important; height: 30mm !important; max-width: 40mm !important; max-height: 30mm !important; padding: 1.5mm 2mm !important; font-size: 8.2px !important; line-height: 1.2 !important; }');
-        doc.write('.label-size-5030 { width: 50mm !important; height: 30mm !important; max-width: 50mm !important; max-height: 30mm !important; padding: 1.5mm 2.5mm !important; font-size: 9px !important; line-height: 1.25 !important; }');
-        doc.write('.label-paper .lbl-header { display: flex !important; justify-content: space-between !important; align-items: center !important; font-weight: bold !important; border-bottom: 1px solid #000000 !important; padding-bottom: 1px !important; margin-bottom: 1px !important; }');
-        doc.write('.label-paper .lbl-code { font-family: "Courier New", monospace !important; font-weight: bold !important; }');
-        doc.write('.label-paper .lbl-row { white-space: normal !important; word-break: break-word !important; overflow: visible !important; line-height: 1.15 !important; margin-bottom: 1px !important; }');
-        doc.write('.label-paper .lbl-row b { display: inline-block !important; min-width: 14px !important; }');
+        // Rules Label Stiker Identitas Murni (40x20mm / 40x30mm)
+        doc.write('.label-paper { background: #ffffff !important; color: #000000 !important; margin: 0 !important; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif !important; border: none !important; box-shadow: none !important; box-sizing: border-box !important; overflow: hidden !important; text-align: left !important; padding: 2mm 0 0 2mm !important; }');
+        doc.write('.label-size-4020 { width: 40mm !important; height: 20mm !important; max-width: 40mm !important; max-height: 20mm !important; padding: 2mm 0 0 2mm !important; }');
+        doc.write('.label-size-4030 { width: 40mm !important; height: 30mm !important; max-width: 40mm !important; max-height: 30mm !important; padding: 2mm 0 0 2mm !important; }');
+        doc.write('.label-size-5030 { width: 50mm !important; height: 30mm !important; max-width: 50mm !important; max-height: 30mm !important; padding: 2mm 0 0 2mm !important; }');
+        doc.write('.label-paper .lbl-ticket { font-family: "Courier New", monospace !important; font-size: 9.5px !important; font-weight: 900 !important; line-height: 1.2 !important; color: #000000 !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; margin: 0 !important; padding: 0 !important; }');
+        doc.write('.label-paper .lbl-item { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif !important; font-size: 8px !important; font-weight: 600 !important; line-height: 1.18 !important; color: #000000 !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; margin: 0 !important; padding: 0 !important; }');
 
         // Rules Khusus Area Print Target
         if (elementId === 'receiptPrintArea') {
-            doc.write('#receiptPrintArea { border: none !important; box-shadow: none !important; width: ' + receiptWidthCss + ' !important; max-width: ' + receiptMaxWidthCss + ' !important; margin: 0 auto !important; padding: 2mm 2.5mm !important; page-break-after: avoid !important; break-after: avoid !important; page-break-inside: avoid !important; break-inside: avoid !important; overflow: visible !important; }');
+            doc.write('#receiptPrintArea { border: none !important; box-shadow: none !important; width: ' + receiptWidthCss + ' !important; max-width: ' + receiptMaxWidthCss + ' !important; max-height: 98mm !important; margin: 0 !important; margin-left: 0 !important; padding: 0mm 1.5mm 1.5mm 0mm !important; page-break-after: avoid !important; break-after: avoid !important; page-break-inside: avoid !important; break-inside: avoid !important; overflow: hidden !important; text-align: left !important; }');
         } else {
-            doc.write('#labelPrintArea { border: none !important; box-shadow: none !important; margin: 0 auto !important; page-break-after: avoid !important; break-after: avoid !important; page-break-inside: avoid !important; break-inside: avoid !important; overflow: visible !important; }');
+            doc.write('#labelPrintArea { border: none !important; box-shadow: none !important; margin: 0 !important; padding: 2mm 0 0 2mm !important; page-break-after: avoid !important; break-after: avoid !important; page-break-inside: avoid !important; break-inside: avoid !important; overflow: hidden !important; width: ' + widthMm + 'mm !important; height: ' + heightMm + 'mm !important; }');
         }
         doc.write('</style></head><body>');
         doc.write(sourceEl.outerHTML);
         doc.write('</body></html>');
         doc.close();
+
+        // Salin isi canvas (seperti QRCode) dari elemen asli ke iframe agar gambar QR tidak blank saat dicetak
+        try {
+            var srcCanvases = sourceEl.querySelectorAll('canvas');
+            var destCanvases = doc.querySelectorAll('canvas');
+            for (var ci = 0; ci < srcCanvases.length && ci < destCanvases.length; ci++) {
+                var destCtx = destCanvases[ci].getContext('2d');
+                if (destCtx) {
+                    destCtx.drawImage(srcCanvases[ci], 0, 0);
+                }
+            }
+        } catch(ce) {
+            console.warn("Gagal menyalin canvas ke print isolation frame:", ce);
+        }
 
         var printed = false;
         var triggerPrint = function() {
@@ -5421,15 +6026,6 @@
             if (callback) {
                 setTimeout(callback, 700);
             }
-
-            // Bersihkan iframe setelah print dialog selesai dibuka (diberi jeda 3 detik agar tidak membatalkan print preview)
-            setTimeout(function() {
-                try {
-                    if (iframe && iframe.parentNode) {
-                        iframe.parentNode.removeChild(iframe);
-                    }
-                } catch(e) {}
-            }, 3000);
         };
 
         // Tunggu gambar (logo toko) selesai dimuat sebelum trigger print
@@ -5454,28 +6050,175 @@
     }
 
     function printViaBrowser(mode, widthMm, heightMm, callback) {
-        var elementId = (mode === 'print-mode-receipt') ? 'receiptPrintArea' : 'labelPrintArea';
-        printElementDirectly(elementId, widthMm, heightMm, callback, mode);
+        var isLabel = (mode && mode.indexOf('label') !== -1) || (currentReceiptType === 'label');
+        if (!widthMm || !heightMm) {
+            if (isLabel) {
+                var sizeParts = (currentLabelSize || '40x20').split('x');
+                widthMm = parseInt(sizeParts[0]) || 40;
+                heightMm = parseInt(sizeParts[1]) || 20;
+            } else {
+                widthMm = (currentReceiptPaperSize === '58') ? 58 : 80;
+                heightMm = 100;
+            }
+        }
+
+        var printClass = mode || (isLabel ? ('print-mode-label-' + (currentLabelSize || '40x20').replace('x', '')) : 'print-mode-receipt');
+        setPrintPageSize(widthMm, heightMm);
+
+        // Pasang kelas mode cetak pada <body> agar @media print hanya merender target
+        document.body.classList.add(printClass);
+
+        var cleaned = false;
+        var cleanup = function() {
+            if (cleaned) return;
+            cleaned = true;
+            document.body.classList.remove(printClass);
+            window.removeEventListener('afterprint', cleanup);
+            if (callback) callback();
+        };
+
+        window.addEventListener('afterprint', cleanup);
+
+        // Beri sedikit jeda agar style @page terkompilasi penuh sebelum print dialog terbuka
+        setTimeout(function() {
+            try {
+                window.print();
+            } catch(e) {
+                console.error("Window print error, falling back to iframe:", e);
+                var elementId = isLabel ? 'labelPrintArea' : 'receiptPrintArea';
+                printElementDirectly(elementId, widthMm, heightMm, callback, mode);
+            }
+            // Fallback pembersihan otomatis jika browser tidak menembakkan afterprint
+            setTimeout(cleanup, 2500);
+        }, 60);
     }
 
     // ========================================================
     // DIRECT BACKEND HARDWARE PRINTING VIA WINSPOOL.DRV (0% GDI / DIALOG)
     // ========================================================
     var cachedWindowsPrinters = [];
+    var localPrinterAgentUrl = null;
+    var lastDetectedAgentName = '';
 
-    function loadAvailablePrinters() {
-        return fetch('/api/printers')
+    function getDeviceId() {
+        var did = localStorage.getItem('autocash_device_id');
+        if (!did) {
+            did = 'dev_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+            localStorage.setItem('autocash_device_id', did);
+        }
+        return did;
+    }
+
+    function updatePrinterAgentStatusUI(status, message, subtext) {
+        var dot = document.getElementById('printerAgentStatusDot');
+        var txt = document.getElementById('printerAgentStatusText');
+        var sub = document.getElementById('printerAgentSubText');
+        var btnDl = document.getElementById('btnDownloadPrinterAgent');
+        if (!txt) return;
+
+        if (status === 'connected') {
+            if (dot) dot.innerText = '🟢';
+            txt.innerHTML = '<span style="color: #0b5e2f;">' + escapeHtml(message) + '</span>';
+            if (sub) sub.innerText = subtext || 'Printer fisik di PC ini siap mencetak langsung tanpa dialog browser.';
+            if (btnDl) {
+                btnDl.innerHTML = '✓ Tool Deteksi Aktif';
+                btnDl.style.background = '#0b5e2f';
+                btnDl.style.opacity = '0.9';
+            }
+        } else if (status === 'loading') {
+            if (dot) dot.innerText = '🔄';
+            txt.innerText = message || 'Mendeteksi printer di PC ini...';
+            if (sub) sub.innerText = subtext || 'Memeriksa agen printer lokal dan koneksi server...';
+        } else {
+            if (dot) dot.innerText = '⚠️';
+            txt.innerHTML = '<span style="color: #d97706;">' + escapeHtml(message) + '</span>';
+            if (sub) sub.innerText = subtext || 'Jika Anda mengakses web ini dari PC/laptop lain, jalankan tool di bawah agar printer di PC ini otomatis terdeteksi.';
+            if (btnDl) {
+                btnDl.innerHTML = '📥 Unduh Tool Deteksi PC Ini';
+                btnDl.style.background = '#d97706';
+                btnDl.style.opacity = '1';
+            }
+        }
+    }
+
+    function loadAvailablePrinters(isManual) {
+        if (isManual) {
+            updatePrinterAgentStatusUI('loading', 'Menyegarkan status printer...');
+        }
+        var did = getDeviceId();
+
+        // Update link download agar otomatis membawa parameter device_id PC klien ini
+        var btnDl = document.getElementById('btnDownloadPrinterAgent');
+        if (btnDl) {
+            btnDl.href = '/api/download/printer-agent?device_id=' + encodeURIComponent(did);
+        }
+
+        // Ambil kode pairing 6-angka dari server untuk PC ini
+        fetch('/api/printer-agent/code?device_id=' + encodeURIComponent(did))
             .then(function(r) { return r.json(); })
-            .then(function(data) {
-                if (data.success && data.printers) {
-                    cachedWindowsPrinters = data.printers;
-                    populatePrinterSelects(data.printers, data.default);
+            .then(function(res) {
+                if (res.success && res.code) {
+                    var badge = document.getElementById('printerPairingCodeBadge');
+                    if (badge) badge.innerText = res.code;
                 }
-                return data;
             })
-            .catch(function(err) {
-                console.warn("Gagal memuat printer Windows:", err);
-            });
+            .catch(function() {});
+
+        // 1. Coba hubungi local agent di 127.0.0.1:18080 (PNA CORS jika browser mengizinkan)
+        var controller = new AbortController();
+        var timeoutId = setTimeout(function() { controller.abort(); }, 1200);
+
+        return fetch('http://127.0.0.1:18080/api/printers', {
+            signal: controller.signal
+        })
+        .then(function(r) { clearTimeout(timeoutId); return r.json(); })
+        .then(function(agentData) {
+            if (agentData.success && agentData.printers && agentData.printers.length > 0) {
+                localPrinterAgentUrl = 'http://127.0.0.1:18080';
+                lastDetectedAgentName = agentData.machine_name || 'PC Ini';
+                cachedWindowsPrinters = agentData.printers;
+                populatePrinterSelects(agentData.printers, agentData.default);
+                updatePrinterAgentStatusUI('connected', 'Printer Terdeteksi: ' + lastDetectedAgentName + ' (' + agentData.printers.length + ' printer)', 'Terhubung langsung ke hardware PC ini via Agen Port 18080.');
+                if (isManual) showToast("🟢 Printer di PC ini berhasil terdeteksi via Local Agent!", "success");
+                return agentData;
+            }
+            throw new Error("No printers from local agent");
+        })
+        .catch(function() {
+            clearTimeout(timeoutId);
+            // 2. Hubungi endpoint server pusat dengan device_id browser ini
+            return fetch('/api/printers?device_id=' + encodeURIComponent(did))
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.success && data.printers && data.printers.length > 0) {
+                        cachedWindowsPrinters = data.printers;
+                        populatePrinterSelects(data.printers, data.default);
+                        if (data.source === 'client_agent') {
+                            localPrinterAgentUrl = null;
+                            lastDetectedAgentName = data.agent_name || 'PC Klien';
+                            updatePrinterAgentStatusUI('connected', 'Printer Terdeteksi: ' + lastDetectedAgentName + ' (' + data.printers.length + ' printer)', 'Terhubung otomatis via KasToko Cloud Bridge.');
+                        } else if (data.source === 'local_server') {
+                            localPrinterAgentUrl = null;
+                            updatePrinterAgentStatusUI('connected', 'Printer Terdeteksi: Server Windows (' + data.printers.length + ' printer)', 'Terhubung langsung ke server printer.');
+                        } else {
+                            updatePrinterAgentStatusUI('connected', 'Printer Terdeteksi (' + data.printers.length + ' printer)');
+                        }
+                    } else {
+                        // Tidak ada printer agen untuk device_id PC ini
+                        cachedWindowsPrinters = [];
+                        populatePrinterSelects([], null);
+                        updatePrinterAgentStatusUI('warning', 'Printer belum terdeteksi di PC ini');
+                    }
+                    if (isManual) showToast("Status deteksi printer diperbarui.", "info");
+                    return data;
+                })
+                .catch(function(err) {
+                    cachedWindowsPrinters = [];
+                    populatePrinterSelects([], null);
+                    updatePrinterAgentStatusUI('warning', 'Gagal memeriksa koneksi printer');
+                    console.warn("Gagal memuat printer:", err);
+                });
+        });
     }
 
     function populatePrinterSelects(printers, defPrinter) {
@@ -5488,27 +6231,27 @@
 
         var htmlOptions = '';
         if (!printers || printers.length === 0) {
-            htmlOptions = '<option value="">-- Tidak ada printer terpasang --</option>';
-        } else {
-            printers.forEach(function(p) {
-                var defTag = p.is_default ? ' (Default)' : '';
-                htmlOptions += '<option value="' + escapeHtml(p.name) + '">' + escapeHtml(p.name) + ' [' + escapeHtml(p.port || 'USB') + ']' + defTag + '</option>';
-            });
+            htmlOptions = '<option value="">-- Belum ada printer terdeteksi di PC ini (Jalankan Tool Agent) --</option>';
+            if (notaSel) notaSel.innerHTML = htmlOptions;
+            if (labelSel) labelSel.innerHTML = htmlOptions;
+            return;
         }
+
+        printers.forEach(function(p) {
+            var defTag = p.is_default ? ' (Default)' : '';
+            htmlOptions += '<option value="' + escapeHtml(p.name) + '">' + escapeHtml(p.name) + ' [' + escapeHtml(p.port || 'USB') + ']' + defTag + '</option>';
+        });
 
         if (notaSel) {
             notaSel.innerHTML = htmlOptions;
             if (savedNotaP && printers.some(function(p) { return p.name === savedNotaP; })) {
                 notaSel.value = savedNotaP;
-            } else {
-                // Auto-detect POS-58
-                var foundPos58 = printers.find(function(p) { return p.name.toLowerCase().includes('58'); });
-                if (foundPos58) {
-                    notaSel.value = foundPos58.name;
-                    localStorage.setItem('autocash_nota_printer_name', foundPos58.name);
-                } else if (defPrinter) {
-                    notaSel.value = defPrinter;
-                }
+            } else if (defPrinter && printers.some(function(p) { return p.name === defPrinter; })) {
+                notaSel.value = defPrinter;
+                localStorage.setItem('autocash_nota_printer_name', defPrinter);
+            } else if (printers.length > 0) {
+                notaSel.value = printers[0].name;
+                localStorage.setItem('autocash_nota_printer_name', printers[0].name);
             }
         }
 
@@ -5517,13 +6260,14 @@
             if (savedLabelP && printers.some(function(p) { return p.name === savedLabelP; })) {
                 labelSel.value = savedLabelP;
             } else {
-                // Auto-detect 80Label atau label printer
                 var foundLabel = printers.find(function(p) { return p.name.toLowerCase().includes('label'); });
                 if (foundLabel) {
                     labelSel.value = foundLabel.name;
                     localStorage.setItem('autocash_label_printer_name', foundLabel.name);
-                } else if (defPrinter) {
+                } else if (defPrinter && printers.some(function(p) { return p.name === defPrinter; })) {
                     labelSel.value = defPrinter;
+                } else if (printers.length > 0) {
+                    labelSel.value = printers[0].name;
                 }
             }
         }
@@ -5552,13 +6296,28 @@
     }
 
     function testPrintReceipt() {
-        var sel = document.getElementById('settingNotaPrinterDevice');
-        var pName = (sel && sel.value) ? sel.value : (localStorage.getItem('autocash_nota_printer_name') || '80Label Printer ( USB )');
-        var pWidth = document.getElementById('settingNotaPaperSize') ? document.getElementById('settingNotaPaperSize').value : '78x98';
-        var pDensity = document.getElementById('settingPrintDensity') ? document.getElementById('settingPrintDensity').value : 'high';
+        var notaConn = localStorage.getItem('autocash_nota_connection') || 'browser';
+        if (notaConn === 'browser') {
+            var receiptArea = document.getElementById('receiptPrintArea');
+            if (receiptArea && receiptArea.innerHTML.trim().length > 30) {
+                printViaBrowser('print-mode-receipt');
+            } else if (services && services.length > 0) {
+                renderReceiptService(services[0], 'masuk');
+                printViaBrowser('print-mode-receipt');
+            } else {
+                showToast("Buka salah satu nota servis terlebih dahulu untuk uji cetak via browser.", "info");
+            }
+            return;
+        }
 
-        if (!pName) {
-            pName = '80Label Printer ( USB )';
+        var sel = document.getElementById('settingNotaPrinterDevice');
+        var pName = (sel && sel.value) ? sel.value : (localStorage.getItem('autocash_nota_printer_name') || '');
+        var pWidth = document.getElementById('settingNotaPaperSize') ? document.getElementById('settingNotaPaperSize').value : ((currentReceiptPaperSize === '58') ? '58' : '80');
+        var pDensity = document.getElementById('settingPrintDensity') ? document.getElementById('settingPrintDensity').value : (localStorage.getItem('autocash_print_density') || 'high');
+
+        if (!pName || pName.includes('Belum ada printer')) {
+            showToast("⚠️ Belum ada printer nota yang terdeteksi di PC ini. Silakan jalankan 'Jalankan_Printer_Agent.bat' di PC ini.", "warning");
+            return;
         }
         showToast("Mengirim uji cetak thermal ke '" + pName + "'...", "info");
 
@@ -5566,7 +6325,8 @@
             printer_name: pName,
             type: 'receipt',
             paper_width: pWidth,
-            density: pDensity
+            density: pDensity,
+            device_id: getDeviceId()
         };
 
         function sendTestRequest(url, fallbackToRelative) {
@@ -5596,18 +6356,34 @@
             });
         }
 
-        var isRemoteHost = (window.location.hostname !== '127.0.0.1' && window.location.hostname !== 'localhost');
-        if (isRemoteHost) {
-            sendTestRequest('http://127.0.0.1:8080/api/print/test', true);
+        if (localPrinterAgentUrl) {
+            sendTestRequest(localPrinterAgentUrl + '/api/print/test', true);
         } else {
             sendTestRequest('/api/print/test', false);
         }
     }
 
     function testPrintLabel() {
+        var labelConn = localStorage.getItem('autocash_label_connection') || 'browser';
+        if (labelConn === 'browser') {
+            var sizeParts = currentLabelSize.split('x');
+            var w = parseInt(sizeParts[0]) || 40;
+            var h = parseInt(sizeParts[1]) || 30;
+            var mode = 'print-mode-label-' + currentLabelSize.replace('x', '');
+            if (activeReceiptService) {
+                printViaBrowser(mode, w, h);
+            } else if (services && services.length > 0) {
+                renderReceiptService(services[0], 'masuk');
+                printViaBrowser(mode, w, h);
+            } else {
+                showToast("Buka salah satu tiket servis untuk uji cetak label via browser.", "info");
+            }
+            return;
+        }
+
         var sel = document.getElementById('settingLabelPrinterDevice');
         var pName = sel ? sel.value : (localStorage.getItem('autocash_label_printer_name') || '');
-        var pSize = document.getElementById('settingLabelPaperSize') ? document.getElementById('settingLabelPaperSize').value : '40x30';
+        var pSize = document.getElementById('settingLabelPaperSize') ? document.getElementById('settingLabelPaperSize').value : '40x20';
         var pMode = document.getElementById('settingLabelCommandMode') ? document.getElementById('settingLabelCommandMode').value : 'tspl';
 
         if (!pName) {
@@ -5615,26 +6391,50 @@
             return;
         }
         showToast("Mengirim uji cetak stiker ke '" + pName + "'...", "info");
-        fetch('/api/print/test', {
+        var payload = {
+            printer_name: pName,
+            type: 'label',
+            label_size: pSize,
+            mode: pMode,
+            device_id: getDeviceId()
+        };
+
+        var targetUrl = localPrinterAgentUrl ? (localPrinterAgentUrl + '/api/print/test') : '/api/print/test';
+        fetch(targetUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                printer_name: pName,
-                type: 'label',
-                label_size: pSize,
-                mode: pMode
-            })
+            body: JSON.stringify(payload)
         })
         .then(function(r) { return r.json(); })
         .then(function(res) {
             if (res.success) {
                 showToast("✅ " + res.message, "success");
+            } else if (localPrinterAgentUrl) {
+                fetch('/api/print/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                }).then(function(r2) { return r2.json(); }).then(function(res2) {
+                    if (res2.success) showToast("✅ " + res2.message, "success");
+                    else showToast("❌ " + res2.message, "error");
+                });
             } else {
                 showToast("❌ " + res.message, "error");
             }
         })
         .catch(function(err) {
-            showToast("Gagal uji cetak label: " + err, "error");
+            if (localPrinterAgentUrl) {
+                fetch('/api/print/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                }).then(function(r2) { return r2.json(); }).then(function(res2) {
+                    if (res2.success) showToast("✅ " + res2.message, "success");
+                    else showToast("❌ " + res2.message, "error");
+                });
+            } else {
+                showToast("Gagal uji cetak label: " + err, "error");
+            }
         });
     }
 
@@ -5650,11 +6450,24 @@
         var rSelG = document.getElementById('rSelectGaransi');
         if (rSelG) sCopy.garansi = rSelG.value;
 
-        var pWidth = currentReceiptPaperSize || '78x98';
-        var pName = localStorage.getItem('autocash_nota_printer_name') || '80Label Printer ( USB )';
-        var pDensity = localStorage.getItem('autocash_print_density') || 'high';
+        // Mode Cetak Browser: Paling Mudah, Universal & Pasti Keluar Kertas
+        var notaConn = localStorage.getItem('autocash_nota_connection') || 'browser';
+        if (notaConn === 'browser') {
+            var w = (currentReceiptPaperSize === '58') ? 58 : 80;
+            var h = 100;
+            printViaBrowser('print-mode-receipt', w, h);
+            return;
+        }
 
-        showToast("⚡ Mengirim nota langsung ke printer thermal (" + pWidth + ")...", "info");
+        var pWidth = (currentReceiptPaperSize === '58') ? '58' : '80';
+        var pName = localStorage.getItem('autocash_nota_printer_name') || '';
+        if (!pName || pName.includes('Belum ada printer')) {
+            showToast("⚠️ Belum ada printer nota terdeteksi di PC ini. Jalankan 'Jalankan_Printer_Agent.bat' di PC ini.", "warning");
+            return;
+        }
+        var pDensity = localStorage.getItem('autocash_print_density') || 'high';
+        var isLabelPrinter = (pName.toLowerCase().includes('label') || pName.toLowerCase().includes('xp-365') || pName.toLowerCase().includes('barcode'));
+        var pMode = (pWidth === '58') ? 'escpos' : (isLabelPrinter ? 'tspl' : 'escpos');
 
         var payload = {
             service_id: sCopy.id,
@@ -5663,7 +6476,7 @@
             paper_width: pWidth,
             receipt_type: currentReceiptType,
             density: pDensity,
-            mode: 'tspl',
+            mode: pMode,
             store_profile: currentStoreProfile
         };
 
@@ -5694,12 +6507,38 @@
             });
         }
 
+        var isHttps = (window.location.protocol === 'https:');
         var isRemoteHost = (window.location.hostname !== '127.0.0.1' && window.location.hostname !== 'localhost');
-        if (isRemoteHost) {
-            // Ketika dibuka dari IP Ubuntu (192.168.1.8), kirim langsung ke printer di PC Windows kasir (127.0.0.1:8080)
-            sendPrintRequest('http://127.0.0.1:8080/api/print/receipt', true);
+        var receiptEl = document.getElementById('receiptPrintArea');
+
+        payload.device_id = getDeviceId();
+
+        var executeSend = function() {
+            if (localPrinterAgentUrl) {
+                sendPrintRequest(localPrinterAgentUrl + '/api/print/receipt', true);
+            } else if (isRemoteHost && !isHttps) {
+                // Ketika dibuka dari IP lokal HTTP (192.168.1.8), kirim langsung ke printer di PC Windows kasir (127.0.0.1:8080)
+                sendPrintRequest('http://127.0.0.1:8080/api/print/receipt', true);
+            } else {
+                sendPrintRequest('/api/print/receipt', false);
+            }
+        };
+
+        if (typeof html2canvas === 'function' && receiptEl) {
+            showToast("⚡ Memproses cetak grafis presisi 100% identik layar...", "info", 1500);
+            html2canvas(receiptEl, {
+                scale: 2,
+                backgroundColor: '#ffffff'
+            }).then(function(canvas) {
+                payload.image_data = canvas.toDataURL('image/png');
+                executeSend();
+            }).catch(function(err) {
+                console.warn("html2canvas error, fallback teks:", err);
+                executeSend();
+            });
         } else {
-            sendPrintRequest('/api/print/receipt', false);
+            showToast("⚡ Mengirim nota langsung ke printer thermal (" + pWidth + "mm)...", "info");
+            executeSend();
         }
     }
 
@@ -5707,41 +6546,92 @@
         if (!activeReceiptService) return;
         var sizeParts = currentLabelSize.split('x');
         var w = parseInt(sizeParts[0]) || 40;
-        var h = parseInt(sizeParts[1]) || 30;
+        var h = parseInt(sizeParts[1]) || 20;
         var mode = 'print-mode-label-' + currentLabelSize.replace('x', '');
 
-        var labelConn = localStorage.getItem('autocash_label_connection') || 'direct_backend';
+        // Prioritaskan Direct Hardware TSPL (0 detik, tanpa dialog Windows, 100% instan)
+        var labelConn = localStorage.getItem('autocash_label_connection');
+        if (!labelConn) {
+            labelConn = (cachedWindowsPrinters && cachedWindowsPrinters.length > 0) ? 'USB' : 'browser';
+            localStorage.setItem('autocash_label_connection', labelConn);
+        }
 
-        if (labelConn === 'direct_backend') {
-            var pName = localStorage.getItem('autocash_label_printer_name') || '';
+        if (labelConn === 'browser') {
+            printViaBrowser(mode, w, h);
+            return;
+        }
+
+        if (labelConn === 'direct_backend' || labelConn === 'USB') {
+            var pName = localStorage.getItem('autocash_label_printer_name') || '80Label Printer';
             var lblMode = localStorage.getItem('autocash_label_mode') || 'tspl';
-            showToast("⚡ Mencetak Label Stiker (" + currentLabelSize + "mm) via Direct Backend...", "info");
+            showToast("⚡ Mencetak Label Stiker (" + currentLabelSize + "mm)...", "info");
 
-            fetch('/api/print/label', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    service_id: activeReceiptService.id,
-                    service: activeReceiptService,
-                    printer_name: pName,
-                    label_size: currentLabelSize,
-                    mode: lblMode,
-                    store_profile: currentStoreProfile
+            var labelPayload = {
+                service_id: activeReceiptService.id,
+                service: activeReceiptService,
+                printer_name: pName,
+                label_size: currentLabelSize,
+                mode: lblMode,
+                store_profile: currentStoreProfile,
+                device_id: getDeviceId()
+            };
+
+            var sendLabelJob = function() {
+                var targetUrl = localPrinterAgentUrl ? (localPrinterAgentUrl + '/api/print/label') : '/api/print/label';
+                fetch(targetUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(labelPayload)
                 })
-            })
-            .then(function(r) { return r.json(); })
-            .then(function(res) {
-                if (res.success) {
-                    showToast("🏷️ " + res.message, "success");
-                } else {
-                    showToast("Direct label gagal (" + res.message + "). Membuka driver browser...", "warning");
-                    printViaBrowser(mode, w, h);
-                }
-            })
-            .catch(function(err) {
-                showToast("Koneksi label error. Membuka driver browser...", "warning");
-                printViaBrowser(mode, w, h);
-            });
+                .then(function(r) { return r.json(); })
+                .then(function(res) {
+                    if (res.success) {
+                        showToast("🏷️ " + res.message, "success");
+                    } else if (localPrinterAgentUrl) {
+                        fetch('/api/print/label', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(labelPayload)
+                        }).then(function(r2) { return r2.json(); }).then(function(res2) {
+                            if (res2.success) showToast("🏷️ " + res2.message, "success");
+                            else {
+                                showToast("Direct label gagal (" + res2.message + "). Membuka driver browser...", "warning");
+                                printViaBrowser(mode, w, h);
+                            }
+                        });
+                    } else {
+                        showToast("Direct label gagal (" + res.message + "). Membuka driver browser...", "warning");
+                        printViaBrowser(mode, w, h);
+                    }
+                })
+                .catch(function(err) {
+                    if (localPrinterAgentUrl) {
+                        fetch('/api/print/label', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(labelPayload)
+                        }).then(function(r2) { return r2.json(); }).then(function(res2) {
+                            if (res2.success) showToast("🏷️ " + res2.message, "success");
+                            else printViaBrowser(mode, w, h);
+                        });
+                    } else {
+                        showToast("Koneksi label error. Membuka driver browser...", "warning");
+                        printViaBrowser(mode, w, h);
+                    }
+                });
+            };
+
+            var labelEl = document.getElementById('labelPrintArea');
+            if (typeof html2canvas === 'function' && labelEl) {
+                html2canvas(labelEl, { scale: 2, backgroundColor: '#ffffff', logging: false }).then(function(canvas) {
+                    labelPayload.image_data = canvas.toDataURL('image/png');
+                    sendLabelJob();
+                }).catch(function() {
+                    sendLabelJob();
+                });
+            } else {
+                sendLabelJob();
+            }
             return;
         }
 
@@ -5793,7 +6683,8 @@
                     density: pDensity,
                     label_mode: lblMode,
                     receipt_type: currentReceiptType,
-                    store_profile: currentStoreProfile
+                    store_profile: currentStoreProfile,
+                    device_id: getDeviceId()
                 })
             })
             .then(function(r) { return r.json(); })
@@ -5935,7 +6826,7 @@
         var addrEl = document.getElementById('rStoreAddress');
         var phoneEl = document.getElementById('rStorePhone');
 
-        var storeName = (currentStoreProfile && currentStoreProfile.name) ? currentStoreProfile.name : 'AUTOCASH SERVIS';
+        var storeName = (currentStoreProfile && currentStoreProfile.name) ? currentStoreProfile.name : 'DHANZCELL SMARTPHONE';
         var storeAddress = (currentStoreProfile && currentStoreProfile.address) ? currentStoreProfile.address : '';
         var storePhone = (currentStoreProfile && currentStoreProfile.phone) ? currentStoreProfile.phone : '';
 
@@ -5952,10 +6843,32 @@
         }
         if (phoneEl) {
             if (storePhone) {
-                phoneEl.innerText = 'Telp/WA: ' + storePhone;
+                phoneEl.innerText = 'Telp / WA: ' + storePhone;
                 phoneEl.style.display = 'block';
             } else {
                 phoneEl.style.display = 'none';
+            }
+        }
+
+        // Update WhatsApp E-Nota Digital Header
+        var waTitle = document.getElementById('waStoreTitle');
+        var waAddr = document.getElementById('waStoreAddress');
+        var waPhone = document.getElementById('waStorePhone');
+        if (waTitle) waTitle.innerText = storeName;
+        if (waAddr) {
+            if (storeAddress) {
+                waAddr.innerText = storeAddress;
+                waAddr.style.display = 'block';
+            } else {
+                waAddr.style.display = 'none';
+            }
+        }
+        if (waPhone) {
+            if (storePhone) {
+                waPhone.innerText = 'Telp/WA: ' + storePhone;
+                waPhone.style.display = 'block';
+            } else {
+                waPhone.style.display = 'none';
             }
         }
     }
@@ -6237,22 +7150,33 @@
 
                     if (s.nota_connection) localStorage.setItem('autocash_nota_connection', s.nota_connection);
                     if (s.label_connection) localStorage.setItem('autocash_label_connection', s.label_connection);
-                    if (s.nota_printer_name) localStorage.setItem('autocash_nota_printer_name', s.nota_printer_name);
-                    if (s.label_printer_name) localStorage.setItem('autocash_label_printer_name', s.label_printer_name);
+                    
+                    // Setting printer fisik adalah perangkat lokal per-komputer (jangan timpa printer PC klien dengan nama printer toko server)
+                    var isPublicHost = (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' && !window.location.hostname.startsWith('192.168.'));
+                    if (!isPublicHost) {
+                        if (s.nota_printer_name && !localStorage.getItem('autocash_nota_printer_name')) localStorage.setItem('autocash_nota_printer_name', s.nota_printer_name);
+                        if (s.label_printer_name && !localStorage.getItem('autocash_label_printer_name')) localStorage.setItem('autocash_label_printer_name', s.label_printer_name);
+                    }
                     if (s.print_density) localStorage.setItem('autocash_print_density', s.print_density);
                     if (s.label_mode) localStorage.setItem('autocash_label_mode', s.label_mode);
 
                     var setNotaConn = document.getElementById('settingNotaConnection');
-                    if (setNotaConn) setNotaConn.value = localStorage.getItem('autocash_nota_connection') || 'direct_backend';
+                    if (setNotaConn) {
+                        var sc = localStorage.getItem('autocash_nota_connection') || 'browser';
+                        setNotaConn.value = (sc === 'USB') ? 'USB' : 'browser';
+                    }
                     var setLabelConn = document.getElementById('settingLabelConnection');
-                    if (setLabelConn) setLabelConn.value = localStorage.getItem('autocash_label_connection') || 'direct_backend';
+                    if (setLabelConn) {
+                        var slc = localStorage.getItem('autocash_label_connection') || 'browser';
+                        setLabelConn.value = (slc === 'USB') ? 'USB' : 'browser';
+                    }
                     var setDensity = document.getElementById('settingPrintDensity');
                     if (setDensity) setDensity.value = localStorage.getItem('autocash_print_density') || 'high';
                     var setLabelMode = document.getElementById('settingLabelCommandMode');
                     if (setLabelMode) setLabelMode.value = localStorage.getItem('autocash_label_mode') || 'tspl';
 
                     var setNotaSize = document.getElementById('settingNotaPaperSize');
-                    if (setNotaSize) setNotaSize.value = currentReceiptPaperSize;
+                    if (setNotaSize) setNotaSize.value = (currentReceiptPaperSize === '58') ? '58' : '80';
                     var setLabelSize = document.getElementById('settingLabelPaperSize');
                     if (setLabelSize) setLabelSize.value = currentLabelSize;
                     var setAutoCheck = document.getElementById('settingAutoPrintLabelCheck');
@@ -6317,6 +7241,8 @@
         if (preview) preview.src = url;
         var receiptLogo = document.getElementById('receiptLogo');
         if (receiptLogo) receiptLogo.src = url;
+        var waLogo = document.getElementById('waLogo');
+        if (waLogo) waLogo.src = url;
         var loginLogo = document.getElementById('loginLogoImg');
         if (loginLogo) loginLogo.src = url;
         var label = document.getElementById('logoStatusLabel');
@@ -6389,8 +7315,8 @@
         var setLabelSize = document.getElementById('settingLabelPaperSize') ? document.getElementById('settingLabelPaperSize').value : currentLabelSize;
         var setAutoPrint = document.getElementById('settingAutoPrintLabelCheck') ? document.getElementById('settingAutoPrintLabelCheck').checked : autoPrintLabel;
         var setDelay = document.getElementById('settingPrintDelay') ? document.getElementById('settingPrintDelay').value : '800';
-        var setNotaConn = document.getElementById('settingNotaConnection') ? document.getElementById('settingNotaConnection').value : 'direct_backend';
-        var setLabelConn = document.getElementById('settingLabelConnection') ? document.getElementById('settingLabelConnection').value : 'direct_backend';
+        var setNotaConn = document.getElementById('settingNotaConnection') ? document.getElementById('settingNotaConnection').value : 'browser';
+        var setLabelConn = document.getElementById('settingLabelConnection') ? document.getElementById('settingLabelConnection').value : 'browser';
         var setNotaP = document.getElementById('settingNotaPrinterDevice') ? document.getElementById('settingNotaPrinterDevice').value : '';
         var setLabelP = document.getElementById('settingLabelPrinterDevice') ? document.getElementById('settingLabelPrinterDevice').value : '';
         var setDensity = document.getElementById('settingPrintDensity') ? document.getElementById('settingPrintDensity').value : 'high';
@@ -6628,11 +7554,13 @@
     }
 
     // ========================================================
-    // MODAL POPUP: PENGATURAN DUAL PRINTER (NOTA & LABEL)
+    // MODAL POPUP: PENGATURAN PRINTER (NOTA & LABEL)
     // ========================================================
+    var printerSettingsPollInterval = null;
+
     function openPrinterSettingsModal() {
         var setNotaSize = document.getElementById('settingNotaPaperSize');
-        if (setNotaSize) setNotaSize.value = currentReceiptPaperSize;
+        if (setNotaSize) setNotaSize.value = (currentReceiptPaperSize === '58') ? '58' : '80';
         var setLabelSize = document.getElementById('settingLabelPaperSize');
         if (setLabelSize) setLabelSize.value = currentLabelSize;
         var setAutoCheck = document.getElementById('settingAutoPrintLabelCheck');
@@ -6641,21 +7569,43 @@
         if (setDelay) setDelay.value = String(currentPrintDelayMs);
 
         var setNotaConn = document.getElementById('settingNotaConnection');
-        if (setNotaConn) setNotaConn.value = localStorage.getItem('autocash_nota_connection') || 'direct_backend';
+        if (setNotaConn) {
+            var sc = localStorage.getItem('autocash_nota_connection') || 'browser';
+            setNotaConn.value = (sc === 'USB') ? 'USB' : 'browser';
+        }
         var setLabelConn = document.getElementById('settingLabelConnection');
-        if (setLabelConn) setLabelConn.value = localStorage.getItem('autocash_label_connection') || 'direct_backend';
+        if (setLabelConn) {
+            var slc = localStorage.getItem('autocash_label_connection') || 'browser';
+            setLabelConn.value = (slc === 'USB') ? 'USB' : 'browser';
+        }
         var setDensity = document.getElementById('settingPrintDensity');
         if (setDensity) setDensity.value = localStorage.getItem('autocash_print_density') || 'high';
         var setLabelMode = document.getElementById('settingLabelCommandMode');
         if (setLabelMode) setLabelMode.value = localStorage.getItem('autocash_label_mode') || 'tspl';
 
-        loadAvailablePrinters();
+        loadAvailablePrinters(true);
+
+        // Auto-poll setiap 2.5 detik selama modal terbuka agar deteksi printer terjadi seketika saat agen dijalankan
+        if (printerSettingsPollInterval) clearInterval(printerSettingsPollInterval);
+        printerSettingsPollInterval = setInterval(function() {
+            var modal = document.getElementById('printerSettingsModal');
+            if (modal && modal.style.display !== 'none') {
+                loadAvailablePrinters(false);
+            } else {
+                clearInterval(printerSettingsPollInterval);
+                printerSettingsPollInterval = null;
+            }
+        }, 2500);
 
         var modal = document.getElementById('printerSettingsModal');
         if (modal) modal.style.display = 'flex';
     }
 
     function closePrinterSettingsModal() {
+        if (printerSettingsPollInterval) {
+            clearInterval(printerSettingsPollInterval);
+            printerSettingsPollInterval = null;
+        }
         var modal = document.getElementById('printerSettingsModal');
         if (modal) modal.style.display = 'none';
     }
@@ -6665,14 +7615,14 @@
         var setLabelSize = document.getElementById('settingLabelPaperSize') ? document.getElementById('settingLabelPaperSize').value : currentLabelSize;
         var setAutoPrint = document.getElementById('settingAutoPrintLabelCheck') ? document.getElementById('settingAutoPrintLabelCheck').checked : autoPrintLabel;
         var setDelay = document.getElementById('settingPrintDelay') ? document.getElementById('settingPrintDelay').value : '800';
-        var setNotaConn = document.getElementById('settingNotaConnection') ? document.getElementById('settingNotaConnection').value : 'direct_backend';
-        var setLabelConn = document.getElementById('settingLabelConnection') ? document.getElementById('settingLabelConnection').value : 'direct_backend';
+        var setNotaConn = document.getElementById('settingNotaConnection') ? document.getElementById('settingNotaConnection').value : 'browser';
+        var setLabelConn = document.getElementById('settingLabelConnection') ? document.getElementById('settingLabelConnection').value : 'browser';
         var setNotaP = document.getElementById('settingNotaPrinterDevice') ? document.getElementById('settingNotaPrinterDevice').value : '';
         var setLabelP = document.getElementById('settingLabelPrinterDevice') ? document.getElementById('settingLabelPrinterDevice').value : '';
-        var setDensity = document.getElementById('settingPrintDensity') ? document.getElementById('settingPrintDensity').value : 'high';
+        var setDensity = document.getElementById('settingPrintDensity') ? document.getElementById('settingPrintDensity').value : (localStorage.getItem('autocash_print_density') || 'high');
         var setLabelMode = document.getElementById('settingLabelCommandMode') ? document.getElementById('settingLabelCommandMode').value : 'tspl';
 
-        currentReceiptPaperSize = setNotaSize;
+        currentReceiptPaperSize = (setNotaSize === '58') ? '58' : '80';
         currentLabelSize = setLabelSize;
         autoPrintLabel = setAutoPrint;
         currentPrintDelayMs = parseInt(setDelay) || 800;
@@ -6714,7 +7664,7 @@
             })
         }).catch(function(e) { console.error("Gagal simpan pengaturan printer ke server:", e); });
 
-        showToast("Pengaturan Dual Printer berhasil disimpan!", "success");
+        showToast("Pengaturan Printer berhasil disimpan!", "success");
         closePrinterSettingsModal();
     }
 
@@ -6734,7 +7684,7 @@
         document.documentElement.setAttribute('data-theme', curTheme);
         updateThemeButton(curTheme, curRole);
         var setNotaSize = document.getElementById('settingNotaPaperSize');
-        if (setNotaSize) setNotaSize.value = currentReceiptPaperSize;
+        if (setNotaSize) setNotaSize.value = (currentReceiptPaperSize === '58') ? '58' : '80';
         var setLabelSize = document.getElementById('settingLabelPaperSize');
         if (setLabelSize) setLabelSize.value = currentLabelSize;
         var setAutoCheck = document.getElementById('settingAutoPrintLabelCheck');
@@ -6745,9 +7695,15 @@
         if (setWa) setWa.value = localStorage.getItem('autocash_wa_target') || 'desktop';
 
         var setNotaConn = document.getElementById('settingNotaConnection');
-        if (setNotaConn) setNotaConn.value = localStorage.getItem('autocash_nota_connection') || 'direct_backend';
+        if (setNotaConn) {
+            var sc = localStorage.getItem('autocash_nota_connection') || 'browser';
+            setNotaConn.value = (sc === 'USB') ? 'USB' : 'browser';
+        }
         var setLabelConn = document.getElementById('settingLabelConnection');
-        if (setLabelConn) setLabelConn.value = localStorage.getItem('autocash_label_connection') || 'direct_backend';
+        if (setLabelConn) {
+            var slc = localStorage.getItem('autocash_label_connection') || 'browser';
+            setLabelConn.value = (slc === 'USB') ? 'USB' : 'browser';
+        }
         var setDensity = document.getElementById('settingPrintDensity');
         if (setDensity) setDensity.value = localStorage.getItem('autocash_print_density') || 'high';
         var setLabelMode = document.getElementById('settingLabelCommandMode');
@@ -8030,7 +8986,10 @@
         transactions.forEach(function(t) {
             var wInfo = getWeekRangeLabel(t.tanggal);
             if (!weeklyMap[wInfo.key]) {
-                weeklyMap[wInfo.key] = { label: wInfo.label, count: 0, omset: 0, spp: 0, opp: 0, jasa: 0, hasil: 0 };
+                weeklyMap[wInfo.key] = { label: wInfo.label, daysSet: {}, count: 0, omset: 0, spp: 0, opp: 0, jasa: 0, hasil: 0 };
+            }
+            if (t.tanggal) {
+                weeklyMap[wInfo.key].daysSet[t.tanggal] = true;
             }
             weeklyMap[wInfo.key].count++;
             weeklyMap[wInfo.key].omset += (t.omset || 0);
@@ -8046,6 +9005,7 @@
 
         wKeys.forEach(function(wKey) {
             var item = weeklyMap[wKey];
+            var daysCount = Object.keys(item.daysSet).length;
             var kas = item.hasil * 0.30;
             var bonus = item.hasil * 0.10;
 
@@ -8054,7 +9014,7 @@
 
             wBody.innerHTML += '<tr>' +
                 '<td><b>' + item.label + '</b></td>' +
-                '<td style="text-align: center;">' + item.count + ' hari</td>' +
+                '<td style="text-align: center;">' + daysCount + ' hari</td>' +
                 '<td class="text-right">' + formatRupiah(item.omset) + '</td>' +
                 '<td class="text-right">' + formatRupiah(item.spp) + '</td>' +
                 '<td class="text-right">' + formatRupiah(item.opp) + '</td>' +
@@ -8081,7 +9041,10 @@
         transactions.forEach(function(t) {
             var mKey = t.tanggal.substring(0, 7); // YYYY-MM
             if (!monthlyMap[mKey]) {
-                monthlyMap[mKey] = { count: 0, omset: 0, spp: 0, opp: 0, jasa: 0, hasil: 0 };
+                monthlyMap[mKey] = { daysSet: {}, count: 0, omset: 0, spp: 0, opp: 0, jasa: 0, hasil: 0 };
+            }
+            if (t.tanggal) {
+                monthlyMap[mKey].daysSet[t.tanggal] = true;
             }
             monthlyMap[mKey].count++;
             monthlyMap[mKey].omset += (t.omset || 0);
@@ -8097,6 +9060,7 @@
 
         mKeys.forEach(function(mKey) {
             var item = monthlyMap[mKey];
+            var daysCount = Object.keys(item.daysSet).length;
             var kas = item.hasil * 0.30;
             var bonus = item.hasil * 0.10;
             var dateObj = new Date(mKey + '-01');
@@ -8107,7 +9071,7 @@
 
             mBody.innerHTML += '<tr>' +
                 '<td><b>' + mName + '</b></td>' +
-                '<td style="text-align: center;">' + item.count + ' hari</td>' +
+                '<td style="text-align: center;">' + daysCount + ' hari</td>' +
                 '<td class="text-right">' + formatRupiah(item.omset) + '</td>' +
                 '<td class="text-right">' + formatRupiah(item.spp) + '</td>' +
                 '<td class="text-right">' + formatRupiah(item.opp) + '</td>' +
@@ -8961,6 +9925,16 @@
     function openServiceDetailModal(id) {
         var s = services.find(function(item) { return item.id === id; });
         if (!s) return;
+
+        // Role Teknisi: 1 Akun hanya bisa melihat riwayat servisan mereka sendiri
+        var isTeknisi = currentUser && currentUser.role === 'teknisi';
+        var myName = (currentUser ? (currentUser.fullname || currentUser.username) : '').toLowerCase();
+        var myUser = (currentUser ? currentUser.username : '').toLowerCase();
+        var sTek = (s.teknisi_nama || '').toLowerCase();
+        var sCrt = (s.created_by || '').toLowerCase();
+        var isMyTicket = (sTek === myName || sTek === myUser || sCrt === myUser);
+        var isUnassigned = !s.teknisi_nama || s.teknisi_nama.trim() === '' || s.teknisi_nama === '-' || s.teknisi_nama.toLowerCase() === 'null';
+
         currentDetailServiceId = s.id;
 
         var dtlKode = document.getElementById('dtlKodeServis');
@@ -8972,6 +9946,7 @@
             var st = s.status_servis;
             var badgeClass = 'badge-baru';
             if (st === 'Instan' || s.menu_servis === 'Servis Instan') badgeClass = 'badge-instan';
+            else if (st === 'Claim Garansi') badgeClass = 'badge-claim';
             else if (st === 'Sedang Dikerjakan') badgeClass = 'badge-proses';
             else if (st === 'Selesai') badgeClass = 'badge-selesai';
             else if (st === 'Diambil') badgeClass = 'badge-diambil';
@@ -9059,11 +10034,18 @@
 
         // Biaya & Status Bayar
         var estBiayaEl = document.getElementById('dtlEstimasiBiaya');
-        if (estBiayaEl) estBiayaEl.innerText = 'Rp ' + Number(s.estimasi_biaya || 0).toLocaleString('id-ID');
-
-        var finBiaya = (s.biaya_akhir || s.estimasi_biaya || 0);
         var finBiayaEl = document.getElementById('dtlBiayaAkhir');
-        if (finBiayaEl) finBiayaEl.innerText = 'Rp ' + Number(finBiaya).toLocaleString('id-ID');
+
+        // Proteksi Biaya: Cukup dengan ikon gembok saja untuk tiket teknisi lain
+        if (isTeknisi && !isUnassigned && !isMyTicket) {
+            if (estBiayaEl) estBiayaEl.innerHTML = '<span style="font-size:15px; opacity:0.85;" title="Dikerjakan teknisi lain">🔒</span>';
+            if (finBiayaEl) finBiayaEl.innerHTML = '<span style="font-size:15px; opacity:0.85;" title="Dikerjakan teknisi lain">🔒</span>';
+            if (sppBox) sppBox.style.display = 'none';
+        } else {
+            if (estBiayaEl) estBiayaEl.innerText = 'Rp ' + Number(s.estimasi_biaya || 0).toLocaleString('id-ID');
+            var finBiaya = (s.biaya_akhir || s.estimasi_biaya || 0);
+            if (finBiayaEl) finBiayaEl.innerText = 'Rp ' + Number(finBiaya).toLocaleString('id-ID');
+        }
 
         // Tampilkan garansi di detail popup
         var dtlGBox = document.getElementById('dtlGaransiContainer');
@@ -9097,9 +10079,11 @@
             if (takeContainer) takeContainer.innerHTML = '';
         }
 
-        // Tombol cetak nota dari modal
+        // Tombol cetak nota dari modal (sembunyikan untuk role teknisi)
         var btnPrint = document.getElementById('dtlBtnPrintReceipt');
         if (btnPrint) {
+            var isTek = (currentUser && currentUser.role === 'teknisi');
+            btnPrint.style.display = isTek ? 'none' : 'inline-block';
             btnPrint.onclick = function() {
                 openReceiptModal(s.id);
             };
@@ -9156,7 +10140,10 @@
             body: JSON.stringify({
                 id: parseInt(serviceId),
                 status_servis: 'Sedang Dikerjakan',
-                teknisi_nama: myName
+                teknisi_nama: myName,
+                role: 'teknisi',
+                actor: myName,
+                username: (user && user.username) ? user.username : ''
             })
         })
         .then(function(res) {

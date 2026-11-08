@@ -14,6 +14,7 @@ import shutil
 import threading
 import signal
 import time
+import random
 
 try:
     import printer_service
@@ -343,12 +344,25 @@ def generate_service_code(cursor):
         new_num = 1
     return f"{prefix}{new_num:03d}"
 
+def capitalize_words(text):
+    """Mengubah huruf pertama setiap kata menjadi huruf besar (Title Case)"""
+    if not text or not isinstance(text, str):
+        return text
+    import re
+    return re.sub(r'(?:^|[\s\-\/\(\[\{\.\,\:\;])([a-z])', lambda m: m.group(0).upper(), text)
+
 def auto_save_customer(cursor, nama, no_hp, alamat=""):
     """Simpan atau perbarui data pelanggan otomatis ke tabel customers"""
-    nama = nama.strip()
+    nama = capitalize_words(nama.strip())
     no_hp = no_hp.strip()
+    alamat = capitalize_words(alamat.strip()) if alamat else ""
     if not nama:
         return None
+    # Kunci: Cegah penyimpanan nama pelanggan yang mengandung kata 'user' (case-insensitive)
+    import re
+    if re.search(r'user', nama, re.IGNORECASE):
+        return None
+
     cursor.execute("SELECT id, total_servis FROM customers WHERE (nama = ? AND no_hp = ?) OR (no_hp != '' AND no_hp = ?)", (nama, no_hp, no_hp))
     cust = cursor.fetchone()
     if cust:
@@ -399,7 +413,11 @@ def get_peer_url(cursor=None):
             cursor.execute("SELECT value FROM settings WHERE key = 'sync_peer_url'")
             row = cursor.fetchone()
             if row and row[0] and row[0].strip():
-                return row[0].strip().rstrip('/')
+                val = row[0].strip().rstrip('/')
+                # Jika di Linux (Ubuntu), jangan biarkan mengarah ke diri sendiri (192.168.1.8 / localhost)
+                if (os.name != 'nt') and ('192.168.1.8' in val or 'localhost' in val or '127.0.0.1' in val):
+                    return "http://192.168.1.50:8080"
+                return val
         except Exception:
             pass
 
@@ -412,6 +430,109 @@ def get_peer_url(cursor=None):
         return "http://192.168.1.8:8080"
     else:
         return "http://192.168.1.50:8080"
+
+ACTIVE_PRINTER_AGENTS = {}
+ACTIVE_PRINTER_AGENTS_BY_IP = {}
+PAIRING_CODES = {}          # 6-digit code -> {"device_id": did, "expires": ts}
+PRINTER_JOB_QUEUES = {}     # device_id -> [job, ...]
+PRINTER_JOB_RESULTS = {}    # job_id -> result_dict
+
+def get_real_client_ip(handler):
+    """Mendapatkan alamat IP asli klien, mendukung Cloudflare Tunnel (CF-Connecting-IP) dan reverse proxy"""
+    cf_ip = handler.headers.get("CF-Connecting-IP")
+    if cf_ip:
+        return cf_ip.strip()
+    xff = handler.headers.get("X-Forwarded-For")
+    if xff:
+        return xff.split(",")[0].strip()
+    x_real = handler.headers.get("X-Real-IP")
+    if x_real:
+        return x_real.strip()
+    return handler.client_address[0]
+
+def get_agent_for_request(device_id=None, client_ip=None):
+    now = time.time()
+    if device_id and device_id in ACTIVE_PRINTER_AGENTS:
+        ag = ACTIVE_PRINTER_AGENTS[device_id]
+        if now - ag.get("last_seen", 0) < 180:
+            return ag
+    if client_ip and client_ip in ACTIVE_PRINTER_AGENTS_BY_IP:
+        if client_ip not in ("127.0.0.1", "localhost", "::1"):
+            ag = ACTIVE_PRINTER_AGENTS_BY_IP[client_ip]
+            if now - ag.get("last_seen", 0) < 180:
+                return ag
+    return None
+
+def queue_and_wait_for_job(device_id, endpoint, data_dict, timeout=8.0):
+    """Menempatkan print job ke antrean agen PC klien dan menunggu respon cetak selesai (NAT traversal)"""
+    job_id = f"job_{int(time.time() * 1000)}_{random.randint(100, 999)}"
+    job = {
+        "job_id": job_id,
+        "endpoint": endpoint,
+        "type": data_dict.get("type", "receipt"),
+        "printer_name": data_dict.get("printer_name"),
+        "paper_width": data_dict.get("paper_width"),
+        "data": data_dict,
+        "created_at": time.time()
+    }
+    PRINTER_JOB_QUEUES.setdefault(device_id, []).append(job)
+
+    start_t = time.time()
+    while time.time() - start_t < timeout:
+        if job_id in PRINTER_JOB_RESULTS:
+            res = PRINTER_JOB_RESULTS.pop(job_id)
+            return res
+        time.sleep(0.2)
+
+    return {
+        "success": False,
+        "message": "Print job telah dikirim ke agen PC Anda tetapi respon belum diterima (timeout). Pastikan jendela KasToko Printer Agent di komputer Anda tetap terbuka."
+    }
+
+def forward_print_to_peer(endpoint, post_data_bytes, device_id=None, client_ip=None, is_public_req=False):
+    """Meneruskan request cetak dari server Linux ke hardware agent di PC klien atau server Windows kasir"""
+    data_dict = {}
+    try:
+        data_dict = json.loads(post_data_bytes.decode('utf-8'))
+    except Exception:
+        pass
+
+    target_dev_id = device_id or data_dict.get("device_id")
+
+    # 1. Coba teruskan via antrean Job Queue ke agen PC klien (BEBAS NAT / FIREWALL / MIXED CONTENT)
+    ag = get_agent_for_request(target_dev_id, client_ip)
+    if ag and target_dev_id:
+        return queue_and_wait_for_job(target_dev_id, endpoint, data_dict, timeout=8.0)
+
+    # 2. Jika request memiliki device_id tertentu tetapi agennya belum aktif:
+    if target_dev_id:
+        raise RuntimeError("Tool KasToko Printer Agent belum aktif di komputer Anda. Silakan jalankan 'Jalankan_Printer_Agent.bat' di komputer Anda agar dapat mencetak langsung.")
+
+    # 3. Fallback ke Windows kasir utama (192.168.1.50) HANYA untuk akses dari LAN lokal toko (bukan dari internet)
+    if is_public_req:
+        raise RuntimeError("Printer belum terhubung di PC ini. Silakan unduh & jalankan KasToko Printer Agent di komputer ini.")
+
+    is_local_lan = (client_ip and (client_ip.startswith("192.168.") or client_ip.startswith("10.") or client_ip.startswith("172.16.") or client_ip in ("127.0.0.1", "localhost")))
+    if not is_local_lan:
+        raise RuntimeError("Printer belum terhubung di PC ini. Silakan unduh & jalankan KasToko Printer Agent di komputer ini.")
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    peer_url = get_peer_url(cursor)
+    conn.close()
+
+    if not peer_url:
+        raise RuntimeError("Printer hardware di PC ini belum terdeteksi. Silakan jalankan KasToko Printer Agent.")
+
+    target_url = f"{peer_url.rstrip('/')}{endpoint}"
+    req = urllib.request.Request(
+        target_url,
+        data=post_data_bytes,
+        headers={'Content-Type': 'application/json', 'User-Agent': 'KasTokoPrinterForwarder/1.0'},
+        method='POST'
+    )
+    with urllib.request.urlopen(req, timeout=12) as resp:
+        return json.loads(resp.read().decode('utf-8'))
 
 def get_sync_export_data():
     """Mengambil seluruh data pembukuan, servis, pelanggan, users, dan settings dalam format JSON standar"""
@@ -570,7 +691,7 @@ def execute_smart_merge(remote_data):
             stats["services_inserted"] += 1
         else:
             l_updated = str(ls["updated_at"] or ls["created_at"] or "")
-            status_order = {'Diambil': 4, 'Selesai': 3, 'Instan': 3, 'Proses': 2, 'Pending': 1, 'Baru': 1, 'Batal': 0}
+            status_order = {'Diambil': 4, 'Selesai': 3, 'Instan': 3, 'Proses': 2, 'Claim Garansi': 1, 'Pending': 1, 'Baru': 1, 'Batal': 0}
             r_status_val = status_order.get(rs.get("status_servis"), 0)
             l_status_val = status_order.get(ls["status_servis"], 0)
 
@@ -847,7 +968,8 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Expires', '0')
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Access-Control-Request-Private-Network')
+        self.send_header('Access-Control-Allow-Private-Network', 'true')
         super().end_headers()
 
     def do_OPTIONS(self):
@@ -871,6 +993,94 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             }
             self.wfile.write(json.dumps(res).encode('utf-8'))
+            return
+
+        elif path == "/api/printer-agent/code":
+            dev_id = query.get("device_id", [None])[0]
+            if not dev_id:
+                dev_id = f"dev_{int(time.time()*1000)}"
+            now = time.time()
+            active_code = None
+            for c, info in list(PAIRING_CODES.items()):
+                if info.get("device_id") == dev_id and info.get("expires", 0) > now:
+                    active_code = c
+                    break
+            if not active_code:
+                active_code = str(random.randint(100000, 999999))
+                PAIRING_CODES[active_code] = {"device_id": dev_id, "expires": now + 900}
+
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({"success": True, "code": active_code, "device_id": dev_id}).encode('utf-8'))
+            return
+
+        elif path == "/api/printer-agent/jobs":
+            dev_id = query.get("device_id", [None])[0]
+            pairing_code = query.get("pairing_code", [None])[0]
+            if pairing_code and str(pairing_code) in PAIRING_CODES:
+                dev_id = PAIRING_CODES[str(pairing_code)]["device_id"]
+
+            if dev_id and dev_id in ACTIVE_PRINTER_AGENTS:
+                ACTIVE_PRINTER_AGENTS[dev_id]["last_seen"] = time.time()
+
+            job = None
+            if dev_id and dev_id in PRINTER_JOB_QUEUES and len(PRINTER_JOB_QUEUES[dev_id]) > 0:
+                job = PRINTER_JOB_QUEUES[dev_id].pop(0)
+
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "success": True,
+                "has_job": (job is not None),
+                "job": job
+            }).encode('utf-8'))
+            return
+
+        elif path == "/api/download/printer-agent":
+            import zipfile
+            import io
+            try:
+                zip_buffer = io.BytesIO()
+                tools_path = os.path.join(DIRECTORY, "tools")
+                agent_ps1 = os.path.join(tools_path, "KasToko_Printer_Agent.ps1")
+                agent_bat = os.path.join(tools_path, "Jalankan_Printer_Agent.bat")
+                petunjuk = os.path.join(tools_path, "PETUNJUK_PENGGUNAAN.txt")
+
+                target_dev_id = query.get("device_id", [None])[0] or ""
+                if not target_dev_id:
+                    target_dev_id = f"dev_{int(time.time()*1000)}"
+
+                with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+                    if os.path.exists(agent_ps1):
+                        zf.write(agent_ps1, "KasToko_Printer_Agent.ps1")
+                    if os.path.exists(agent_bat):
+                        zf.write(agent_bat, "Jalankan_Printer_Agent.bat")
+                    if os.path.exists(petunjuk):
+                        zf.write(petunjuk, "PETUNJUK_PENGGUNAAN.txt")
+
+                    # Buat file config.json otomatis ter-pair dengan device_id browser klien ini
+                    cfg_json = json.dumps({
+                        "device_id": target_dev_id,
+                        "central_server": "https://autocash.dhanzcell.my.id"
+                    }, indent=2)
+                    zf.writestr("config.json", cfg_json)
+
+                zip_buffer.seek(0)
+                zip_data = zip_buffer.getvalue()
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/zip')
+                self.send_header('Content-Disposition', 'attachment; filename="KasToko_Printer_Agent.zip"')
+                self.send_header('Content-Length', str(len(zip_data)))
+                self.end_headers()
+                self.wfile.write(zip_data)
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
             return
 
         elif path == "/api/sync/export":
@@ -1021,9 +1231,11 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     args.extend([q_like, q_like, q_like, q_like, q_like, q_like])
                 role_filter = str(query.get('role', [None])[0] or '').strip().lower()
                 actor_filter = str(query.get('actor', [None])[0] or '').strip()
+                username_filter = str(query.get('username', [None])[0] or '').strip()
                 if role_filter == 'mitra' and actor_filter:
                     clauses.append("(mitra_nama = ? OR created_by = ?)")
                     args.extend([actor_filter, actor_filter])
+                # Role teknisi: Tetap tampilkan semua riwayat servis (tidak dibatasi di SQL WHERE)
                 if clauses:
                     sql += " WHERE " + " AND ".join(clauses)
                 sql += " ORDER BY id DESC"
@@ -1032,6 +1244,31 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 rows = cursor.fetchall()
                 services = [dict(row) for row in rows]
                 conn.close()
+
+                # Aturan Privasi Teknisi:
+                # 1. Belum ada teknisi ambil servis (unassigned) -> HARGA TETAP DITAMPILKAN
+                # 2. Servisan milik teknisi sendiri -> HARGA TETAP DITAMPILKAN
+                # 3. Dikerjakan oleh teknisi lain -> ESTIMASI HARGA TIDAK TAMPAK (dimasking)
+                if role_filter == 'teknisi':
+                    actor_l = actor_filter.lower()
+                    user_l = username_filter.lower()
+                    for srv in services:
+                        s_tek = (srv.get('teknisi_nama') or '').strip().lower()
+                        s_crt = (srv.get('created_by') or '').strip().lower()
+                        is_unassigned = not s_tek or s_tek in ('-', 'null')
+                        is_my_srv = (s_tek == actor_l or s_tek == user_l or s_crt == user_l)
+                        if is_unassigned:
+                            # Belum ada teknisi ambil servis: harga tetap tampak
+                            srv['is_other_tech_locked'] = False
+                        elif is_my_srv:
+                            # Tiket miliknya sendiri: harga tetap tampak
+                            srv['is_other_tech_locked'] = False
+                        else:
+                            # Dikerjakan teknisi lain: estimasi harga TIDAK TAMPAK
+                            srv['estimasi_biaya'] = 0
+                            srv['biaya_akhir'] = 0
+                            srv['sparepart_biaya'] = 0
+                            srv['is_other_tech_locked'] = True
 
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
@@ -1045,12 +1282,92 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
 
         elif path == "/api/printers":
             try:
-                printers = printer_service.get_installed_printers() if printer_service else []
-                def_printer = printer_service.get_default_printer() if printer_service else None
+                printers = []
+                def_printer = None
+                source = "none"
+                agent_name = ""
+
+                # 1. Cek apakah ada agen printer aktif dari PC klien ini (via device_id atau IP klien)
+                dev_id = query.get("device_id", [None])[0]
+                client_ip = get_real_client_ip(self)
+                ag = get_agent_for_request(dev_id, client_ip)
+                if ag and ag.get("printers"):
+                    printers = ag["printers"]
+                    def_printer = ag.get("default")
+                    source = "client_agent"
+                    agent_name = ag.get("machine_name", "")
+
+                # 2. Cek apakah request datang dari internet/publik (domain publik / Cloudflare Tunnel)
+                host_val = self.headers.get("Host", "").lower()
+                is_public_req = ("autocash.dhanzcell.my.id" in host_val or self.headers.get("CF-Connecting-IP") is not None)
+                allow_peer = query.get("allow_peer", ["false"])[0] == "true"
+                is_local = (not is_public_req) and (client_ip.startswith("192.168.") or client_ip.startswith("10.") or client_ip in ("127.0.0.1", "localhost"))
+
+                # Jika akses dari internet/publik dan belum ada agen di PC ini, JANGAN PERNAH fallback ke printer toko kasir!
+                if not printers and (not is_public_req) and (not dev_id or (allow_peer and is_local)):
+                    # Coba deteksi printer lokal (Windows winspool di host server)
+                    if printer_service and hasattr(printer_service, 'winspool') and printer_service.winspool:
+                        printers = printer_service.get_installed_printers()
+                        def_printer = printer_service.get_default_printer()
+                        source = "local_server"
+
+                    # Jika di server Linux/Ubuntu, hubungi Windows kasir utama toko
+                    if not printers and (os.name != 'nt' or not (printer_service and getattr(printer_service, 'winspool', None))):
+                        conn = sqlite3.connect(DB_FILE)
+                        cursor = conn.cursor()
+                        peer_url = get_peer_url(cursor)
+                        conn.close()
+
+                        if peer_url:
+                            try:
+                                req = urllib.request.Request(f"{peer_url}/api/printers", headers={'User-Agent': 'KasTokoPrinterBridge/1.0'})
+                                with urllib.request.urlopen(req, timeout=2.5) as resp:
+                                    peer_data = json.loads(resp.read().decode('utf-8'))
+                                    if peer_data.get("success") and peer_data.get("printers"):
+                                        printers = peer_data["printers"]
+                                        def_printer = peer_data.get("default")
+                                        source = "peer_windows"
+                                        try:
+                                            conn_c = sqlite3.connect(DB_FILE)
+                                            cur_c = conn_c.cursor()
+                                            cur_c.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('cached_windows_printers', ?)", (json.dumps(printers),))
+                                            if def_printer:
+                                                cur_c.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('cached_default_printer', ?)", (str(def_printer),))
+                                            conn_c.commit()
+                                            conn_c.close()
+                                        except Exception:
+                                            pass
+                            except Exception as peer_err:
+                                print(f"[PRINTER-BRIDGE] Info: Gagal kontak peer {peer_url} ({peer_err})")
+
+                        # Fallback cache settings hanya untuk akses lokal toko
+                        if not printers:
+                            try:
+                                conn_c = sqlite3.connect(DB_FILE)
+                                cur_c = conn_c.cursor()
+                                cur_c.execute("SELECT value FROM settings WHERE key = 'cached_windows_printers'")
+                                row_c = cur_c.fetchone()
+                                if row_c and row_c[0]:
+                                    printers = json.loads(row_c[0])
+                                    source = "cache"
+                                cur_c.execute("SELECT value FROM settings WHERE key = 'cached_default_printer'")
+                                row_d = cur_c.fetchone()
+                                if row_d and row_d[0]:
+                                    def_printer = row_d[0]
+                                conn_c.close()
+                            except Exception:
+                                pass
+
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.end_headers()
-                self.wfile.write(json.dumps({"success": True, "printers": printers, "default": def_printer}).encode('utf-8'))
+                self.wfile.write(json.dumps({
+                    "success": True,
+                    "printers": printers,
+                    "default": def_printer,
+                    "source": source,
+                    "agent_name": agent_name
+                }).encode('utf-8'))
             except Exception as e:
                 self.send_response(500)
                 self.send_header('Content-Type', 'application/json')
@@ -1301,7 +1618,73 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
 
-        if path == "/api/sync/import":
+        if path == "/api/printer-agent/register":
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data.decode('utf-8')) if post_data else {}
+                dev_id = data.get("device_id")
+                pairing_code = str(data.get("pairing_code", "")).strip()
+                if pairing_code and pairing_code in PAIRING_CODES:
+                    dev_id = PAIRING_CODES[pairing_code]["device_id"]
+
+                real_ip = get_real_client_ip(self)
+                if not dev_id:
+                    dev_id = f"dev_{real_ip.replace('.', '_')}"
+
+                p_list = data.get("printers", [])
+                if isinstance(p_list, dict):
+                    p_list = [p_list]
+
+                agent_info = {
+                    "device_id": dev_id,
+                    "machine_name": data.get("machine_name") or f"PC-{real_ip}",
+                    "client_ip": real_ip,
+                    "agent_port": data.get("agent_port") or 18080,
+                    "printers": p_list,
+                    "default": data.get("default"),
+                    "last_seen": time.time()
+                }
+                ACTIVE_PRINTER_AGENTS[dev_id] = agent_info
+                if real_ip not in ("127.0.0.1", "localhost", "::1"):
+                    ACTIVE_PRINTER_AGENTS_BY_IP[real_ip] = agent_info
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    "success": True,
+                    "device_id": dev_id,
+                    "machine_name": agent_info["machine_name"],
+                    "printers_count": len(agent_info["printers"])
+                }).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
+            return
+
+        elif path == "/api/printer-agent/jobs/finish":
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data.decode('utf-8')) if post_data else {}
+                j_id = data.get("job_id")
+                if j_id:
+                    PRINTER_JOB_RESULTS[j_id] = data
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
+            return
+
+        elif path == "/api/sync/import":
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length)
             try:
@@ -1370,7 +1753,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                         float(t.get('opp', 0) or 0),
                         float(t.get('jasa', 0) or 0),
                         float(t.get('hasil', 0) or 0),
-                        str(t.get('catatan', '') or ''),
+                        capitalize_words(str(t.get('catatan', '') or '')),
                         t.get('service_id'),
                         t.get('created_at') or f"{t_tanggal} 12:00:00",
                         t.get('updated_at') or now_str
@@ -1792,18 +2175,18 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     self.end_headers()
                     self.wfile.write(json.dumps({"success": False, "message": "Akses Ditolak: Role Teknisi tidak diizinkan mengedit tiket servis."}).encode('utf-8'))
                     return
-                nama_pelanggan = str(data.get('nama_pelanggan', '')).strip()
+                nama_pelanggan = capitalize_words(str(data.get('nama_pelanggan', '')).strip())
                 no_hp = str(data.get('no_hp', '')).strip()
-                jenis_perangkat = str(data.get('jenis_perangkat', '')).strip()
-                merk_model = str(data.get('merk_model', '')).strip()
-                keluhan = str(data.get('keluhan', '')).strip()
-                catatan_teknisi = str(data.get('catatan_teknisi', '')).strip()
+                jenis_perangkat = capitalize_words(str(data.get('jenis_perangkat', '')).strip())
+                merk_model = capitalize_words(str(data.get('merk_model', '')).strip())
+                keluhan = capitalize_words(str(data.get('keluhan', '')).strip())
+                catatan_teknisi = capitalize_words(str(data.get('catatan_teknisi', '')).strip())
                 menu_servis = str(data.get('menu_servis', 'Diagnosa')).strip()
                 status_servis = str(data.get('status_servis', 'Baru')).strip()
                 estimasi_biaya = float(data.get('estimasi_biaya', 0) or 0)
                 biaya_akhir = float(data.get('biaya_akhir', estimasi_biaya) or 0)
                 status_pembayaran = str(data.get('status_pembayaran', 'Belum Bayar')).strip()
-                sparepart_nama = str(data.get('sparepart_nama', '')).strip()
+                sparepart_nama = capitalize_words(str(data.get('sparepart_nama', '')).strip())
                 sparepart_biaya = float(data.get('sparepart_biaya', 0) or 0)
                 metode_pembayaran = str(data.get('metode_pembayaran', 'Tunai')).strip()
                 teknisi_nama = str(data.get('teknisi_nama', '')).strip()
@@ -1816,6 +2199,10 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
 
                 if not nama_pelanggan:
                     raise Exception("Nama pelanggan wajib diisi.")
+                # Kunci: Validasi anti-user ketat
+                import re
+                if re.search(r'user', nama_pelanggan, re.IGNORECASE):
+                    raise Exception("Nama pelanggan tidak valid: Dilarang menggunakan nama yang mengandung kata 'user'. Harap masukkan nama pelanggan asli.")
                 if not jenis_perangkat or not merk_model:
                     raise Exception("Jenis perangkat dan merk/model unit wajib diisi.")
 
@@ -1935,6 +2322,16 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     conn.close()
                     raise Exception("Data servis tidak ditemukan.")
 
+                # Validasi isolasi akun teknisi: tidak boleh mengubah tiket teknisi lain
+                if user_role == 'teknisi':
+                    curr_tek = (srv_row['teknisi_nama'] or '').strip().lower()
+                    actor_req = str(data.get('actor', '') or data.get('teknisi_nama', '')).strip().lower()
+                    username_req = str(data.get('username', '')).strip().lower()
+                    if curr_tek and curr_tek not in ('-', 'null'):
+                        if actor_req and curr_tek != actor_req and curr_tek != username_req:
+                            conn.close()
+                            raise Exception("Akses Ditolak: 1 Akun Teknisi hanya dapat mengelola servisan mereka sendiri.")
+
                 updates = ["status_servis = ?"]
                 params = [new_status]
 
@@ -1949,7 +2346,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     params.append(str(status_pembayaran))
                 if sparepart_nama is not None:
                     updates.append("sparepart_nama = ?")
-                    params.append(str(sparepart_nama).strip())
+                    params.append(capitalize_words(str(sparepart_nama).strip()))
                 if sparepart_biaya is not None:
                     updates.append("sparepart_biaya = ?")
                     params.append(float(sparepart_biaya or 0))
@@ -1958,7 +2355,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     params.append(str(metode_pembayaran).strip())
                 if catatan_teknisi is not None:
                     updates.append("catatan_teknisi = ?")
-                    params.append(str(catatan_teknisi).strip())
+                    params.append(capitalize_words(str(catatan_teknisi).strip()))
                 if data.get('teknisi_nama') is not None:
                     updates.append("teknisi_nama = ?")
                     params.append(str(data.get('teknisi_nama', '')).strip())
@@ -2162,11 +2559,14 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             post_data = self.rfile.read(content_length)
             try:
                 data = json.loads(post_data.decode('utf-8'))
-                nama = data.get('nama', '').strip()
+                nama = capitalize_words(data.get('nama', '').strip())
                 no_hp = data.get('no_hp', '').strip()
-                alamat = data.get('alamat', '').strip()
+                alamat = capitalize_words(data.get('alamat', '').strip())
                 if not nama:
                     raise Exception("Nama pelanggan wajib diisi.")
+                import re
+                if re.search(r'user', nama, re.IGNORECASE):
+                    raise Exception("Nama pelanggan tidak valid: Dilarang menggunakan nama yang mengandung kata 'user'. Harap masukkan nama pelanggan asli.")
 
                 conn = sqlite3.connect(DB_FILE)
                 cursor = conn.cursor()
@@ -2218,11 +2618,26 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length)
             try:
+                if os.name != 'nt' or not (printer_service and getattr(printer_service, 'winspool', None)):
+                    dev_id = None
+                    try:
+                        dev_id = json.loads(post_data.decode('utf-8')).get('device_id')
+                    except Exception:
+                        pass
+                    c_ip = get_real_client_ip(self)
+                    is_pub = ("autocash.dhanzcell.my.id" in self.headers.get("Host", "").lower() or self.headers.get("CF-Connecting-IP") is not None)
+                    forward_res = forward_print_to_peer(path, post_data, device_id=dev_id, client_ip=c_ip, is_public_req=is_pub)
+                    self.send_response(200 if forward_res.get("success") else 500)
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps(forward_res).encode('utf-8'))
+                    return
+
                 data = json.loads(post_data.decode('utf-8')) if post_data else {}
                 p_name = data.get('printer_name') or (printer_service.get_default_printer() if printer_service else None)
                 p_type = data.get('type', 'receipt')
                 paper_w = str(data.get('paper_width', '58'))
-                lbl_size = str(data.get('label_size', '40x30'))
+                lbl_size = str(data.get('label_size') or '40x20')
                 lbl_mode = str(data.get('mode', 'tspl'))
                 density = str(data.get('density', 'high'))
 
@@ -2252,6 +2667,21 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length)
             try:
+                if os.name != 'nt' or not (printer_service and getattr(printer_service, 'winspool', None)):
+                    dev_id = None
+                    try:
+                        dev_id = json.loads(post_data.decode('utf-8')).get('device_id')
+                    except Exception:
+                        pass
+                    c_ip = get_real_client_ip(self)
+                    is_pub = ("autocash.dhanzcell.my.id" in self.headers.get("Host", "").lower() or self.headers.get("CF-Connecting-IP") is not None)
+                    forward_res = forward_print_to_peer(path, post_data, device_id=dev_id, client_ip=c_ip, is_public_req=is_pub)
+                    self.send_response(200 if forward_res.get("success") else 500)
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps(forward_res).encode('utf-8'))
+                    return
+
                 data = json.loads(post_data.decode('utf-8')) if post_data else {}
                 settings = get_store_settings_dict()
                 srv_id = data.get('service_id')
@@ -2287,9 +2717,12 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     "phone": settings.get('store_phone', '')
                 }
 
-                # Optimasi Cetak Nota Kertas Thermal Label 78 x 98 mm via TSPL (Sensor Gap Presisi)
-                is_tspl = ("78" in str(paper_w) or "label" in str(p_name).lower() or data.get('mode') == 'tspl')
-                if is_tspl:
+                # Optimasi Cetak Grafis Bitmap Presisi 100% Identik Layar (jika dikirim gambar) atau Fallback Direct TSPL/ESC-POS
+                image_data = data.get('image_data')
+                is_tspl = (str(paper_w) != "58") and ("78" in str(paper_w) or "label" in str(p_name).lower() or data.get('mode') == 'tspl')
+                if image_data and hasattr(printer_service, 'format_image_receipt'):
+                    raw_bytes = printer_service.format_image_receipt(image_data, paper_width=paper_w, is_tspl=is_tspl, density=density)
+                elif is_tspl:
                     raw_bytes = printer_service.format_tspl_receipt(srv_obj, store_profile=store_prof, is_ambil=is_ambil, width_mm=78, height_mm=98)
                 else:
                     raw_bytes = printer_service.format_escpos_receipt(srv_obj, store_profile=store_prof, paper_width=paper_w, density=density, is_ambil=is_ambil)
@@ -2311,12 +2744,27 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length)
             try:
+                if os.name != 'nt' or not (printer_service and getattr(printer_service, 'winspool', None)):
+                    dev_id = None
+                    try:
+                        dev_id = json.loads(post_data.decode('utf-8')).get('device_id')
+                    except Exception:
+                        pass
+                    c_ip = get_real_client_ip(self)
+                    is_pub = ("autocash.dhanzcell.my.id" in self.headers.get("Host", "").lower() or self.headers.get("CF-Connecting-IP") is not None)
+                    forward_res = forward_print_to_peer(path, post_data, device_id=dev_id, client_ip=c_ip, is_public_req=is_pub)
+                    self.send_response(200 if forward_res.get("success") else 500)
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps(forward_res).encode('utf-8'))
+                    return
+
                 data = json.loads(post_data.decode('utf-8')) if post_data else {}
                 settings = get_store_settings_dict()
                 srv_id = data.get('service_id')
                 srv_obj = data.get('service')
                 p_name = data.get('printer_name') or settings.get('label_printer_name') or (printer_service.get_default_printer() if printer_service else None)
-                lbl_size = str(data.get('label_size') or settings.get('label_paper_size') or '40x30')
+                lbl_size = str(data.get('label_size') or settings.get('label_paper_size') or '40x20')
                 lbl_mode = str(data.get('mode') or settings.get('label_mode') or 'tspl')
 
                 if not p_name:
@@ -2339,7 +2787,10 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     "name": settings.get('store_name', 'AUTOCASH SERVIS')
                 }
 
-                if lbl_mode == 'escpos':
+                image_data = data.get('image_data')
+                if image_data and hasattr(printer_service, 'format_image_label') and data.get('render_mode') == 'bitmap':
+                    raw_bytes = printer_service.format_image_label(image_data, label_size=lbl_size, is_tspl=(lbl_mode != 'escpos'))
+                elif lbl_mode == 'escpos':
                     raw_bytes = printer_service.format_escpos_label(srv_obj, label_size=lbl_size, store_profile=store_prof)
                 else:
                     raw_bytes = printer_service.format_tspl_label(srv_obj, label_size=lbl_size, store_profile=store_prof)
@@ -2361,6 +2812,21 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length)
             try:
+                if os.name != 'nt' or not (printer_service and getattr(printer_service, 'winspool', None)):
+                    dev_id = None
+                    try:
+                        dev_id = json.loads(post_data.decode('utf-8')).get('device_id')
+                    except Exception:
+                        pass
+                    c_ip = get_real_client_ip(self)
+                    is_pub = ("autocash.dhanzcell.my.id" in self.headers.get("Host", "").lower() or self.headers.get("CF-Connecting-IP") is not None)
+                    forward_res = forward_print_to_peer(path, post_data, device_id=dev_id, client_ip=c_ip, is_public_req=is_pub)
+                    self.send_response(200 if forward_res.get("success") else 500)
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps(forward_res).encode('utf-8'))
+                    return
+
                 data = json.loads(post_data.decode('utf-8')) if post_data else {}
                 settings = get_store_settings_dict()
                 srv_id = data.get('service_id')
@@ -2398,8 +2864,15 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     "phone": settings.get('store_phone', '')
                 }
 
-                # 1. Cetak Nota ke Printer 1
-                receipt_bytes = printer_service.format_escpos_receipt(srv_obj, store_profile=store_prof, paper_width=paper_w, density=density, is_ambil=is_ambil)
+                # 1. Cetak Nota ke Printer 1 (Grafis Bitmap Presisi atau TSPL/ESC-POS)
+                image_data = data.get('image_data')
+                is_tspl_nota = (str(paper_w) != "58") and ("78" in str(paper_w) or "label" in str(nota_p).lower() or data.get('mode') == 'tspl')
+                if image_data and hasattr(printer_service, 'format_image_receipt'):
+                    receipt_bytes = printer_service.format_image_receipt(image_data, paper_width=paper_w, is_tspl=is_tspl_nota, density=density)
+                elif is_tspl_nota:
+                    receipt_bytes = printer_service.format_tspl_receipt(srv_obj, store_profile=store_prof, is_ambil=is_ambil, width_mm=78, height_mm=98)
+                else:
+                    receipt_bytes = printer_service.format_escpos_receipt(srv_obj, store_profile=store_prof, paper_width=paper_w, density=density, is_ambil=is_ambil)
                 printer_service.send_raw_to_printer(nota_p, receipt_bytes, doc_name=f"Nota {srv_obj.get('kode_servis', '')}")
 
                 # Jeda waktu (delay)
