@@ -52,6 +52,22 @@ Dokumen ini berisi aturan baku bagi AI Agent dalam mengembangkan, memodifikasi, 
 
 ---
 
+### 8. Penomoran Versi di Pengaturan Aplikasi (Versioning)
+- **Label Versi di Judul Pengaturan**: Judul menu Pengaturan Aplikasi wajib mencantumkan nomor versi (dimulai dari `Pengaturan Aplikasi v0.0.1`).
+- **Peningkatan Versi Berkelanjutan (Incremental Versioning)**: Setiap kali ada perubahan fitur, perbaikan bug, atau pembaruan baru pada aplikasi, AI Agent wajib menaikkan nomor versi secara bertahap (`v0.0.1` -> `v0.0.2` -> `v0.0.3`, dan seterusnya) pada judul tersebut agar pengguna dapat melihat dengan jelas bahwa pembaruan sistem telah aktif dan termuat.
+
+---
+
+### 9. Gunakan Istilah Ringkas & Padat (Hindari Kata Terlalu Panjang)
+- **Ringkas & Langsung pada Intinya**: Hindari penamaan tombol, opsi, atau teks antarmuka yang terlalu panjang dan bertele-tele.
+- **Contoh Penerapan**:
+  - Tombol `"Buka Manajemen Pengguna"` disederhanakan menjadi `"Akses User"`.
+  - Opsi label `"40 x 20 mm (Mini Stiker - 5 Baris Identitas Murni)"` disederhanakan menjadi `"40 x 20 mm (Mini Stiker)"`.
+  - Opsi nota `"80 mm (Standar Nota Kasir 80x100mm)"` disederhanakan menjadi `"80 mm (Standar Nota Kasir)"`.
+- **Kenyamanan UI Kasir**: Teks yang ringkas membuat antarmuka kasir bersih, mudah dibaca cepat, dan tidak memakan ruang tombol.
+
+---
+
 ## ⚙️ Aturan Operasional & Deployment
 1. **Lokal First**: Selalu uji perubahan pada environment lokal (`http://localhost:8080`) terlebih dahulu.
 2. **Dilarang Commit & Deploy Tanpa Perintah**: Jangan melakukan `git commit`, `git push`, maupun deploy ke server Ubuntu (`192.168.1.8`) sebelum ada perintah langsung dari pengguna.
@@ -59,3 +75,5 @@ Dokumen ini berisi aturan baku bagi AI Agent dalam mengembangkan, memodifikasi, 
 4. **Jangan Update `perubahan.md` Tanpa Perintah**: Tunggu instruksi spesifik dari pengguna sebelum mencatat ke `perubahan.md`.
 5. **Selalu Tes Print**: Jalankan verifikasi cetak langsung ke printer hardware setiap ada modifikasi nota.
 6. **Gunakan Wadah `tools/`**: Untuk utilitas seperti deploy, backup, dan inspeksi database, gunakan skrip yang telah distandardisasi di dalam folder `tools/` (misal: `tools/deploy_manager.py`, `tools/db_backup.py`, `tools/db_inspect.py`).
+7. **Pembaruan Versi Terus Menerus**: Selalu naikkan nomor versi pada judul "Pengaturan Aplikasi v..." secara berkala di setiap siklus perubahan berikutnya.
+8. **Hindari Kata Terlalu Panjang**: Gunakan istilah UI yang ringkas, simpel, dan to the point (contoh: "Akses User" alih-alih "Buka Manajemen Pengguna").

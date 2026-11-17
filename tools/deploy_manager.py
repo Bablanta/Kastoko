@@ -135,14 +135,15 @@ def pull_database_from_server(client, sftp):
     print("  [OK] Database lokal berhasil diperbarui dari server Ubuntu!")
     return True
 
-def restart_pm2(client):
-    stdin, stdout, stderr = client.exec_command("npx pm2 restart Kastoko")
+def restart_service(client):
+    cmd = "echo 1234 | sudo -S systemctl restart kastoko.service"
+    stdin, stdout, stderr = client.exec_command(cmd)
     exit_code = stdout.channel.recv_exit_status()
     if exit_code == 0:
-        print("[OK] Server KasToko di Ubuntu berhasil direstart!")
+        print("[OK] Service KasToko di Ubuntu berhasil direstart!")
         return True
     else:
-        print(f"[!] Gagal restart PM2: {stderr.read().decode()}")
+        print(f"[!] Gagal restart service: {stderr.read().decode()}")
         return False
 
 def main():
@@ -184,9 +185,9 @@ def main():
 
     sftp.close()
 
-    # 3. Restart PM2
+    # 3. Restart Service
     print("\n[3/3] Me-restart proses server di Ubuntu...")
-    restart_pm2(client)
+    restart_service(client)
 
     client.close()
     print("-" * 65)

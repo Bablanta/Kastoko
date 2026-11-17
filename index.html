@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Autocash - Pembukuan & Servis Toko</title>
-    <link rel="stylesheet" href="style.css?v=0.0.9">
+    <link rel="stylesheet" href="style.css?v=0.0.10">
     <style>
         /* Force Settings Modal Persegi Panjang & Scrollable Atas-Bawah */
         .settings-modal-card {
@@ -490,7 +490,7 @@
             <div class="settings-modal-header">
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <span style="font-size: 20px;">⚙️</span>
-                    <h2 style="margin: 0; text-align: left; font-size: 18px; color: var(--accent-color);">Pengaturan Aplikasi v0.0.9</h2>
+                    <h2 style="margin: 0; text-align: left; font-size: 18px; color: var(--accent-color);">Pengaturan Aplikasi v0.0.10</h2>
                 </div>
                 <button class="toast-close" style="font-size: 20px; padding: 2px 8px; cursor: pointer;" onclick="closeSettingsModal()" title="Tutup">✕</button>
             </div>
@@ -10909,36 +10909,44 @@
     // LOGIKA PERHITUNGAN MASTER KAS (4 POS KAS)
     // ========================================================
     function calculateMasterKas() {
-        var totalLabaBersih = 0;
+        var totOmset = 0;
+        var totSpp = 0;
+        var totOppUmum = 0;
+        var totJasa = 0;
         var pengeluaranPos = {
             aset: 0,
             owner: 0,
             investor: 0,
-            bonus: 0,
-            umum: 0
+            bonus: 0
         };
 
         if (Array.isArray(transactions)) {
             transactions.forEach(function(t) {
-                var hasil = parseFloat(t.hasil || 0);
-                if (hasil > 0) {
-                    totalLabaBersih += hasil;
-                }
-                var opp = parseFloat(t.opp || 0);
                 var pos = (t.pos_kas || 'umum').toLowerCase();
-                if (opp > 0 && pengeluaranPos.hasOwnProperty(pos)) {
+                var opp = parseFloat(t.opp || 0);
+
+                if (pos !== 'umum' && pengeluaranPos.hasOwnProperty(pos)) {
                     pengeluaranPos[pos] += opp;
+                } else {
+                    totOmset += parseFloat(t.omset || 0);
+                    totSpp += parseFloat(t.spp || 0);
+                    totOppUmum += opp;
+                    totJasa += parseFloat(t.jasa || 0);
                 }
             });
         }
 
-        // Alokasi proporsional: 30% Aset, 30% Owner, 30% Investor, 10% Bonus
-        var alokasiAset = Math.round(totalLabaBersih * 0.30);
-        var alokasiOwner = Math.round(totalLabaBersih * 0.30);
-        var alokasiInvestor = Math.round(totalLabaBersih * 0.30);
-        var alokasiBonus = Math.round(totalLabaBersih * 0.10);
+        // Total Hasil Bersih Toko (Omset - SPP - Pengeluaran Toko Umum - Jasa Teknisi)
+        var totalHasilToko = totOmset - totSpp - totOppUmum - totJasa;
+        if (totalHasilToko < 0) totalHasilToko = 0;
 
-        // Saldo akhir masing-masing pos kas
+        // Alokasi 100% dari Total Hasil Toko: 30% Aset, 30% Owner, 30% Investor, 10% Bonus
+        var alokasiAset = Math.round(totalHasilToko * 0.30);
+        var alokasiOwner = Math.round(totalHasilToko * 0.30);
+        var alokasiInvestor = Math.round(totalHasilToko * 0.30);
+        var alokasiBonus = totalHasilToko - (alokasiAset + alokasiOwner + alokasiInvestor);
+
+        // Saldo akhir masing-masing pos kas dikurangi pengeluaran spesifik pos kas terkait
         var saldoAset = alokasiAset - pengeluaranPos.aset;
         var saldoOwner = alokasiOwner - pengeluaranPos.owner;
         var saldoInvestor = alokasiInvestor - pengeluaranPos.investor;

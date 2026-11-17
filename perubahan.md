@@ -4,6 +4,47 @@ Dokumen ini mencatat seluruh riwayat perubahan, pembaruan antarmuka, penyesuaian
 
 ---
 
+## 📅 Tanggal: 14 November 2026
+
+### 1. 🛡️ Pembersihan Transaksi Duplikat & Penyempurnaan Smart Merge Case-Insensitive (Anti-Duplikasi)
+- **Investigasi & Analisis Akar Masalah (Root Cause)**:
+  - Ditemukan adanya 6 baris transaksi ganda pada tanggal `2026-11-07` (`Beli Hp Samsung A30s`) dan tanggal `2026-11-06` (`Operasional Toko Harian`).
+  - Akar masalah disebabkan oleh sensitivitas huruf besar/kecil (*case-sensitivity*) pada SQLite query `execute_smart_merge` saat mencocokkan catatan transaksi manual (`catatan = ?`), di mana perbedaan antara huruf kecil `hp` dan huruf besar `Hp` (akibat kapitalisasi otomatis dari web) membuat sistem mendeteksi baris tersebut sebagai transaksi baru dan menginsert ulang setiap kali sinkronisasi berlangsung.
+- **Pembersihan Database Bersih (Deduplikasi)**:
+  - Database lokal dan database server Ubuntu di-backup secara otomatis sebelum eksekusi.
+  - Menghapus 5 baris duplikat berlebih pada tanggal `2026-11-07` (menyisakan 1 baris resmi dengan biaya SPP Rp 200.000 & Opp Rp 190.000).
+  - Menghapus 5 baris duplikat berlebih pada tanggal `2026-11-06` (menyisakan 1 baris resmi biaya Opp Rp 190.000).
+  - Total riwayat transaksi pada database lokal dan server kini kembali selaras dan bersih sempurna sebanyak **76 transaksi**.
+- **Patch Pencegah Duplikasi Permanen di [server.py](file:///E:/KasToko/server.py)**:
+  - **Case-Insensitive Match**: Memperbarui pencarian transaksi manual di `execute_smart_merge` menggunakan `TRIM(catatan) = TRIM(?) COLLATE NOCASE` sehingga perbedaan variasi huruf besar/kecil tidak akan pernah memicu duplikasi lagi.
+  - **Smart Nominal Match Fallback**: Menambahkan pencocokan fallback berdasarkan kesamaan tanggal dan nominal (`omset`, `spp`, `opp`) sehingga jika nominal dan tanggal identik, sistem langsung mengaitkannya sebagai transaksi yang sama.
+  - **In-Batch Duplicate Guard**: Menerapkan tracking `seen_matched_tx_ids` selama pemrosesan payload agar dalam satu batch sinkronisasi tidak terjadi `INSERT` berulang untuk transaksi yang sama.
+
+---
+
+### 2. 📅 Penambahan Filter 'Hari Ini' & Rentang Tanggal pada Antrean & Riwayat Servis
+- **Filter Rentang Waktu di Dashboard Servis (`#serviceDateFilter`)**:
+  - Menambahkan dropdown filter rentang tanggal pada toolbar **Antrean & Riwayat Servis** (`dashboardServisView`), diposisikan bersebelahan dengan filter teknisi dan tab status.
+  - Pilihan rentang filter:
+    1. `📅 Hari Ini` (aktif menyaring hanya tiket servis yang masuk hari ini)
+    2. `📅 7 Hari Terakhir`
+    3. `📅 14 Hari Terakhir`
+    4. `📅 30 Hari Terakhir`
+    5. `📅 Bulan Ini`
+    6. `📅 Semua Hari` (default)
+  - Logika filter otomatis menyaring tiket secara real-time berdasarkan `s.tanggal_masuk` / `s.created_at` dan memperbarui counter `Total: X tiket`.
+
+### 3. 📊 Pengembalian Highlight Transaksi & Servis Harian di Halaman Overview Superadmin
+- **Peran Halaman Overview**: Halaman **Overview** (`#dashboardOverviewView`) didedikasikan sebagai pusat informasi eksekutif mengenai seluruh aktivitas transaksi keuangan dan servis hari itu.
+- **Komponen Seksi `#ovwDailyHighlightSection`**:
+  - Mengelompokkan seluruh riwayat keuangan dan aktivitas operasional toko per tanggal (*grouped by date*), diurutkan dari hari terbaru.
+  - **Header Ringkasan Accordion**: Dilengkapi penanda `⭐ HARI INI` / `KEMARIN`, pill metrik finansial instan (`💰 Total Omset`, `🔩 Modal SPP`, `🏢 Beban Opp`, `📈 Laba Bersih`), serta pill aktivitas `🔧 X Servis Masuk` pada tanggal bersangkutan.
+  - **Tabel Rincian Aktivitas Transaksi Harian**: Menampilkan nomor, jenis transaksi (`🔧 Servis`, `🏢 Operasional`, `🛒 Kasir Non-Servis`), catatan unit/pelanggan/teknisi, omset, modal SPP, beban operasional toko, dan laba bersih.
+  - **Filter Periode & Pencarian Cepat**: Filter rentang 7 hari, 14 hari, 30 hari, bulan ini, dan semua hari, filter kategori jenis transaksi, pencarian catatan/tanggal, serta tombol `📂 Buka Semua` / `📁 Tutup Semua`.
+- **Pemisahan Peran yang Bersih**: Daftar antrean tiket servis lengkap beserta tombol formulir, status operasional, ekspor, dan rekap teknisi tetap berada secara eksklusif pada **Dashboard Servis**, sehingga halaman Overview tetap fokus pada monitoring aktivitas keuangan dan servis tanpa duplikasi daftar antrean teknis.
+
+---
+
 ## 📅 Tanggal: 08 November 2026
 
 ### 1. 🛠️ Penyesuaian Formulir Penerimaan Servis Baru (Status Servis 3 Opsi)

@@ -7,7 +7,7 @@ Folder ini berisi skrip pemeliharaan, sinkronisasi, dan manajemen sistem KasToko
 ### 1. 🚀 `deploy_manager.py` & `deploy_ke_ubuntu.bat`
 Tool untuk mengunggah update kode program dan/atau menyinkronkan database antara PC Lokal (Windows) dan Server Ubuntu (`192.168.1.8`).
 - **Cara Menjalankan**:
-  - Di Windows: Cukup klik ganda `deploy_ke_ubuntu.bat` (tersedia di folder utama dan di folder `tools/`).
+  - Di Windows: Cukup klik ganda `tools\deploy_ke_ubuntu.bat`.
   - Di CLI / Terminal:
     ```bash
     python tools/deploy_manager.py code     # Update file kode saja (Database transaksi server AMAN)

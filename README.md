@@ -130,7 +130,7 @@ Fitur analitik dan finansial sensitif dirancang khusus hanya dapat diakses penuh
 ## 🚀 6. Cara Deploy & Sinkronisasi ke Server Ubuntu (192.168.1.8)
 
 Untuk memperbarui server Ubuntu di `192.168.1.8`, kini cukup menggunakan **1 file tunggal**:
-👉 **`deploy_ke_ubuntu.bat`** (klik ganda).
+👉 **`tools\deploy_ke_ubuntu.bat`** (klik ganda).
 
 Skrip akan menampilkan menu interaktif:
 1. **`[1] Update Lengkap: Kode Fitur + Database Pembukuan (Default / Rekomendasi)`**

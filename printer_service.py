@@ -373,43 +373,46 @@ def format_tspl_receipt(service_dict: dict, store_profile: dict = None, is_ambil
 
     y = 2
 
-    # 1. Header Toko (Rata Kiri, Mentok Atas Y=2)
+    x0 = 40  # Margin rata kiri 5mm (40 dots pada 203 DPI)
+    bar_w = 520
+
+    # 1. Header Toko (Rata Kiri 5mm, Mentok Atas Y=2)
     st_name = (prof.get("name") or "DHANZCELL SMARTPHONE").strip().upper()
-    tspl.append(f'TEXT 0,{y},"3",0,1,1,"{st_name}"')
+    tspl.append(f'TEXT {x0},{y},"3",0,1,1,"{st_name}"')
     y += 28
 
     st_addr = (prof.get("address") or "").strip()
     if st_addr:
-        tspl.append(f'TEXT 0,{y},"1",0,1,1,"{st_addr[:50]}"')
+        tspl.append(f'TEXT {x0},{y},"1",0,1,1,"{st_addr[:50]}"')
         y += 18
 
     st_phone = (prof.get("phone") or "").strip()
     if st_phone:
         p_txt = f"Telp / WA: {st_phone}"
-        tspl.append(f'TEXT 0,{y},"1",0,1,1,"{p_txt}"')
+        tspl.append(f'TEXT {x0},{y},"1",0,1,1,"{p_txt}"')
         y += 20
 
-    # 2. Judul Nota & Garis Pembatas (Rata Kiri)
-    tspl.append(f"BAR 0,{y},550,2")
+    # 2. Judul Nota & Garis Pembatas (Rata Kiri 5mm)
+    tspl.append(f"BAR {x0},{y},{bar_w},2")
     y += 8
 
     title = "NOTA PENGAMBILAN & KWITANSI" if is_ambil else "TANDA TERIMA PENERIMAAN UNIT"
-    tspl.append(f'TEXT 0,{y},"2",0,1,1,"{title}"')
+    tspl.append(f'TEXT {x0},{y},"2",0,1,1,"{title}"')
     y += 22
 
     kode = str(s.get("kode_servis") or f"#{s.get('id', '')}").strip()
     tgl = str(s.get("tanggal_masuk" if not is_ambil else "tanggal_selesai") or datetime.date.today().strftime("%Y-%m-%d"))[:10]
-    tspl.append(f'TEXT 0,{y},"1",0,1,1,"Waktu: {tgl}"')
+    tspl.append(f'TEXT {x0},{y},"1",0,1,1,"Waktu: {tgl}"')
     y += 20
 
-    tspl.append(f"BAR 0,{y},550,1")
+    tspl.append(f"BAR {x0},{y},{bar_w},1")
     y += 8
 
-    # 3. Rincian Pelanggan & Unit (Rata Kiri)
-    tspl.append(f'TEXT 0,{y},"3",0,1,1,"No. Tiket   : {kode}"')
+    # 3. Rincian Pelanggan & Unit (Rata Kiri 5mm)
+    tspl.append(f'TEXT {x0},{y},"3",0,1,1,"No. Tiket   : {kode}"')
     y += 26
 
-    # 4. Rincian Pelanggan & Unit (Mentok Kiri X=0)
+    # 4. Rincian Pelanggan & Unit (Rata Kiri X=x0)
     nama_cust = str(s.get("nama_pelanggan") or "-").strip()[:24]
     no_hp = str(s.get("no_hp") or "-").strip()[:18]
     unit = str(s.get("merk_model") or "-").strip()[:24]
@@ -420,38 +423,38 @@ def format_tspl_receipt(service_dict: dict, store_profile: dict = None, is_ambil
     catatan_tek = str(s.get("catatan_teknisi") or "").strip()
     sparepart_nama = str(s.get("sparepart_nama") or "").strip()[:26]
 
-    tspl.append(f'TEXT 0,{y},"2",0,1,1,"Pelanggan   : {nama_cust}"')
+    tspl.append(f'TEXT {x0},{y},"2",0,1,1,"Pelanggan   : {nama_cust}"')
     y += 22
-    tspl.append(f'TEXT 0,{y},"2",0,1,1,"No. HP/WA   : {no_hp}"')
+    tspl.append(f'TEXT {x0},{y},"2",0,1,1,"No. HP/WA   : {no_hp}"')
     y += 22
-    tspl.append(f"BAR 0,{y},550,1")
+    tspl.append(f"BAR {x0},{y},{bar_w},1")
     y += 8
-    tspl.append(f'TEXT 0,{y},"2",0,1,1,"Perangkat   : {perangkat}"')
+    tspl.append(f'TEXT {x0},{y},"2",0,1,1,"Perangkat   : {perangkat}"')
     y += 22
-    tspl.append(f'TEXT 0,{y},"2",0,1,1,"Merk/Model  : {unit}"')
+    tspl.append(f'TEXT {x0},{y},"2",0,1,1,"Merk/Model  : {unit}"')
     y += 22
     if imei_sn:
-        tspl.append(f'TEXT 0,{y},"2",0,1,1,"IMEI / SN   : {imei_sn}"')
+        tspl.append(f'TEXT {x0},{y},"2",0,1,1,"IMEI / SN   : {imei_sn}"')
         y += 22
     if layanan and layanan != "-":
-        tspl.append(f'TEXT 0,{y},"2",0,1,1,"Layanan     : {layanan}"')
+        tspl.append(f'TEXT {x0},{y},"2",0,1,1,"Layanan     : {layanan}"')
         y += 22
-    tspl.append(f'TEXT 0,{y},"2",0,1,1,"Keluhan     : {keluhan}"')
+    tspl.append(f'TEXT {x0},{y},"2",0,1,1,"Keluhan     : {keluhan}"')
     y += 22
     if catatan_tek:
-        tspl.append(f'TEXT 0,{y},"2",0,1,1,"Catatan Tek : {catatan_tek}"')
+        tspl.append(f'TEXT {x0},{y},"2",0,1,1,"Catatan Tek : {catatan_tek}"')
         y += 22
     if sparepart_nama:
-        tspl.append(f'TEXT 0,{y},"2",0,1,1,"Sparepart   : {sparepart_nama}"')
+        tspl.append(f'TEXT {x0},{y},"2",0,1,1,"Sparepart   : {sparepart_nama}"')
         y += 22
 
-    # 5. Kotak Biaya & Status (Mentok Kiri X=0, Batas Kanan 550)
-    tspl.append(f"BAR 0,{y},550,1")
+    # 5. Kotak Biaya & Status (Rata Kiri 5mm)
+    tspl.append(f"BAR {x0},{y},{bar_w},1")
     y += 6
 
     box_y = y
     box_h = 52
-    tspl.append(f"BOX 0,{box_y},550,{box_y + box_h},2")
+    tspl.append(f"BOX {x0},{box_y},{x0 + bar_w},{box_y + box_h},2")
 
     est_biaya = float(s.get("estimasi_biaya", 0) or 0)
     biaya_akhir = float(s.get("biaya_akhir", est_biaya) or 0)
@@ -461,42 +464,42 @@ def format_tspl_receipt(service_dict: dict, store_profile: dict = None, is_ambil
     if is_ambil:
         tot_str = f"Rp {int(biaya_akhir):,}".replace(",", ".")
         garansi = str(s.get("garansi") or "7 Hari").strip()
-        tspl.append(f'TEXT 8,{box_y + 8},"3",0,1,1,"TOTAL BIAYA : {tot_str}"')
-        tspl.append(f'TEXT 8,{box_y + 32},"2",0,1,1,"STATUS BAYAR: {status_bayar} (Garansi {garansi})"')
+        tspl.append(f'TEXT {x0 + 8},{box_y + 8},"3",0,1,1,"TOTAL BIAYA : {tot_str}"')
+        tspl.append(f'TEXT {x0 + 8},{box_y + 32},"2",0,1,1,"STATUS BAYAR: {status_bayar} (Garansi {garansi})"')
     else:
         est_str = f"Rp {int(est_biaya):,}".replace(",", ".")
-        tspl.append(f'TEXT 8,{box_y + 8},"3",0,1,1,"ESTIMASI BIAYA: {est_str}"')
-        tspl.append(f'TEXT 8,{box_y + 32},"2",0,1,1,"STATUS SERVIS : {status_servis}"')
+        tspl.append(f'TEXT {x0 + 8},{box_y + 8},"3",0,1,1,"ESTIMASI BIAYA: {est_str}"')
+        tspl.append(f'TEXT {x0 + 8},{box_y + 32},"2",0,1,1,"STATUS SERVIS : {status_servis}"')
     y += box_h + 8
 
-    # 6. Syarat & Tanda Tangan + QR Code Pelacakan
+    # 6. Syarat & Tanda Tangan + QR Code Pelacakan (Rata Kiri 5mm)
     if is_ambil:
-        tspl.append(f'TEXT 0,{y},"1",0,1,1,"* Unit telah diterima dlm kondisi baik & berfungsi normal."')
+        tspl.append(f'TEXT {x0},{y},"1",0,1,1,"* Unit telah diterima dlm kondisi baik & berfungsi normal."')
         y += 14
-        tspl.append(f'TEXT 0,{y},"1",0,1,1,"* Simpan nota ini sebagai bukti sah garansi resmi servis."')
+        tspl.append(f'TEXT {x0},{y},"1",0,1,1,"* Simpan nota ini sebagai bukti sah garansi resmi servis."')
         y += 14
     else:
-        tspl.append(f'TEXT 0,{y},"1",0,1,1,"* Simpan nota ini sebagai tanda bukti resmi saat mengambil unit."')
+        tspl.append(f'TEXT {x0},{y},"1",0,1,1,"* Simpan nota ini sebagai tanda bukti resmi saat mengambil unit."')
         y += 14
-        tspl.append(f'TEXT 0,{y},"1",0,1,1,"* Kerusakan aksesoris tidak tercatat di luar tanggung jawab toko."')
+        tspl.append(f'TEXT {x0},{y},"1",0,1,1,"* Kerusakan aksesoris tidak tercatat di luar tanggung jawab toko."')
         y += 14
 
     footer_y = y
-    # Kolom Kiri: Tanda Tangan Pelanggan & Kasir (Garis Solid Minimalis)
-    tspl.append(f'TEXT 25,{footer_y + 4},"1",0,1,1,"Pelanggan"')
-    tspl.append(f'TEXT 165,{footer_y + 4},"1",0,1,1,"Kasir / Teknisi"')
-    tspl.append(f'BAR 15,{footer_y + 52},115,1')
-    tspl.append(f'BAR 155,{footer_y + 52},120,1')
-    tspl.append(f'TEXT 20,{footer_y + 58},"1",0,1,1,"( {nama_cust[:12]} )"')
-    tspl.append(f'TEXT 160,{footer_y + 58},"1",0,1,1,"( Dhanzcell )"')
+    # Kolom Kiri: Tanda Tangan Pelanggan & Kasir (Garis Solid Minimalis Rata Kiri 5mm)
+    tspl.append(f'TEXT {x0 + 10},{footer_y + 4},"1",0,1,1,"Pelanggan"')
+    tspl.append(f'TEXT {x0 + 150},{footer_y + 4},"1",0,1,1,"Kasir / Teknisi"')
+    tspl.append(f'BAR {x0},{footer_y + 52},115,1')
+    tspl.append(f'BAR {x0 + 140},{footer_y + 52},120,1')
+    tspl.append(f'TEXT {x0 + 5},{footer_y + 58},"1",0,1,1,"( {nama_cust[:12]} )"')
+    tspl.append(f'TEXT {x0 + 145},{footer_y + 58},"1",0,1,1,"( Dhanzcell )"')
 
     # Kolom Kanan: QR Code Pelacakan Online
-    qr_x = 390
-    tspl.append(f"BOX {qr_x - 8},{footer_y},550,{footer_y + 92},1")
-    tspl.append(f'TEXT {qr_x + 12},{footer_y + 4},"1",0,1,1,"SCAN STATUS"')
+    qr_x = 380
+    tspl.append(f"BOX {qr_x - 8},{footer_y},{x0 + bar_w},{footer_y + 92},1")
+    tspl.append(f'TEXT {qr_x + 8},{footer_y + 4},"1",0,1,1,"SCAN STATUS"')
     tracking_url = f"https://lacak.dhanzcell.my.id/lacak?nota={kode}"
-    tspl.append(f'QRCODE {qr_x + 14},{footer_y + 18},L,3,A,0,"{tracking_url}"')
-    tspl.append(f'TEXT {qr_x + 2},{footer_y + 78},"1",0,1,1,"lacak.dhanzcell"')
+    tspl.append(f'QRCODE {qr_x + 10},{footer_y + 18},L,3,A,0,"{tracking_url}"')
+    tspl.append(f'TEXT {qr_x},{footer_y + 78},"1",0,1,1,"lacak.dhanzcell"')
 
     tspl.append("PRINT 1,1\n")
     return "\r\n".join(tspl).encode("ascii", errors="replace")
@@ -621,12 +624,10 @@ def format_tspl_label(service_dict: dict, label_size: str = "40x20", store_profi
 
     kode = clean_t(s.get("kode_servis") or f"#{s.get('id', '')}", 16)
     nama = clean_t(s.get("nama_pelanggan"), 22)
-    no_wa = clean_t(s.get("no_hp"), 20)
-
-    biaya_val = float(s.get("biaya_akhir") or s.get("estimasi_biaya") or 0)
-    biaya_str = f"Rp {int(biaya_val):,}".replace(",", ".") if biaya_val > 0 else "Rp 0"
-    biaya_str = clean_t(biaya_str, 20)
-
+    model = clean_t(s.get("merk_model") or s.get("model") or s.get("unit") or s.get("no_hp"), 20)
+    passcode = clean_t(s.get("passcode") or s.get("pin") or s.get("password") or "", 18)
+    if passcode == "-":
+        passcode = ""
     keluhan = clean_t(s.get("keluhan"), 24)
 
     tspl = []
@@ -640,23 +641,31 @@ def format_tspl_label(service_dict: dict, label_size: str = "40x20", store_profi
     tspl.append("SET TEAR ON")
     tspl.append("CLS")
 
-    # Margin rata kiri 2mm = 16 dots, margin rata atas 2mm = 16 dots (DPI 203: 1mm = 8 dots)
-    x = 16
+    # Margin rata kiri 5mm = 40 dots, margin rata atas 2mm = 16 dots (DPI 203: 1mm = 8 dots)
+    x = 40
     if h_mm <= 22:
         # Kertas 40x20 mm (160 dots total height):
-        # 5 baris identitas murni presisi tinggi
-        tspl.append(f'TEXT {x},16,"3",0,1,1,"{kode}"')
-        tspl.append(f'TEXT {x},44,"2",0,1,1,"{nama}"')
-        tspl.append(f'TEXT {x},68,"2",0,1,1,"{no_wa}"')
-        tspl.append(f'TEXT {x},92,"2",0,1,1,"{biaya_str}"')
-        tspl.append(f'TEXT {x},116,"2",0,1,1,"{keluhan}"')
+        if passcode:
+            tspl.append(f'TEXT {x},14,"3",0,1,1,"{kode}"')
+            tspl.append(f'TEXT {x},42,"2",0,1,1,"{nama}"')
+            tspl.append(f'TEXT {x},68,"2",0,1,1,"{model}"')
+            tspl.append(f'TEXT {x},94,"2",0,1,1,"Passcode: {passcode}"')
+            tspl.append(f'TEXT {x},120,"2",0,1,1,"{keluhan}"')
+        else:
+            tspl.append(f'TEXT {x},16,"3",0,1,1,"{kode}"')
+            tspl.append(f'TEXT {x},48,"2",0,1,1,"{nama}"')
+            tspl.append(f'TEXT {x},78,"2",0,1,1,"{model}"')
+            tspl.append(f'TEXT {x},108,"2",0,1,1,"{keluhan}"')
     else:
         # Kertas 40x30 mm / 50x30 mm
         tspl.append(f'TEXT {x},16,"3",0,1,1,"{kode}"')
-        tspl.append(f'TEXT {x},52,"2",0,1,1,"{nama}"')
-        tspl.append(f'TEXT {x},86,"2",0,1,1,"{no_wa}"')
-        tspl.append(f'TEXT {x},120,"2",0,1,1,"{biaya_str}"')
-        tspl.append(f'TEXT {x},154,"2",0,1,1,"{keluhan}"')
+        tspl.append(f'TEXT {x},50,"2",0,1,1,"{nama}"')
+        tspl.append(f'TEXT {x},84,"2",0,1,1,"{model}"')
+        if passcode:
+            tspl.append(f'TEXT {x},118,"2",0,1,1,"Passcode: {passcode}"')
+            tspl.append(f'TEXT {x},152,"2",0,1,1,"{keluhan}"')
+        else:
+            tspl.append(f'TEXT {x},118,"2",0,1,1,"{keluhan}"')
 
     tspl.append("PRINT 1,1\n")
     return "\r\n".join(tspl).encode("ascii", errors="replace")
@@ -746,9 +755,8 @@ def format_escpos_label(service_dict: dict, label_size: str = "40x20", store_pro
 
     kode = str(s.get("kode_servis") or f"#{s.get('id', '')}").strip()
     nama = str(s.get("nama_pelanggan") or "-").strip()
-    no_wa = str(s.get("no_hp") or "-").strip()
-    biaya_val = float(s.get("biaya_akhir") or s.get("estimasi_biaya") or 0)
-    biaya_str = f"Rp {int(biaya_val):,}".replace(",", ".") if biaya_val > 0 else "Rp 0"
+    model = str(s.get("merk_model") or s.get("model") or "-").strip()
+    passcode = str(s.get("passcode") or "").strip()
     keluhan = str(s.get("keluhan") or "-").strip()
 
     buf = bytearray()
@@ -759,8 +767,9 @@ def format_escpos_label(service_dict: dict, label_size: str = "40x20", store_pro
     buf.extend((f"{kode}\n").encode("cp437", errors="replace"))
     buf.extend(BOLD_OFF)
     buf.extend((f"{nama}\n").encode("cp437", errors="replace"))
-    buf.extend((f"{no_wa}\n").encode("cp437", errors="replace"))
-    buf.extend((f"{biaya_str}\n").encode("cp437", errors="replace"))
+    buf.extend((f"{model}\n").encode("cp437", errors="replace"))
+    if passcode and passcode != "-":
+        buf.extend((f"Passcode: {passcode}\n").encode("cp437", errors="replace"))
     buf.extend((f"{keluhan}\n").encode("cp437", errors="replace"))
     buf.extend(b"\n")
     buf.extend(CUT_PAPER)
@@ -856,11 +865,14 @@ def format_label_test_page(printer_name: str, label_size: str = "40x20", mode: s
     h_mm = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 20
 
     dummy_service = {
-        "kode_servis": "SRV-20261107-004",
-        "nama_pelanggan": "Tita",
-        "no_hp": "08987125805",
-        "estimasi_biaya": 150000,
-        "keluhan": "matot"
+        "kode_servis": "SRV-0000-000",
+        "nama_pelanggan": "contoh",
+        "no_hp": "081234567890",
+        "jenis_perangkat": "smartphone/hp",
+        "merk_model": "redmi 10",
+        "model": "redmi 10",
+        "passcode": "1234",
+        "keluhan": "diagnosa"
     }
     if mode == "tspl":
         return format_tspl_label(dummy_service, label_size=f"{w_mm}x{h_mm}")

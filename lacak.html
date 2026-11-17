@@ -572,7 +572,17 @@
 
         function getQueryParam(param) {
             var urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get(param) || '';
+            var direct = urlParams.get(param);
+            if (direct) return direct;
+            var pLower = (param || '').toLowerCase();
+            try {
+                for (var entry of urlParams.entries()) {
+                    if (entry[0].toLowerCase() === pLower) {
+                        return entry[1];
+                    }
+                }
+            } catch(e) {}
+            return '';
         }
 
         function formatRupiah(num) {
@@ -811,7 +821,7 @@
                     }
                 }).catch(function() {});
 
-            var notaParam = getQueryParam('nota') || getQueryParam('kode');
+            var notaParam = getQueryParam('nota') || getQueryParam('kode') || getQueryParam('ticket') || getQueryParam('tiket');
             if (notaParam) {
                 document.getElementById('notaInput').value = notaParam;
                 fetchTrackingData(notaParam);
