@@ -34,7 +34,10 @@ def get_store_settings_dict():
         "label_printer_name": "",
         "label_mode": "tspl",
         "print_density": "high",
-        "print_delay_ms": 600
+        "print_delay_ms": 600,
+        "marquee_enabled": "true",
+        "marquee_text": "DHANZCELL SMARTPHONE  -   MENGATASI MASALAH TANPA MASALAH BARU",
+        "marquee_speed": "20"
     }
     try:
         conn = sqlite3.connect(DB_FILE)
@@ -252,6 +255,15 @@ def init_db():
         except Exception as e:
             print(f"[WARNING] Gagal migrasi imei_sn: {e}")
 
+    # Migrasi kolom passcode pada services
+    if "passcode" not in s_cols:
+        try:
+            cursor.execute("ALTER TABLE services ADD COLUMN passcode TEXT DEFAULT ''")
+            conn.commit()
+            print("[INFO] Kolom 'passcode' berhasil ditambahkan ke tabel services.")
+        except Exception as e:
+            print(f"[WARNING] Gagal migrasi passcode: {e}")
+
     # Migrasi kolom updated_at & created_at pada transactions
     cursor.execute("PRAGMA table_info(transactions)")
     tx_cols = [col[1] for col in cursor.fetchall()]
@@ -271,6 +283,16 @@ def init_db():
             print("[INFO] Kolom 'created_at' berhasil ditambahkan ke tabel transactions.")
         except Exception as e:
             print(f"[WARNING] Gagal migrasi created_at pada transactions: {e}")
+
+    # Migrasi kolom pos_kas pada transactions (Master Kas: 'umum', 'aset', 'owner', 'investor', 'bonus')
+    if "pos_kas" not in tx_cols:
+        try:
+            cursor.execute("ALTER TABLE transactions ADD COLUMN pos_kas TEXT DEFAULT 'umum'")
+            cursor.execute("UPDATE transactions SET pos_kas = 'umum' WHERE pos_kas IS NULL OR pos_kas = ''")
+            conn.commit()
+            print("[INFO] Kolom 'pos_kas' berhasil ditambahkan ke tabel transactions.")
+        except Exception as e:
+            print(f"[WARNING] Gagal migrasi pos_kas pada transactions: {e}")
 
     # Migrasi kolom updated_at pada users
     cursor.execute("PRAGMA table_info(users)")
@@ -325,7 +347,54 @@ def init_db():
         except Exception as e:
             print(f"[WARNING] Gagal migrasi data lama: {e}")
 
+    auto_insert_daily_locked_opp(cursor, conn)
     conn.close()
+
+def auto_insert_daily_locked_opp(cursor, conn):
+    """
+    Otomatis mencatat pengeluaran operasional toko (Opp) yang sudah dikunci
+    ke riwayat buku toko (transactions) setiap hari baru jika belum tercatat.
+    """
+    try:
+        cursor.execute("SELECT value FROM settings WHERE key = 'is_opp_locked'")
+        row_lock = cursor.fetchone()
+        is_locked = (row_lock and str(row_lock[0]).strip().lower() == 'true')
+        if not is_locked:
+            return
+
+        cursor.execute("SELECT value FROM settings WHERE key = 'locked_opp_value'")
+        row_val = cursor.fetchone()
+        opp_val = float(row_val[0]) if (row_val and row_val[0]) else 0.0
+        if opp_val <= 0:
+            return
+
+        today_str = datetime.date.today().strftime('%Y-%m-%d')
+        # Cek apakah sudah ada catatan operasional toko harian pada tanggal hari ini
+        cursor.execute("""
+            SELECT id FROM transactions 
+            WHERE tanggal = ? AND (catatan LIKE '%Operasional Toko Harian%' OR (opp = ? AND omset = 0 AND spp = 0 AND jasa = 0))
+        """, (today_str, opp_val))
+        row_exist = cursor.fetchone()
+
+        now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if not row_exist:
+            cursor.execute("""
+                INSERT INTO transactions (tanggal, omset, spp, opp, jasa, hasil, catatan, service_id, created_at, updated_at, pos_kas)
+                VALUES (?, 0, 0, ?, 0, ?, 'Operasional Toko Harian (Otomatis)', NULL, ?, ?, 'umum')
+            """, (today_str, opp_val, -opp_val, now_str, now_str))
+            conn.commit()
+            print(f"[INFO] Auto-insert Opp Toko Harian Rp {opp_val:,.0f} untuk tanggal {today_str}.")
+        else:
+            # Jika ada catatan otomatis tapi nominalnya berbeda dari locked_opp_value terkini, perbarui
+            cursor.execute("""
+                UPDATE transactions 
+                SET opp = ?, hasil = -?, updated_at = ?
+                WHERE tanggal = ? AND catatan = 'Operasional Toko Harian (Otomatis)' AND opp != ?
+            """, (opp_val, opp_val, now_str, today_str, opp_val))
+            if cursor.rowcount > 0:
+                conn.commit()
+    except Exception as e:
+        print(f"[WARNING] Gagal auto-insert Opp Toko Harian: {e}")
 
 def generate_service_code(cursor):
     """Generate kode servis otomatis format: SRV-YYYYMMDD-001"""
@@ -673,8 +742,8 @@ def execute_smart_merge(remote_data):
                     menu_servis, status_servis, estimasi_biaya, biaya_akhir,
                     status_pembayaran, sparepart_nama, sparepart_biaya,
                     metode_pembayaran, teknisi_nama, mitra_nama, created_by,
-                    tanggal_masuk, tanggal_selesai, garansi, imei_sn, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    tanggal_masuk, tanggal_selesai, garansi, imei_sn, passcode, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 kode_servis, cust_id, rs.get("nama_pelanggan", ""), rs.get("no_hp", ""),
                 rs.get("jenis_perangkat", ""), rs.get("merk_model", ""), rs.get("keluhan", ""),
@@ -686,6 +755,7 @@ def execute_smart_merge(remote_data):
                 rs.get("tanggal_masuk", ""), rs.get("tanggal_selesai", ""),
                 rs.get("garansi", "7 Hari") or "7 Hari",
                 rs.get("imei_sn", ""),
+                rs.get("passcode", ""),
                 r_created, r_updated or now_str
             ))
             stats["services_inserted"] += 1
@@ -720,6 +790,7 @@ def execute_smart_merge(remote_data):
                         tanggal_selesai = ?,
                         garansi = COALESCE(NULLIF(?, ''), garansi),
                         imei_sn = ?,
+                        passcode = ?,
                         updated_at = ?
                     WHERE id = ?
                 ''', (
@@ -735,12 +806,14 @@ def execute_smart_merge(remote_data):
                     rs.get("tanggal_masuk", ""), rs.get("tanggal_selesai", ""),
                     rs.get("garansi", "7 Hari") or "7 Hari",
                     rs.get("imei_sn", ""),
+                    rs.get("passcode", ""),
                     r_updated, ls["id"]
                 ))
                 stats["services_updated"] += 1
 
     # 3. MERGE TRANSACTIONS
     remote_transactions = remote_data.get("transactions", [])
+    seen_matched_tx_ids = set()
     for rt in remote_transactions:
         t_tanggal = str(rt.get("tanggal") or "").strip()
         t_omset = float(rt.get("omset") or 0)
@@ -749,6 +822,7 @@ def execute_smart_merge(remote_data):
         t_jasa = float(rt.get("jasa") or 0)
         t_hasil = float(rt.get("hasil") or 0)
         t_catatan = str(rt.get("catatan") or "").strip()
+        t_pos_kas = str(rt.get("pos_kas") or "umum").strip().lower()
         t_srv_kode = str(rt.get("service_kode") or "").strip()
         r_updated = str(rt.get("updated_at") or rt.get("created_at") or f"{t_tanggal} 12:00:00")
         r_created = str(rt.get("created_at") or f"{t_tanggal} 12:00:00")
@@ -768,19 +842,60 @@ def execute_smart_merge(remote_data):
             cursor.execute("SELECT * FROM transactions WHERE service_id = ?", (local_service_id,))
             lt = cursor.fetchone()
         else:
-            cursor.execute("SELECT * FROM transactions WHERE service_id IS NULL AND tanggal = ? AND catatan = ?", (t_tanggal, t_catatan))
-            lt = cursor.fetchone()
+            # 1. Pencocokan case-insensitive berdasarkan tanggal & catatan
+            if t_catatan:
+                cursor.execute("""
+                    SELECT * FROM transactions 
+                    WHERE service_id IS NULL 
+                      AND tanggal = ? 
+                      AND TRIM(catatan) = TRIM(?) COLLATE NOCASE
+                """, (t_tanggal, t_catatan))
+                candidates = cursor.fetchall()
+                for cand in candidates:
+                    if cand["id"] not in seen_matched_tx_ids:
+                        lt = cand
+                        break
+
+            # 2. Jika catatan kosong di kedua sisi
             if not lt and not t_catatan:
-                cursor.execute("SELECT * FROM transactions WHERE service_id IS NULL AND tanggal = ?", (t_tanggal,))
-                lt = cursor.fetchone()
+                cursor.execute("""
+                    SELECT * FROM transactions 
+                    WHERE service_id IS NULL 
+                      AND tanggal = ? 
+                      AND (catatan IS NULL OR TRIM(catatan) = '')
+                """, (t_tanggal,))
+                candidates = cursor.fetchall()
+                for cand in candidates:
+                    if cand["id"] not in seen_matched_tx_ids:
+                        lt = cand
+                        break
+
+            # 3. Fallback cerdas: Jika ada transaksi manual di tanggal sama dengan nominal identik (mencegah duplikasi SPP / Opp / Beban)
+            if not lt and (t_omset != 0 or t_spp != 0 or t_opp != 0):
+                cursor.execute("""
+                    SELECT * FROM transactions 
+                    WHERE service_id IS NULL 
+                      AND tanggal = ? 
+                      AND ABS(COALESCE(omset, 0) - ?) < 0.01
+                      AND ABS(COALESCE(spp, 0) - ?) < 0.01
+                      AND ABS(COALESCE(opp, 0) - ?) < 0.01
+                """, (t_tanggal, t_omset, t_spp, t_opp))
+                candidates = cursor.fetchall()
+                for cand in candidates:
+                    if cand["id"] not in seen_matched_tx_ids:
+                        lt = cand
+                        break
 
         if not lt:
             cursor.execute('''
-                INSERT INTO transactions (tanggal, omset, spp, opp, jasa, hasil, catatan, service_id, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (t_tanggal, t_omset, t_spp, t_opp, t_jasa, t_hasil, t_catatan, local_service_id, r_created, r_updated))
+                INSERT INTO transactions (tanggal, omset, spp, opp, jasa, hasil, catatan, service_id, created_at, updated_at, pos_kas)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (t_tanggal, t_omset, t_spp, t_opp, t_jasa, t_hasil, t_catatan, local_service_id, r_created, r_updated, t_pos_kas))
+            new_id = cursor.lastrowid
+            seen_matched_tx_ids.add(new_id)
             stats["transactions_inserted"] += 1
         else:
+            seen_matched_tx_ids.add(lt["id"])
             l_updated = str(lt["updated_at"] or lt["created_at"] or f"{lt['tanggal']} 12:00:00")
             if r_updated > l_updated:
                 cursor.execute('''
@@ -793,9 +908,10 @@ def execute_smart_merge(remote_data):
                         hasil = ?,
                         catatan = ?,
                         service_id = COALESCE(?, service_id),
+                        pos_kas = CASE WHEN ? != '' AND ? != 'umum' THEN ? ELSE COALESCE(pos_kas, 'umum') END,
                         updated_at = ?
                     WHERE id = ?
-                ''', (t_tanggal, t_omset, t_spp, t_opp, t_jasa, t_hasil, t_catatan, local_service_id, r_updated, lt["id"]))
+                ''', (t_tanggal, t_omset, t_spp, t_opp, t_jasa, t_hasil, t_catatan, local_service_id, t_pos_kas, t_pos_kas, t_pos_kas, r_updated, lt["id"]))
                 stats["transactions_updated"] += 1
 
     # 4. MERGE USERS
@@ -1110,7 +1226,8 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 conn = sqlite3.connect(DB_FILE)
                 conn.row_factory = sqlite3.Row
                 cursor = conn.cursor()
-                cursor.execute("SELECT id, tanggal, omset, spp, opp, jasa, hasil, catatan, service_id, created_at, updated_at FROM transactions ORDER BY id ASC")
+                auto_insert_daily_locked_opp(cursor, conn)
+                cursor.execute("SELECT id, tanggal, omset, spp, opp, jasa, hasil, catatan, service_id, created_at, updated_at, pos_kas FROM transactions ORDER BY id ASC")
                 rows = cursor.fetchall()
                 
                 transactions = []
@@ -1126,7 +1243,8 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                         "catatan": row["catatan"] or "",
                         "service_id": row["service_id"] if "service_id" in row.keys() else None,
                         "created_at": row["created_at"] if "created_at" in row.keys() else "",
-                        "updated_at": row["updated_at"] if "updated_at" in row.keys() else ""
+                        "updated_at": row["updated_at"] if "updated_at" in row.keys() else "",
+                        "pos_kas": row["pos_kas"] if ("pos_kas" in row.keys() and row["pos_kas"]) else "umum"
                     })
                 conn.close()
 
@@ -1226,9 +1344,9 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     clauses.append("status_servis = ?")
                     args.append(status_filter)
                 if search_q:
-                    clauses.append("(nama_pelanggan LIKE ? OR no_hp LIKE ? OR merk_model LIKE ? OR kode_servis LIKE ? OR keluhan LIKE ? OR imei_sn LIKE ?)")
+                    clauses.append("(nama_pelanggan LIKE ? OR no_hp LIKE ? OR merk_model LIKE ? OR kode_servis LIKE ? OR keluhan LIKE ? OR imei_sn LIKE ? OR passcode LIKE ?)")
                     q_like = f"%{search_q}%"
-                    args.extend([q_like, q_like, q_like, q_like, q_like, q_like])
+                    args.extend([q_like, q_like, q_like, q_like, q_like, q_like, q_like])
                 role_filter = str(query.get('role', [None])[0] or '').strip().lower()
                 actor_filter = str(query.get('actor', [None])[0] or '').strip()
                 username_filter = str(query.get('username', [None])[0] or '').strip()
@@ -1467,10 +1585,17 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 conn.row_factory = sqlite3.Row
                 cursor = conn.cursor()
                 search_q = query.get('q', [None])[0]
+                base_sql = """
+                    SELECT 
+                        c.*,
+                        (SELECT COUNT(*) FROM services s WHERE s.customer_id = c.id OR (c.no_hp != '' AND c.no_hp != '0' AND s.no_hp = c.no_hp) OR s.nama_pelanggan = c.nama) as real_servis_count,
+                        (SELECT MAX(created_at) FROM services s WHERE s.customer_id = c.id OR (c.no_hp != '' AND c.no_hp != '0' AND s.no_hp = c.no_hp) OR s.nama_pelanggan = c.nama) as last_servis_date
+                    FROM customers c
+                """
                 if search_q:
-                    cursor.execute("SELECT * FROM customers WHERE nama LIKE ? OR no_hp LIKE ? ORDER BY total_servis DESC, nama ASC LIMIT 50", (f"%{search_q}%", f"%{search_q}%"))
+                    cursor.execute(base_sql + " WHERE c.nama LIKE ? OR c.no_hp LIKE ? OR c.alamat LIKE ? ORDER BY c.total_servis DESC, c.nama ASC", (f"%{search_q}%", f"%{search_q}%", f"%{search_q}%"))
                 else:
-                    cursor.execute("SELECT * FROM customers ORDER BY total_servis DESC, nama ASC LIMIT 100")
+                    cursor.execute(base_sql + " ORDER BY c.total_servis DESC, c.id DESC")
                 rows = cursor.fetchall()
                 customers = [dict(row) for row in rows]
                 conn.close()
@@ -1485,22 +1610,69 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
 
-        elif path in ("/lacak", "/lacak/", "/lacak.html"):
+        elif path == "/api/customers/history":
+            try:
+                conn = sqlite3.connect(DB_FILE)
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cust_id = query.get('id', [None])[0]
+                phone = query.get('phone', [None])[0]
+                name = query.get('name', [None])[0]
+
+                clauses = []
+                args = []
+                if cust_id:
+                    clauses.append("customer_id = ?")
+                    args.append(cust_id)
+                if phone and phone != '0':
+                    clauses.append("no_hp = ?")
+                    args.append(phone)
+                if name:
+                    clauses.append("nama_pelanggan = ?")
+                    args.append(name)
+
+                if clauses:
+                    sql = "SELECT * FROM services WHERE " + " OR ".join(clauses) + " ORDER BY id DESC"
+                else:
+                    sql = "SELECT * FROM services WHERE 1=0"
+
+                cursor.execute(sql, args)
+                rows = cursor.fetchall()
+                services = [dict(row) for row in rows]
+                conn.close()
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True, "services": services}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
+
+        elif path.lower() in ("/lacak", "/lacak/", "/lacak.html"):
             lacak_file = os.path.join(DIRECTORY, "lacak.html")
             if os.path.exists(lacak_file):
                 with open(lacak_file, "rb") as f:
                     content_html = f.read()
                 self.send_response(200)
                 self.send_header('Content-Type', 'text/html; charset=utf-8')
+                self.send_header('Content-Length', str(len(content_html)))
                 self.end_headers()
                 self.wfile.write(content_html)
                 return
             else:
                 super().do_GET()
 
-        elif path == "/api/public/tracking":
+        elif path.lower() == "/api/public/tracking":
             try:
-                nota_q = query.get('nota', [None])[0] or query.get('kode', [None])[0]
+                # Ambil nomor nota/kode secara case-insensitive
+                nota_q = None
+                for param_k, param_v in query.items():
+                    if param_k.lower() in ('nota', 'kode', 'ticket', 'tiket') and param_v and param_v[0]:
+                        nota_q = param_v[0]
+                        break
                 if not nota_q:
                     self.send_response(400)
                     self.send_header('Content-Type', 'application/json')
@@ -1744,8 +1916,8 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 for t in transactions:
                     t_tanggal = str(t.get('tanggal', '')).strip()
                     cursor.execute('''
-                        INSERT INTO transactions (tanggal, omset, spp, opp, jasa, hasil, catatan, service_id, created_at, updated_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        INSERT INTO transactions (tanggal, omset, spp, opp, jasa, hasil, catatan, service_id, created_at, updated_at, pos_kas)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ''', (
                         t_tanggal,
                         float(t.get('omset', 0) or 0),
@@ -1756,9 +1928,11 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                         capitalize_words(str(t.get('catatan', '') or '')),
                         t.get('service_id'),
                         t.get('created_at') or f"{t_tanggal} 12:00:00",
-                        t.get('updated_at') or now_str
+                        t.get('updated_at') or now_str,
+                        str(t.get('pos_kas', 'umum') or 'umum').strip().lower()
                     ))
                 conn.commit()
+                auto_insert_daily_locked_opp(cursor, conn)
                 conn.close()
 
                 # Buat file backup JSON snapshot otomatis di folder backup/
@@ -1820,6 +1994,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     VALUES (?, ?, ?, ?, ?, 'pending', ?, 'Pendaftaran mandiri pengguna baru')
                 ''', (username, fullname, pass_hash, role, phone, now_str))
                 conn.commit()
+                auto_insert_daily_locked_opp(cursor, conn)
                 conn.close()
 
                 self.send_response(200)
@@ -2002,6 +2177,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     raise Exception(f"Action '{action}' tidak dikenal.")
 
                 conn.commit()
+                auto_insert_daily_locked_opp(cursor, conn)
                 conn.close()
 
                 self.send_response(200)
@@ -2041,6 +2217,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     ''', (key, str(value) if value is not None else '', str(value) if value is not None else ''))
 
                 conn.commit()
+                auto_insert_daily_locked_opp(cursor, conn)
                 conn.close()
 
                 self.send_response(200)
@@ -2090,6 +2267,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                         str(t.get('catatan', '') or '')
                     ))
                 conn.commit()
+                auto_insert_daily_locked_opp(cursor, conn)
                 conn.close()
 
                 self.send_response(200)
@@ -2196,6 +2374,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 tanggal_selesai = str(data.get('tanggal_selesai', '')).strip()
                 garansi = str(data.get('garansi', '7 Hari')).strip() or '7 Hari'
                 imei_sn = str(data.get('imei_sn', '')).strip()
+                passcode = str(data.get('passcode', '')).strip()
 
                 if not nama_pelanggan:
                     raise Exception("Nama pelanggan wajib diisi.")
@@ -2237,6 +2416,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                             tanggal_selesai = ?,
                             garansi = ?,
                             imei_sn = ?,
+                            passcode = ?,
                             updated_at = ?
                         WHERE id = ?
                     ''', (
@@ -2245,7 +2425,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                         estimasi_biaya, biaya_akhir, status_pembayaran,
                         sparepart_nama, sparepart_biaya, metode_pembayaran,
                         teknisi_nama, teknisi_nama, mitra_nama, mitra_nama,
-                        tanggal_masuk, tanggal_selesai, garansi, imei_sn, now_str, srv_id
+                        tanggal_masuk, tanggal_selesai, garansi, imei_sn, passcode, now_str, srv_id
                     ))
                     saved_id = srv_id
                     msg = "Data servis berhasil diperbarui."
@@ -2258,20 +2438,21 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                             menu_servis, status_servis, estimasi_biaya, biaya_akhir,
                             status_pembayaran, sparepart_nama, sparepart_biaya,
                             metode_pembayaran, teknisi_nama, mitra_nama, created_by,
-                            tanggal_masuk, tanggal_selesai, garansi, imei_sn, created_at, updated_at
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            tanggal_masuk, tanggal_selesai, garansi, imei_sn, passcode, created_at, updated_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ''', (
                         kode_servis, cust_id, nama_pelanggan, no_hp,
                         jenis_perangkat, merk_model, keluhan, catatan_teknisi,
                         menu_servis, status_servis, estimasi_biaya, biaya_akhir,
                         status_pembayaran, sparepart_nama, sparepart_biaya,
                         metode_pembayaran, teknisi_nama, mitra_nama, created_by,
-                        tanggal_masuk, tanggal_selesai, garansi, imei_sn, now_str, now_str
+                        tanggal_masuk, tanggal_selesai, garansi, imei_sn, passcode, now_str, now_str
                     ))
                     saved_id = cursor.lastrowid
                     msg = f"Tiket servis baru #{kode_servis} berhasil disimpan."
 
                 conn.commit()
+                auto_insert_daily_locked_opp(cursor, conn)
                 conn.close()
 
                 self.send_response(200)
@@ -2307,8 +2488,8 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 user_role = str(data.get('role', '')).strip().lower()
                 if user_role == 'admin' and new_status not in ('Baru', 'Instan', 'Diambil'):
                     raise Exception("Akses Ditolak: Role Admin hanya berwenang mengubah status ke Baru, Instan, atau Diambil.")
-                elif user_role == 'teknisi' and new_status not in ('Sedang Dikerjakan', 'Selesai', 'Batal'):
-                    raise Exception("Akses Ditolak: Role Teknisi hanya berwenang mengubah status ke Diproses, Selesai, atau Batal.")
+                elif user_role == 'teknisi' and new_status not in ('Sedang Dikerjakan', 'Selesai', 'Batal', 'Baru'):
+                    raise Exception("Akses Ditolak: Role Teknisi hanya berwenang mengubah status ke Diproses, Selesai, Batal, atau Lepas Job (Baru).")
 
                 conn = sqlite3.connect(DB_FILE)
                 conn.row_factory = sqlite3.Row
@@ -2461,6 +2642,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     cursor.execute("DELETE FROM transactions WHERE service_id = ?", (srv_id,))
 
                 conn.commit()
+                auto_insert_daily_locked_opp(cursor, conn)
                 conn.close()
 
                 self.send_response(200)
@@ -2492,6 +2674,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 cursor.execute("DELETE FROM services WHERE id = ?", (srv_id,))
                 cursor.execute("DELETE FROM transactions WHERE service_id = ?", (srv_id,))
                 conn.commit()
+                auto_insert_daily_locked_opp(cursor, conn)
                 conn.close()
 
                 self.send_response(200)
@@ -2537,6 +2720,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 cursor.execute("DELETE FROM transactions WHERE service_id IS NOT NULL")
                 cursor.execute("DELETE FROM sqlite_sequence WHERE name IN ('services', 'customers')")
                 conn.commit()
+                auto_insert_daily_locked_opp(cursor, conn)
                 conn.close()
 
                 self.send_response(200)
@@ -2572,6 +2756,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 cursor = conn.cursor()
                 cust_id = auto_save_customer(cursor, nama, no_hp, alamat)
                 conn.commit()
+                auto_insert_daily_locked_opp(cursor, conn)
                 conn.close()
 
                 self.send_response(200)
@@ -2585,6 +2770,61 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 response = {"success": False, "message": str(e)}
                 self.wfile.write(json.dumps(response).encode('utf-8'))
+
+        elif path == "/api/customers/update":
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data.decode('utf-8'))
+                cust_id = data.get('id')
+                nama = capitalize_words(data.get('nama', '').strip())
+                no_hp = data.get('no_hp', '').strip()
+                alamat = capitalize_words(data.get('alamat', '').strip())
+                if not cust_id:
+                    raise Exception("ID Pelanggan wajib diisi.")
+                if not nama:
+                    raise Exception("Nama Pelanggan wajib diisi.")
+
+                conn = sqlite3.connect(DB_FILE)
+                cursor = conn.cursor()
+                cursor.execute("UPDATE customers SET nama = ?, no_hp = ?, alamat = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", (nama, no_hp, alamat, cust_id))
+                conn.commit()
+                conn.close()
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True, "message": "Data pelanggan berhasil diperbarui."}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
+
+        elif path == "/api/customers/delete":
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data.decode('utf-8'))
+                cust_id = data.get('id')
+                if not cust_id:
+                    raise Exception("ID Pelanggan wajib diisi.")
+
+                conn = sqlite3.connect(DB_FILE)
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM customers WHERE id = ?", (cust_id,))
+                conn.commit()
+                conn.close()
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True, "message": "Data pelanggan berhasil dihapus."}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode('utf-8'))
 
         elif path == "/api/export":
             content_length = int(self.headers.get('Content-Length', 0))
