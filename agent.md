@@ -1,6 +1,16 @@
 # Panduan & Aturan AI Agent (KasToko)
 
-Dokumen ini berisi aturan baku bagi AI Agent dalam mengembangkan, memodifikasi, dan mengeksekusi kode pada proyek **KasToko**.
+Dokumen ini berisi aturan baku dan ringkasan konteks bagi AI Agent dalam mengembangkan, memodifikasi, dan mengeksekusi kode pada proyek **KasToko**.
+
+---
+
+## ⚡ Ringkasan Cepat Konteks Proyek (Executive Context for New Agents)
+* **Aplikasi**: KasToko (Autocash) - Kasir & Servis Toko v0.0.10.
+* **Fitur Terakhir**: **Master Kas** (4 Pos Kas: Aset 30%, Owner 30%, Investor 30%, Bonus 10% sinkron 100% dengan Total Hasil Toko).
+* **Arsitektur**: Frontend [index.html](file:///E:/KasToko/index.html), Styling [style.css](file:///E:/KasToko/style.css), Backend [server.py](file:///E:/KasToko/server.py), Database `pembukuan.db` (SQLite).
+* **Target Server**: Ubuntu Server `http://192.168.1.8:8080` (SSH: `bablanta@192.168.1.8`).
+* **Deploy Command**: `python tools/deploy_manager.py code` (HANYA deploy file kode, **dilarang menimpa pembukuan.db di server**).
+* **Detail Lengkap**: Baca [PROJECT_HANDOFF.md](file:///E:/KasToko/PROJECT_HANDOFF.md) untuk rincian serah terima konteks lengkap.
 
 ---
 

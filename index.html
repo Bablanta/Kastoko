@@ -10398,10 +10398,10 @@
         if (secStore) secStore.style.display = (isSuperadmin || isAdmin) ? 'block' : 'none';
         if (secPrint) secPrint.style.display = (isSuperadmin || isAdmin) ? 'block' : 'none';
 
-        // Master Kas Toko (4 Pos Kas): Khusus Superadmin & Admin
+        // Master Kas Toko (4 Pos Kas): Khusus Superadmin SAJA
         var masterKasSec = document.getElementById('masterKasSection');
         if (masterKasSec) {
-            masterKasSec.style.display = (isSuperadmin || isAdmin) ? 'block' : 'none';
+            masterKasSec.style.display = isSuperadmin ? 'block' : 'none';
         }
         calculateMasterKas();
 
